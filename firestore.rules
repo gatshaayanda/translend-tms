@@ -28,6 +28,11 @@ service cloud.firestore {
           && request.resource.data.role == 'owner') || isOwner(orgId);
         allow update, delete: if isOwner(orgId);
       }
+
+      match /customers/{customerId} {
+        allow read, create, update: if isMember(orgId);
+        allow delete: if isOwner(orgId);
+      }
     }
 
     match /{document=**} {
