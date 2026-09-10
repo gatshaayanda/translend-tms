@@ -3,15 +3,31 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() { return request.auth != null; }
     function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isMember(orgId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+    }
+    function isOwner(orgId) {
+      return isMember(orgId)
+        && get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'owner';
+    }
 
-    // Foundation only. Organization/business collections are intentionally denied
-    // until their data contracts and authorization rules are implemented.
     match /users/{userId} {
       allow read, write: if isSelf(userId);
     }
 
     match /organizations/{orgId} {
-      allow read, write: if false;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow read: if isMember(orgId);
+      allow update, delete: if isOwner(orgId);
+
+      match /members/{memberId} {
+        allow read: if isMember(orgId);
+        allow create: if (isSignedIn()
+          && memberId == request.auth.uid
+          && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid
+          && request.resource.data.role == 'owner') || isOwner(orgId);
+        allow update, delete: if isOwner(orgId);
+      }
     }
 
     match /{document=**} {
