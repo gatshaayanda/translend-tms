@@ -6,9 +6,15 @@ service cloud.firestore {
     function isMember(orgId) {
       return isSignedIn() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
     }
-    function isOwner(orgId) {
-      return isMember(orgId)
-        && get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'owner';
+    function role(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
+    }
+    function isOwner(orgId) { return isMember(orgId) && role(orgId) == 'owner'; }
+    function canFleetRead(orgId) {
+      return isMember(orgId) && role(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'viewer'];
+    }
+    function canFleetManage(orgId) {
+      return isMember(orgId) && role(orgId) in ['owner', 'operations_manager', 'fleet_manager'];
     }
 
     match /users/{userId} {
@@ -34,6 +40,20 @@ service cloud.firestore {
         allow create: if isMember(orgId) && request.resource.data.createdBy == request.auth.uid;
         allow update: if isMember(orgId) && request.resource.data.createdBy == resource.data.createdBy;
         allow delete: if isOwner(orgId);
+      }
+
+      match /trucks/{truckId} {
+        allow read: if canFleetRead(orgId);
+        allow create: if canFleetManage(orgId) && request.resource.data.createdBy == request.auth.uid;
+        allow update: if canFleetManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if isOwner(orgId) || role(orgId) == 'fleet_manager';
+      }
+
+      match /drivers/{driverId} {
+        allow read: if canFleetRead(orgId);
+        allow create: if canFleetManage(orgId) && request.resource.data.createdBy == request.auth.uid;
+        allow update: if canFleetManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if isOwner(orgId) || role(orgId) == 'fleet_manager';
       }
     }
 
