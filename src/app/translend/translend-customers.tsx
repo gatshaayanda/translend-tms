@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createCustomer, deleteCustomer, getCustomer, getCustomers, updateCustomer, TranslendCustomer, TranslendCustomerStatus } from '@/lib/translend/customers'
 import styles from './translend-shell.module.css'
 
@@ -12,11 +12,12 @@ export default function TranslendCustomers({ organizationId, userId }: { organiz
   const [selected, setSelected] = useState<TranslendCustomer | null>(null)
   const [showForm, setShowForm] = useState(false)
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true); setError(null)
     try { setCustomers(await getCustomers(organizationId)) } catch (err) { setError(err instanceof Error ? err.message : 'Unable to load customers.') } finally { setLoading(false) }
-  }
-  useEffect(() => { void load() }, [organizationId])
+  }, [organizationId])
+
+  useEffect(() => { void load() }, [load])
 
   async function save(values: CustomerValues) {
     setError(null)
@@ -38,7 +39,7 @@ export default function TranslendCustomers({ organizationId, userId }: { organiz
   }
 
   return <section className={styles.panel}>
-    <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Commercial</span><h2>Customers</h2><p style={{ marginTop: 5, color: '#718188', fontSize: 11 }}>Your company's customer records and commercial contacts.</p></div><button className={styles.primaryButton} onClick={() => { setEditing(null); setShowForm(true) }}>+ Add customer</button></div>
+    <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Commercial</span><h2>Customers</h2><p style={{ marginTop: 5, color: '#718188', fontSize: 11 }}>Your company&apos;s customer records and commercial contacts.</p></div><button className={styles.primaryButton} onClick={() => { setEditing(null); setShowForm(true) }}>+ Add customer</button></div>
     {error && <div role="alert" style={{ margin: '0 22px 14px', padding: 12, borderRadius: 8, background: '#fff1f0', color: '#a33b31', fontSize: 12 }}>{error}</div>}
     {loading ? <EmptyState text="Loading customers…" /> : customers.length === 0 ? <EmptyState text="No customers yet. Add your first customer to begin building your commercial records." /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Terms</th><th>Status</th><th>Notes</th><th>Action</th></tr></thead><tbody>{customers.map((customer) => <tr key={customer.id}><td><button className={styles.textButton} onClick={() => void view(customer.id)}><strong>{customer.name}</strong></button></td><td>{customer.contactName || '—'}</td><td>{customer.phone || '—'}</td><td>{customer.paymentTerms || '—'}</td><td>{customer.status === 'active' ? 'Active' : 'Inactive'}</td><td>{customer.notes || '—'}</td><td><button className={styles.textButton} onClick={() => { setEditing(customer); setShowForm(true) }}>Edit</button>{' '}<button className={styles.textButton} onClick={() => void remove(customer)}>Delete</button></td></tr>)}</tbody></table></div>}
     {selected && <CustomerDetail customer={selected} onClose={() => setSelected(null)} onEdit={() => { setEditing(selected); setSelected(null); setShowForm(true) }} />}
