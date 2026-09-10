@@ -32,6 +32,22 @@ Never copy AdminHub production Firebase configuration, service-account credentia
 
 Firestore and Storage default to deny. Organization/business access rules are intentionally not implemented until business data contracts exist.
 
+## Product-direction checkpoint (documented, not yet implemented)
+The following decisions are product direction only. They must guide future design and data contracts but must not be treated as implemented functionality until the relevant features are deliberately built and verified.
+
+1. Users have role-based starting dashboards, but dashboards are not isolated mini-apps. Navigation allows users to move into other areas according to their permissions.
+2. A user's role determines their normal starting view and permissions; the role does not own the business data.
+3. Records should retain authorship metadata: who created or reported the record, their role at the time where appropriate, timestamp, and later updater/reviewer information where applicable.
+4. Business records belong to the relevant business object/job/trip/delivery/etc. The person entering information is the author, not the owner of that business record.
+5. Learning/demo data may exist as an intentional instructional environment. It must be clearly labelled as learning/demo data and be safely removable or resettable before the company begins real operations.
+6. Production/live dashboards and reports must be driven by the company's real data. Dummy data must never be presented as live operational data.
+7. The product should be understandable to non-technical users and answer: what is happening, what needs attention, and what should I do next?
+8. Platform administration and customer organisation administration are separate concepts.
+9. Platform Admin should eventually provide appropriate visibility into organisations, users, usage, application analytics, system health, errors and related platform information, while customer private operational data remains properly protected.
+10. Vercel/Firebase/platform analytics are infrastructure/product administration concerns and must not be confused with customer trucking data.
+
+These decisions do not authorize implementation of dashboards, administration features, analytics, authorship fields, demo-data tooling, or business modules during the current foundation phase.
+
 ## Quality gates
 Do not inherit AdminHub's build-error suppression. `npx tsc --noEmit`, `npm run lint`, `npm run build`, deployment verification, and browser verification are real gates. Do not declare success from source inspection alone.
 
