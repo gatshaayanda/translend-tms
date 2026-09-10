@@ -33,14 +33,15 @@ export async function getTranslendWorkspaceDiagnostics(uid: string): Promise<Tra
   const organizationPath = `organizations/${organizationId}`
   let organizationSnapshot
   try { organizationSnapshot = await getDoc(doc(translendFirestore, 'organizations', organizationId)) } catch (error) { const detail = readError(error); return { uid, userProfile, organization: { path: organizationPath, exists: false, name: null, ownerId: null }, membership: null, error: { stage: 'organization', path: organizationPath, ...detail } } }
-  const organization = organizationSnapshot.exists() ? organizationSnapshot.data() as { name?: string; ownerId?: string } : null
   if (!organizationSnapshot.exists()) return { uid, userProfile, organization: { path: organizationPath, exists: false, name: null, ownerId: null }, membership: null, error: null }
+  const organizationData = organizationSnapshot.data() as { name?: string; ownerId?: string }
+  const organizationInfo = { path: organizationPath, exists: true, name: organizationData.name || null, ownerId: organizationData.ownerId || null }
 
   const membershipPath = `organizations/${organizationId}/members/${uid}`
   let membershipSnapshot
-  try { membershipSnapshot = await getDoc(doc(translendFirestore, 'organizations', organizationId, 'members', uid)) } catch (error) { const detail = readError(error); return { uid, userProfile, organization: { path: organizationPath, exists: true, name: organization.name || null, ownerId: organization.ownerId || null }, membership: { path: membershipPath, exists: false, role: null, email: null }, error: { stage: 'membership', path: membershipPath, ...detail } } }
+  try { membershipSnapshot = await getDoc(doc(translendFirestore, 'organizations', organizationId, 'members', uid)) } catch (error) { const detail = readError(error); return { uid, userProfile, organization: organizationInfo, membership: { path: membershipPath, exists: false, role: null, email: null }, error: { stage: 'membership', path: membershipPath, ...detail } } }
   const membership = membershipSnapshot.exists() ? membershipSnapshot.data() as { role?: TranslendRole; email?: string } : null
-  return { uid, userProfile, organization: { path: organizationPath, exists: true, name: organization.name || null, ownerId: organization.ownerId || null }, membership: { path: membershipPath, exists: membershipSnapshot.exists(), role: membership?.role || null, email: membership?.email || null }, error: null }
+  return { uid, userProfile, organization: organizationInfo, membership: { path: membershipPath, exists: membershipSnapshot.exists(), role: membership?.role || null, email: membership?.email || null }, error: null }
 }
 
 export async function getPendingTranslendInvitation(email: string) { const normalized = email.trim().toLowerCase(); if (!normalized) return null; const snapshot = await getDocs(query(collection(translendFirestore, 'invitations'), where('email', '==', normalized), where('status', '==', 'pending'))); const first = snapshot.docs[0]; return first ? ({ id: first.id, ...first.data() } as TranslendInvitation) : null }
