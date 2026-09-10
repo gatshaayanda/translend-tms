@@ -8,6 +8,13 @@ import TranslendCompanySetup from './translend-company-setup'
 
 type GateState = 'checking' | 'setup' | 'invite' | 'workspace' | 'error'
 
+function withTimeout<T>(promise: Promise<T>, label: string, milliseconds = 10000) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => window.setTimeout(() => reject(new Error(`${label} timed out after ${milliseconds / 1000} seconds.`)), milliseconds)),
+  ])
+}
+
 export default function TranslendAuthGate({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [state, setState] = useState<GateState>('checking')
@@ -16,20 +23,6 @@ export default function TranslendAuthGate({ children }: { children: ReactNode })
   const [error, setError] = useState('')
 
   useEffect(() => {
-    let settled = false
-    const timeoutId = window.setTimeout(() => {
-      if (settled) return
-      const message = 'Firebase authentication or company workspace lookup did not finish within 15 seconds. Check the browser console for the Firebase initialization or Firestore error.'
-      console.error('[Translend workspace trace] initialization timeout', { message })
-      setError(message)
-      setState('error')
-    }, 15000)
-
-    const finish = () => {
-      settled = true
-      window.clearTimeout(timeoutId)
-    }
-
     let unsubscribe: (() => void) | undefined
     try {
       unsubscribe = onAuthStateChanged(translendAuth, async (nextUser) => {
@@ -38,35 +31,37 @@ export default function TranslendAuthGate({ children }: { children: ReactNode })
         if (!nextUser) {
           setInvitation(null)
           setState('checking')
-          finish()
           return
         }
 
         setState('checking')
         console.info('[Translend workspace trace] Firebase user', { uid: nextUser.uid, email: nextUser.email })
         try {
-          const workspace = await getTranslendWorkspaceForUser(nextUser.uid)
+          const workspace = await withTimeout(
+            getTranslendWorkspaceForUser(nextUser.uid),
+            'Translend company workspace lookup',
+          )
           console.info('[Translend workspace trace] workspace lookup result', { uid: nextUser.uid, organizationId: workspace?.organization.id || null, role: workspace?.membership.role || null })
           window.localStorage.removeItem('translend-demo-mode')
           window.localStorage.removeItem('translend-workspace-data')
           if (workspace) {
-            finish()
             setState('workspace')
             return
           }
-          const pending = await getPendingTranslendInvitation(nextUser.email || '')
+
+          const pending = await withTimeout(
+            getPendingTranslendInvitation(nextUser.email || ''),
+            'Translend invitation lookup',
+          )
           if (pending) {
-            finish()
             setInvitation(pending)
             setState('invite')
             return
           }
-          finish()
           setState('setup')
         } catch (nextError) {
           const message = nextError instanceof Error ? nextError.message : 'We could not load your Translend workspace.'
           console.error('[Translend workspace trace] auth gate workspace lookup failed', { uid: nextUser.uid, error: nextError })
-          finish()
           setError(message)
           setState('error')
         }
@@ -74,15 +69,11 @@ export default function TranslendAuthGate({ children }: { children: ReactNode })
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : 'Firebase authentication could not initialize.'
       console.error('[Translend workspace trace] auth initialization failed', { error: nextError })
-      finish()
       setError(message)
       setState('error')
     }
 
-    return () => {
-      finish()
-      unsubscribe?.()
-    }
+    return () => unsubscribe?.()
   }, [])
 
   async function signIn() {
@@ -109,7 +100,7 @@ export default function TranslendAuthGate({ children }: { children: ReactNode })
   if (state === 'checking') return <main style={centerStyle}><div style={cardStyle}><strong>Loading Translend…</strong><span>Checking your company workspace.</span></div></main>
   if (user && state === 'setup') return <TranslendCompanySetup user={user} onCreated={() => setState('workspace')} />
   if (user && state === 'invite' && invitation) return <main style={centerStyle}><section style={cardStyle}><div style={logoStyle}>T</div><span style={eyebrowStyle}>COMPANY INVITATION</span><h1 style={{ margin: '8px 0 6px', fontSize: 30, letterSpacing: '-.04em' }}>Join {invitation.organizationId}.</h1><p style={{ margin: 0, color: '#607278', lineHeight: 1.6 }}>You have been invited to join an existing Translend company workspace as <strong>{invitation.role.replace('_', ' ')}</strong>.</p><button onClick={acceptInvite} disabled={busy} style={primaryStyle}>{busy ? 'Joining workspace…' : 'Accept invitation'}</button><button onClick={leave} disabled={busy} style={secondaryStyle}>Sign out</button>{error && <div style={errorStyle}>{error}</div>}<small style={{ display: 'block', marginTop: 16, color: '#91a0a5', lineHeight: 1.5 }}>This invitation is tied to your Google email address and organization ID. Company name matching is not used.</small></section></main>
-  if (user && state === 'error') return <main style={centerStyle}><section style={cardStyle}><div style={logoStyle}>T</div><span style={eyebrowStyle}>WORKSPACE LOAD FAILED</span><h1 style={{ margin: '8px 0 6px', fontSize: 30, letterSpacing: '-.04em' }}>We could not open your company workspace.</h1><p style={{ margin: 0, color: '#607278', lineHeight: 1.6 }}>Firebase authentication succeeded, but the workspace lookup failed. The error is being shown instead of falling back to an empty workspace.</p><div style={errorStyle}>{error}</div><button onClick={() => window.location.reload()} style={primaryStyle}>Retry workspace load</button><button onClick={leave} style={secondaryStyle}>Sign out</button></section></main>
+  if (user && state === 'error') return <main style={centerStyle}><section style={cardStyle}><div style={logoStyle}><strong>T</strong></div><span style={eyebrowStyle}>WORKSPACE LOAD FAILED</span><h1 style={{ margin: '8px 0 6px', fontSize: 30, letterSpacing: '-.04em' }}>We could not open your company workspace.</h1><p style={{ margin: 0, color: '#607278', lineHeight: 1.6 }}>Firebase authentication succeeded, but the workspace lookup failed.</p><div style={errorStyle}>{error}</div><button onClick={() => window.location.reload()} style={primaryStyle}>Retry workspace load</button><button onClick={leave} style={secondaryStyle}>Sign out</button></section></main>
   if (!user) return <main style={centerStyle}><section style={cardStyle}><div style={logoStyle}>T</div><span style={eyebrowStyle}>TRANSLEND TMS · TRUCK DIVISION</span><h1 style={{ margin: '8px 0 6px', fontSize: 30, letterSpacing: '-.04em' }}>Your transport desk starts here.</h1><p style={{ margin: 0, color: '#607278', lineHeight: 1.6 }}>Sign in with Google to create or open your private company workspace.</p><button onClick={signIn} disabled={busy} style={primaryStyle}>{busy ? 'Signing in…' : 'Continue with Google'}</button>{error && <div style={errorStyle}>{error}</div>}<small style={{ display: 'block', marginTop: 16, color: '#91a0a5', lineHeight: 1.5 }}>Each company gets its own private workspace. Your operational data is not shared with other companies.</small></section></main>
   return <>{children}</>
 }
