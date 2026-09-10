@@ -1,5 +1,10 @@
-import TranslendShell from "./translend-shell";
+import TranslendAuthGate from './translend-auth'
+import TranslendShell from './translend-shell'
 
 export default function TranslendPage() {
-  return <TranslendShell />;
+  return (
+    <TranslendAuthGate>
+      <TranslendShell />
+    </TranslendAuthGate>
+  )
 }
