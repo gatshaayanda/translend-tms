@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import styles from './translend-shell.module.css'
 import { BUSINESS_CONFIG, BusinessCollection, BusinessField, BusinessRecord, createBusinessRecord, deleteBusinessRecord, getBusinessRecords, updateBusinessRecord } from '@/lib/translend/business'
 
@@ -13,7 +13,7 @@ export default function TranslendBusinessModule({ collectionName, organizationId
   const [editing, setEditing] = useState<BusinessRecord | null>(null)
   const [showForm, setShowForm] = useState(false)
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -23,11 +23,11 @@ export default function TranslendBusinessModule({ collectionName, organizationId
     } finally {
       setLoading(false)
     }
-  }
+  }, [collectionName, config.title, organizationId])
 
   useEffect(() => {
     void refresh()
-  }, [organizationId, collectionName])
+  }, [refresh])
 
   const singular = config.title.endsWith('s') ? config.title.slice(0, -1) : config.title
 
