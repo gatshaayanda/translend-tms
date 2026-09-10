@@ -61,7 +61,7 @@ export default function TranslendIntelligence({ kind, organizationId }: { kind: 
       <div>
         <span className={styles.panelEyebrow}>Derived from live records</span>
         <h2>{kind === 'profitability' ? 'Profitability' : 'Operational P&L'}</h2>
-        <p style={{ marginTop: 5, color: '#718188', fontSize: 11 }}>Read-only intelligence calculated from the organization's operational, cost and commercial collections. Draft and void invoices are excluded from revenue; draft expenses are excluded from costs.</p>
+        <p style={{ marginTop: 5, color: '#718188', fontSize: 11 }}>Read-only intelligence calculated from the organization&apos;s operational, cost and commercial collections. Draft and void invoices are excluded from revenue; draft expenses are excluded from costs.</p>
       </div>
     </div>
     {error && <div style={{ margin: '0 18px 14px', padding: 10, color: '#9b3030', background: '#fff1f1' }}>{error}</div>}
