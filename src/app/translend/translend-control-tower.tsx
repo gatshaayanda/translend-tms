@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import styles from './translend-shell.module.css'
-import { BusinessRecord, getBusinessRecords } from '@/lib/translend/business'
+import { BusinessCollection, BusinessRecord, getBusinessRecords } from '@/lib/translend/business'
+
+type ControlTowerModule = 'Jobs' | 'Exceptions'
+type ControlTowerProps = { organizationId: string; onOpen: (module: ControlTowerModule) => void }
 
 function isPostedInvoice(row: BusinessRecord) {
   return ['issued', 'paid', 'overdue'].includes(String(row.status ?? ''))
@@ -12,7 +15,7 @@ function isActiveJob(row: BusinessRecord) {
   return !['delivered', 'cancelled'].includes(String(row.status ?? ''))
 }
 
-export default function TranslendControlTower({ organizationId, onOpen }: { organizationId: string; onOpen: (module: any) => void }) {
+export default function TranslendControlTower({ organizationId, onOpen }: ControlTowerProps) {
   const [data, setData] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,7 +23,8 @@ export default function TranslendControlTower({ organizationId, onOpen }: { orga
   useEffect(() => {
     let live = true
     setLoading(true)
-    Promise.all(['jobs', 'trips', 'deliveries', 'invoices', 'fuel', 'maintenance', 'tyres', 'expenses'].map((name) => getBusinessRecords(organizationId, name as any)))
+    const names: BusinessCollection[] = ['jobs', 'trips', 'deliveries', 'invoices', 'fuel', 'maintenance', 'tyres', 'expenses']
+    Promise.all(names.map((name) => getBusinessRecords(organizationId, name)))
       .then((all) => {
         if (!live) return
         const [jobs, trips, deliveries, invoices, fuel, maintenance, tyres, expenses] = all
@@ -44,7 +48,7 @@ export default function TranslendControlTower({ organizationId, onOpen }: { orga
 
   return <>
     <section className={styles.pageHeader}>
-      <div><span className={styles.eyebrow}>Control Tower</span><h1>Operational command.</h1><p>Live metrics derived from the company's Firestore business records. No seeded or static operational figures are used.</p></div>
+      <div><span className={styles.eyebrow}>Control Tower</span><h1>Operational command.</h1><p>Live metrics derived from the company&apos;s Firestore business records. No seeded or static operational figures are used.</p></div>
       <div className={styles.headerActions}><button className={styles.secondaryButton} onClick={() => onOpen('Jobs')}>Jobs</button><button className={styles.primaryButton} onClick={() => onOpen('Exceptions')}>Exceptions</button></div>
     </section>
     {error && <div style={{ padding: 12, color: '#9b3030' }}>{error}</div>}
