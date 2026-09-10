@@ -15,28 +15,57 @@ export default function TranslendAuthGate({ children }: { children: ReactNode })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => onAuthStateChanged(translendAuth, async (nextUser) => {
-    setUser(nextUser)
-    setError('')
-    if (!nextUser) { setInvitation(null); setState('checking'); return }
-    setState('checking')
-    console.info('[Translend workspace trace] Firebase user', { uid: nextUser.uid, email: nextUser.email })
+  useEffect(() => {
+    let settled = false
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return
+      const message = 'Firebase authentication did not finish initializing. Check the browser console for the Firebase initialization error.'
+      console.error('[Translend workspace trace] auth state timeout', { message })
+      setError(message)
+      setState('error')
+    }, 15000)
+
+    let unsubscribe: (() => void) | undefined
     try {
-      const workspace = await getTranslendWorkspaceForUser(nextUser.uid)
-      console.info('[Translend workspace trace] workspace lookup result', { uid: nextUser.uid, organizationId: workspace?.organization.id || null, role: workspace?.membership.role || null })
-      window.localStorage.removeItem('translend-demo-mode')
-      window.localStorage.removeItem('translend-workspace-data')
-      if (workspace) { setState('workspace'); return }
-      const pending = await getPendingTranslendInvitation(nextUser.email || '')
-      if (pending) { setInvitation(pending); setState('invite'); return }
-      setState('setup')
+      unsubscribe = onAuthStateChanged(translendAuth, async (nextUser) => {
+        settled = true
+        window.clearTimeout(timeoutId)
+        setUser(nextUser)
+        setError('')
+        if (!nextUser) { setInvitation(null); setState('checking'); return }
+        setState('checking')
+        console.info('[Translend workspace trace] Firebase user', { uid: nextUser.uid, email: nextUser.email })
+        try {
+          const workspace = await getTranslendWorkspaceForUser(nextUser.uid)
+          console.info('[Translend workspace trace] workspace lookup result', { uid: nextUser.uid, organizationId: workspace?.organization.id || null, role: workspace?.membership.role || null })
+          window.localStorage.removeItem('translend-demo-mode')
+          window.localStorage.removeItem('translend-workspace-data')
+          if (workspace) { setState('workspace'); return }
+          const pending = await getPendingTranslendInvitation(nextUser.email || '')
+          if (pending) { setInvitation(pending); setState('invite'); return }
+          setState('setup')
+        } catch (nextError) {
+          const message = nextError instanceof Error ? nextError.message : 'We could not load your Translend workspace.'
+          console.error('[Translend workspace trace] auth gate workspace lookup failed', { uid: nextUser.uid, error: nextError })
+          setError(message)
+          setState('error')
+        }
+      })
     } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : 'We could not load your Translend workspace.'
-      console.error('[Translend workspace trace] auth gate workspace lookup failed', { uid: nextUser.uid, error: nextError })
+      settled = true
+      window.clearTimeout(timeoutId)
+      const message = nextError instanceof Error ? nextError.message : 'Firebase authentication could not initialize.'
+      console.error('[Translend workspace trace] auth initialization failed', { error: nextError })
       setError(message)
       setState('error')
     }
-  }), [])
+
+    return () => {
+      settled = true
+      window.clearTimeout(timeoutId)
+      unsubscribe?.()
+    }
+  }, [])
 
   async function signIn() {
     setBusy(true); setError('')
