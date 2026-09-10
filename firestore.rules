@@ -1,69 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() { return request.auth != null; }
-    function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
-    function isMember(orgId) { return isSignedIn() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)); }
-    function role(orgId) { return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role; }
-    function isOwner(orgId) { return isMember(orgId) && role(orgId) == 'owner'; }
-    function canFleetRead(orgId) { return isMember(orgId) && role(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'viewer']; }
-    function canFleetManage(orgId) { return isMember(orgId) && role(orgId) in ['owner', 'operations_manager', 'fleet_manager']; }
-    function canOperationsRead(orgId) { return isMember(orgId) && role(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'finance', 'driver', 'viewer']; }
-    function canOperationsManage(orgId) { return isMember(orgId) && role(orgId) in ['owner', 'operations_manager', 'dispatcher']; }
-
-    match /users/{userId} { allow read, write: if isSelf(userId); }
-    match /organizations/{orgId} {
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow read: if isMember(orgId);
-      allow update, delete: if isOwner(orgId);
-      match /members/{memberId} {
-        allow read: if isMember(orgId);
-        allow create: if (isSignedIn() && memberId == request.auth.uid && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId == request.auth.uid && request.resource.data.role == 'owner') || isOwner(orgId);
-        allow update, delete: if isOwner(orgId);
-      }
-      match /customers/{customerId} {
-        allow read: if isMember(orgId);
-        allow create: if isMember(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if isMember(orgId) && request.resource.data.createdBy == resource.data.createdBy;
-        allow delete: if isOwner(orgId);
-      }
-      match /trucks/{truckId} {
-        allow read: if canFleetRead(orgId);
-        allow create: if canFleetManage(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if canFleetManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
-        allow delete: if isOwner(orgId) || role(orgId) == 'fleet_manager';
-      }
-      match /drivers/{driverId} {
-        allow read: if canFleetRead(orgId);
-        allow create: if canFleetManage(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if canFleetManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
-        allow delete: if isOwner(orgId) || role(orgId) == 'fleet_manager';
-      }
-      match /jobs/{jobId} {
-        allow read: if canOperationsRead(orgId);
-        allow create: if canOperationsManage(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if canOperationsManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
-        allow delete: if isOwner(orgId) || role(orgId) == 'operations_manager';
-      }
-      match /dispatches/{dispatchId} {
-        allow read: if canOperationsRead(orgId);
-        allow create: if canOperationsManage(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if canOperationsManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
-        allow delete: if isOwner(orgId) || role(orgId) == 'operations_manager';
-      }
-      match /trips/{tripId} {
-        allow read: if canOperationsRead(orgId);
-        allow create: if canOperationsManage(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if canOperationsManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
-        allow delete: if isOwner(orgId) || role(orgId) == 'operations_manager';
-      }
-      match /routes/{routeId} {
-        allow read: if canOperationsRead(orgId);
-        allow create: if canOperationsManage(orgId) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if canOperationsManage(orgId) && request.resource.data.createdBy == resource.data.createdBy;
-        allow delete: if isOwner(orgId) || role(orgId) == 'operations_manager';
-      }
+    function isSignedIn(){return request.auth!=null;} function isSelf(uid){return isSignedIn()&&request.auth.uid==uid;} function isMember(orgId){return isSignedIn()&&exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));} function role(orgId){return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;} function isOwner(orgId){return isMember(orgId)&&role(orgId)=='owner';}
+    function canFleetRead(orgId){return isMember(orgId)&&role(orgId) in ['owner','operations_manager','dispatcher','fleet_manager','viewer'];} function canFleetManage(orgId){return isMember(orgId)&&role(orgId) in ['owner','operations_manager','fleet_manager'];}
+    function canOperationsRead(orgId){return isMember(orgId)&&role(orgId) in ['owner','operations_manager','dispatcher','fleet_manager','finance','driver','viewer'];} function canOperationsManage(orgId){return isMember(orgId)&&role(orgId) in ['owner','operations_manager','dispatcher'];}
+    match /users/{userId}{allow read,write:if isSelf(userId);}
+    match /organizations/{orgId}{
+      allow create:if isSignedIn()&&request.resource.data.ownerId==request.auth.uid; allow read:if isMember(orgId); allow update,delete:if isOwner(orgId);
+      match /members/{memberId}{allow read:if isMember(orgId);allow create:if(isSignedIn()&&memberId==request.auth.uid&&get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerId==request.auth.uid&&request.resource.data.role=='owner')||isOwner(orgId);allow update,delete:if isOwner(orgId);}
+      match /customers/{id}{allow read:if isMember(orgId);allow create:if isMember(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if isMember(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId);}
+      match /trucks/{id}{allow read:if canFleetRead(orgId);allow create:if canFleetManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canFleetManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='fleet_manager';}
+      match /drivers/{id}{allow read:if canFleetRead(orgId);allow create:if canFleetManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canFleetManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='fleet_manager';}
+      match /jobs/{id}{allow read:if canOperationsRead(orgId);allow create:if canOperationsManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canOperationsManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='operations_manager';}
+      match /dispatches/{id}{allow read:if canOperationsRead(orgId);allow create:if canOperationsManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canOperationsManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='operations_manager';}
+      match /trips/{id}{allow read:if canOperationsRead(orgId);allow create:if canOperationsManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canOperationsManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='operations_manager';}
+      match /routes/{id}{allow read:if canOperationsRead(orgId);allow create:if canOperationsManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canOperationsManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='operations_manager';}
+      match /deliveries/{id}{allow read:if canOperationsRead(orgId);allow create:if canOperationsManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canOperationsManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='operations_manager';}
+      match /pods/{id}{allow read:if canOperationsRead(orgId);allow create:if canOperationsManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canOperationsManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='operations_manager';}
+      match /exceptions/{id}{allow read:if canOperationsRead(orgId);allow create:if canOperationsManage(orgId)&&request.resource.data.createdBy==request.auth.uid;allow update:if canOperationsManage(orgId)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if isOwner(orgId)||role(orgId)=='operations_manager';}
     }
-    match /{document=**} { allow read, write: if false; }
+    match /{document=**}{allow read,write:if false;}
   }
 }
