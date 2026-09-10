@@ -1,0 +1,60 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import styles from './translend-shell.module.css'
+import { translendFirestore, translendStorage } from '@/lib/translend/firebase/client'
+
+type DocumentRow = { id: string; reference: string; type: string; relatedTo?: string; status?: string; expiry?: string; fileName?: string; fileUrl?: string; fileSize?: number; contentType?: string; createdAt?: unknown; createdBy?: string }
+
+export default function TranslendDocuments({ organizationId, userId }: { organizationId: string; userId: string }) {
+  const [rows, setRows] = useState<DocumentRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+
+  async function load() {
+    setLoading(true); setError('')
+    try {
+      const snapshot = await getDocs(collection(translendFirestore, 'organizations', organizationId, 'documents'))
+      setRows(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })) as DocumentRow[])
+    } catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Unable to load documents.') }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { void load() }, [organizationId])
+
+  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) { setError('Files must be 10 MB or smaller.'); return }
+    setBusy(true); setError(''); setMessage('')
+    const documentRef = doc(collection(translendFirestore, 'organizations', organizationId, 'documents'))
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    try {
+      const storagePath = `organizations/${organizationId}/documents/${documentRef.id}/${safeName}`
+      const storageFile = ref(translendStorage, storagePath)
+      await uploadBytes(storageFile, file, { contentType: file.type || 'application/octet-stream' })
+      const fileUrl = await getDownloadURL(storageFile)
+      await setDoc(documentRef, { reference: documentRef.id.slice(0, 8).toUpperCase(), type: file.type || 'file', relatedTo: '', status: 'active', fileName: file.name, fileUrl, storagePath, fileSize: file.size, contentType: file.type || 'application/octet-stream', createdBy: userId, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+      setMessage(`${file.name} uploaded.`); await load()
+    } catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Upload failed.') }
+    finally { setBusy(false) }
+  }
+
+  async function remove(row: DocumentRow) {
+    if (!window.confirm(`Remove ${row.fileName || row.reference}?`)) return
+    setError(''); setMessage('')
+    try { await deleteDoc(doc(translendFirestore, 'organizations', organizationId, 'documents', row.id)); setMessage('Document record removed.'); await load() }
+    catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Unable to remove document.') }
+  }
+
+  return <section className={styles.panel}>
+    <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Secure company files</span><h2>Documents</h2><p style={{ marginTop: 5, color: '#718188', fontSize: 11 }}>Real Firebase Storage files with organization-scoped metadata. Maximum file size: 10 MB.</p></div><label className={styles.primaryButton} style={{ display: 'inline-flex', alignItems: 'center', cursor: busy ? 'wait' : 'pointer', opacity: busy ? .6 : 1 }}>{busy ? 'Uploading…' : '+ Upload document'}<input type="file" hidden disabled={busy} onChange={(event) => void upload(event)} /></label></div>
+    {error && <div style={{ margin: '0 18px 14px', padding: 10, borderRadius: 8, background: '#fff1f1', color: '#9b3030', fontSize: 12 }}>{error}</div>}
+    {message && <div style={{ margin: '0 18px 14px', padding: 10, borderRadius: 8, background: '#edf8f5', color: '#167d69', fontSize: 12 }}>{message}</div>}
+    <div className={styles.tableWrap}>{loading ? <div style={{ padding: 34, textAlign: 'center', color: '#718188' }}>Loading documents…</div> : rows.length === 0 ? <div style={{ padding: 34, textAlign: 'center', color: '#718188' }}>No company documents yet. Upload a licence, POD, invoice attachment, compliance certificate or other operational file.</div> : <table className={styles.table}><thead><tr><th>File</th><th>Type</th><th>Status</th><th>Size</th><th>Action</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><strong>{row.fileName || row.reference}</strong></td><td>{row.contentType || row.type}</td><td>{row.status || 'active'}</td><td>{row.fileSize ? `${(row.fileSize / 1024 / 1024).toFixed(2)} MB` : '—'}</td><td>{row.fileUrl && <a className={styles.textButton} href={row.fileUrl} target="_blank" rel="noreferrer">Open</a>}<button className={styles.textButton} onClick={() => void remove(row)} style={{ marginLeft: 8 }}>Remove</button></td></tr>)}</tbody></table>}</div>
+  </section>
+}
