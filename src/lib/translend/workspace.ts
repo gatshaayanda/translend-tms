@@ -1,10 +1,10 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, where, query } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { translendFirestore } from '@/lib/translend/firebase/client'
 
 export type TranslendRole = 'owner' | 'operations_manager' | 'dispatcher' | 'fleet_manager' | 'finance' | 'driver' | 'viewer'
 export type TranslendOrganization = { id: string; name: string; country?: string; currency?: string; timezone?: string; ownerId: string }
 export type TranslendUserProfile = { uid: string; displayName?: string | null; email?: string | null; photoURL?: string | null; organizationId?: string | null; role?: TranslendRole | null }
-export type TranslendInvitation = { id: string; email: string; organizationId: string; role: TranslendRole; invitedBy: string; createdAt?: unknown; updatedAt?: unknown }
+export type TranslendInvitation = { id: string; email: string; organizationId: string; role: TranslendRole; invitedBy: string; status?: 'pending' | 'accepted'; createdAt?: unknown; updatedAt?: unknown }
 
 export async function getTranslendUserProfile(uid: string) {
   const snapshot = await getDoc(doc(translendFirestore, 'users', uid))
@@ -38,7 +38,7 @@ export async function acceptTranslendInvitation(input: { invitation: TranslendIn
   const memberRef = doc(translendFirestore, 'organizations', invitation.organizationId, 'members', user.uid)
   const userRef = doc(translendFirestore, 'users', user.uid)
   const now = serverTimestamp()
-  await setDoc(memberRef, { uid: user.uid, role: invitation.role, displayName: user.displayName ?? '', email: user.email ?? invitation.email, createdAt: now, updatedAt: now })
+  await setDoc(memberRef, { uid: user.uid, role: invitation.role, invitationId: invitation.id, displayName: user.displayName ?? '', email: user.email ?? invitation.email, createdAt: now, updatedAt: now })
   await setDoc(userRef, { uid: user.uid, displayName: user.displayName ?? '', email: user.email ?? invitation.email, photoURL: user.photoURL ?? '', organizationId: invitation.organizationId, role: invitation.role, updatedAt: now }, { merge: true })
   await deleteDoc(doc(translendFirestore, 'invitations', invitation.id))
   return invitation.organizationId
