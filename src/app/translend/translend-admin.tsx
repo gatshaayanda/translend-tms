@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { addDoc, collection, doc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
 import styles from './translend-shell.module.css'
 import { translendFirestore } from '@/lib/translend/firebase/client'
@@ -19,15 +19,16 @@ export default function TranslendAdmin({ organization, userId }: { organization:
   const [loading, setLoading] = useState(true)
   const [inviting, setInviting] = useState(false)
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true); setError('')
     try {
       const snapshot = await getDocs(collection(translendFirestore, 'organizations', organization.id, 'members'))
       setMembers(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })) as MemberRow[])
     } catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Unable to load organization members.') }
     finally { setLoading(false) }
-  }
-  useEffect(() => { void load() }, [organization.id])
+  }, [organization.id])
+
+  useEffect(() => { void load() }, [load])
 
   async function saveCompany(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setMessage('')
