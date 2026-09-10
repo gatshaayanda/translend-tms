@@ -1,40 +1,14 @@
 rules_version='2';
 service cloud.firestore {
  match /databases/{database}/documents {
-  function signed(){return request.auth!=null;}
-  function self(uid){return signed()&&request.auth.uid==uid;}
-  function member(org){return signed()&&exists(/databases/$(database)/documents/organizations/$(org)/members/$(request.auth.uid));}
-  function role(org){return get(/databases/$(database)/documents/organizations/$(org)/members/$(request.auth.uid)).data.role;}
-  function owner(org){return member(org)&&role(org)=='owner';}
-  function fleetRead(org){return member(org)&&role(org) in ['owner','operations_manager','dispatcher','fleet_manager','viewer'];}
-  function fleetManage(org){return member(org)&&role(org) in ['owner','operations_manager','fleet_manager'];}
-  function opsRead(org){return member(org)&&role(org) in ['owner','operations_manager','dispatcher','fleet_manager','finance','driver','viewer'];}
-  function opsManage(org){return member(org)&&role(org) in ['owner','operations_manager','dispatcher'];}
-  function financeRead(org){return member(org)&&role(org) in ['owner','operations_manager','finance','viewer'];}
-  function financeManage(org){return member(org)&&role(org) in ['owner','finance'];}
-  function fleetCollection(c){return c in ['maintenance','inspections','compliance','tyres','fuel'];}
-  function financeCollection(c){return c in ['expenses','invoices','receipts','statements','rateCards','reports'];}
-  function operationsCollection(c){return c in ['documents'];}
-  function derivedCollection(c){return c in ['profitability','operationalPnl'];}
-  function businessCollection(c){return fleetCollection(c)||financeCollection(c)||operationsCollection(c);}
-
+  function signed(){return request.auth!=null;} function self(uid){return signed()&&request.auth.uid==uid;} function member(org){return signed()&&exists(/databases/$(database)/documents/organizations/$(org)/members/$(request.auth.uid));} function role(org){return get(/databases/$(database)/documents/organizations/$(org)/members/$(request.auth.uid)).data.role;} function owner(org){return member(org)&&role(org)=='owner';}
+  function fleetRead(org){return member(org)&&role(org) in ['owner','operations_manager','dispatcher','fleet_manager','viewer'];} function fleetManage(org){return member(org)&&role(org) in ['owner','operations_manager','fleet_manager'];} function opsRead(org){return member(org)&&role(org) in ['owner','operations_manager','dispatcher','fleet_manager','finance','driver','viewer'];} function opsManage(org){return member(org)&&role(org) in ['owner','operations_manager','dispatcher'];} function financeRead(org){return member(org)&&role(org) in ['owner','operations_manager','finance','viewer'];} function financeManage(org){return member(org)&&role(org) in ['owner','finance'];}
+  function fleetCollection(c){return c in ['maintenance','inspections','compliance','tyres','fuel'];} function financeCollection(c){return c in ['expenses','invoices','receipts','statements','rateCards','reports'];} function operationsCollection(c){return c in ['documents'];} function derivedCollection(c){return c in ['profitability','operationalPnl'];} function businessCollection(c){return fleetCollection(c)||financeCollection(c)||operationsCollection(c);}
   match /users/{uid}{allow read,write:if self(uid);}
-  match /invitations/{id}{
-   allow read:if signed()&&resource.data.status=='pending'&&resource.data.email==request.auth.token.email;
-   allow create:if signed()&&owner(request.resource.data.organizationId)&&request.resource.data.invitedBy==request.auth.uid&&request.resource.data.status=='pending';
-   allow update:if owner(resource.data.organizationId);
-   allow delete:if (signed()&&resource.data.status=='pending'&&resource.data.email==request.auth.token.email)||owner(resource.data.organizationId);
-  }
-
+  match /invitations/{id}{allow read:if signed()&&resource.data.status=='pending'&&resource.data.email==request.auth.token.email;allow create:if signed()&&owner(request.resource.data.organizationId)&&request.resource.data.invitedBy==request.auth.uid&&request.resource.data.status=='pending';allow update:if owner(resource.data.organizationId);allow delete:if (signed()&&resource.data.status=='pending'&&resource.data.email==request.auth.token.email)||owner(resource.data.organizationId);}
   match /organizations/{org}{
-   allow create:if signed()&&request.resource.data.ownerId==request.auth.uid;
-   allow read:if member(org);
-   allow update,delete:if owner(org);
-   match /members/{uid}{
-    allow read:if member(org);
-    allow create:if (signed()&&uid==request.auth.uid&&get(/databases/$(database)/documents/organizations/$(org)).data.ownerId==request.auth.uid&&request.resource.data.role=='owner') || (signed()&&uid==request.auth.uid&&exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId))&&get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.organizationId==org&&get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.email==request.auth.token.email&&get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.role==request.resource.data.role);
-    allow update,delete:if owner(org);
-   }
+   allow create:if signed()&&request.resource.data.ownerId==request.auth.uid; allow read:if member(org); allow update,delete:if owner(org);
+   match /members/{uid}{allow read:if member(org);allow create:if (signed()&&uid==request.auth.uid&&get(/databases/$(database)/documents/organizations/$(org)).data.ownerId==request.auth.uid&&request.resource.data.role=='owner')||(signed()&&uid==request.auth.uid&&exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId))&&get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.organizationId==org&&get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.email==request.auth.token.email&&get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationId)).data.role==request.resource.data.role);allow update,delete:if owner(org);}
    match /customers/{id}{allow read:if member(org);allow create:if member(org)&&request.resource.data.createdBy==request.auth.uid;allow update:if member(org)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if owner(org);}
    match /trucks/{id}{allow read:if fleetRead(org);allow create:if fleetManage(org)&&request.resource.data.createdBy==request.auth.uid;allow update:if fleetManage(org)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if owner(org)||role(org)=='fleet_manager';}
    match /drivers/{id}{allow read:if fleetRead(org);allow create:if fleetManage(org)&&request.resource.data.createdBy==request.auth.uid;allow update:if fleetManage(org)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if owner(org)||role(org)=='fleet_manager';}
@@ -46,12 +20,7 @@ service cloud.firestore {
    match /pods/{id}{allow read:if opsRead(org);allow create:if opsManage(org)&&request.resource.data.createdBy==request.auth.uid;allow update:if opsManage(org)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if owner(org)||role(org)=='operations_manager';}
    match /exceptions/{id}{allow read:if opsRead(org);allow create:if opsManage(org)&&request.resource.data.createdBy==request.auth.uid;allow update:if opsManage(org)&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if owner(org)||role(org)=='operations_manager';}
    match /audit/{id}{allow read:if owner(org)||role(org)=='operations_manager';allow create:if member(org)&&request.resource.data.userId==request.auth.uid;allow update,delete:if owner(org);}
-   match /{collection}/{id}{
-    allow read:if (fleetCollection(collection)&&fleetRead(org))||(financeCollection(collection)&&financeRead(org))||(operationsCollection(collection)&&member(org))||(derivedCollection(collection)&&financeRead(org));
-    allow create:if businessCollection(collection)&&((fleetCollection(collection)&&fleetManage(org))||(financeCollection(collection)&&financeManage(org))||(operationsCollection(collection)&&(owner(org)||opsManage(org))))&&request.resource.data.createdBy==request.auth.uid;
-    allow update:if businessCollection(collection)&&((fleetCollection(collection)&&fleetManage(org))||(financeCollection(collection)&&financeManage(org))||(operationsCollection(collection)&&(owner(org)||opsManage(org))))&&request.resource.data.createdBy==resource.data.createdBy;
-    allow delete:if businessCollection(collection)&&((fleetCollection(collection)&&(owner(org)||role(org)=='fleet_manager'))||(financeCollection(collection)&&(owner(org)||role(org)=='finance'))||(operationsCollection(collection)&&owner(org)));
-   }
+   match /{collection}/{id}{allow read:if (fleetCollection(collection)&&fleetRead(org))||(financeCollection(collection)&&financeRead(org))||(operationsCollection(collection)&&member(org))||(derivedCollection(collection)&&financeRead(org));allow create:if businessCollection(collection)&&((fleetCollection(collection)&&fleetManage(org))||(financeCollection(collection)&&financeManage(org))||(operationsCollection(collection)&&(owner(org)||opsManage(org))))&&request.resource.data.createdBy==request.auth.uid;allow update:if businessCollection(collection)&&((fleetCollection(collection)&&fleetManage(org))||(financeCollection(collection)&&financeManage(org))||(operationsCollection(collection)&&(owner(org)||opsManage(org))))&&request.resource.data.createdBy==resource.data.createdBy;allow delete:if businessCollection(collection)&&((fleetCollection(collection)&&(owner(org)||role(org)=='fleet_manager'))||(financeCollection(collection)&&(owner(org)||role(org)=='finance'))||(operationsCollection(collection)&&(owner(org)||resource.data.createdBy==request.auth.uid)));}
   }
   match /{document=**}{allow read,write:if false;}
  }
