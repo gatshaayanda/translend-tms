@@ -1,16 +1,13 @@
 rules_version = '2';
 service firebase.storage {
-  match /b/{bucket}/o {
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    match /organizations/{orgId}/{allPaths=**} {
-      allow read, write: if false;
-    }
-
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
-  }
+ match /b/{bucket}/o {
+  function signed(){return request.auth != null;}
+  function member(org){return signed() && firestore.exists(/databases/(default)/documents/organizations/$(org)/members/$(request.auth.uid));}
+  function role(org){return firestore.get(/databases/(default)/documents/organizations/$(org)/members/$(request.auth.uid)).data.role;}
+  function canManage(org){return member(org) && role(org) in ['owner','operations_manager','fleet_manager','finance'];}
+  match /users/{userId}/{allPaths=**}{allow read,write:if signed()&&request.auth.uid==userId;}
+  match /organizations/{orgId}/documents/{documentId}/{fileName}{allow read:if member(orgId);allow write:if canManage(orgId)&&request.resource.size<10*1024*1024;allow delete:if member(orgId)&&role(orgId)=='owner';}
+  match /organizations/{orgId}/{allPaths=**}{allow read:if member(orgId);allow write:if false;}
+  match /{allPaths=**}{allow read,write:if false;}
+ }
 }
