@@ -6,7 +6,7 @@ service firebase.storage {
   function role(org){return firestore.get(/databases/(default)/documents/organizations/$(org)/members/$(request.auth.uid)).data.role;}
   function canManage(org){return member(org) && role(org) in ['owner','operations_manager','fleet_manager','finance'];}
   match /users/{userId}/{allPaths=**}{allow read,write:if signed()&&request.auth.uid==userId;}
-  match /organizations/{orgId}/documents/{documentId}/{fileName}{allow read:if member(orgId);allow write:if canManage(orgId)&&request.resource.size<10*1024*1024;allow delete:if member(orgId)&&role(orgId)=='owner';}
+  match /organizations/{orgId}/documents/{documentId}/{fileName}{allow read:if member(orgId);allow write:if canManage(orgId)&&request.resource.size<10*1024*1024;allow delete:if member(orgId)&&(role(orgId) in ['owner','operations_manager','fleet_manager','finance']);}
   match /organizations/{orgId}/{allPaths=**}{allow read:if member(orgId);allow write:if false;}
   match /{allPaths=**}{allow read,write:if false;}
  }
