@@ -1,12 +1,12 @@
 # Translend TMS · Truck Division — Agent Operating Contract
 
 ## Product
-Translend is an independent transport management application for the Truck Division. The current product goal is to answer: what is moving, what needs attention, what is costing money, and what can be billed.
+Translend is an independent transport management application for the Truck Division. The product goal is to answer: what is moving, what needs attention, what is costing money, and what can be billed.
 
 ## Current phase
-Independent foundation + verified v19-inspired application shell. Business modules are explicitly out of scope until this foundation is verified.
+Working MVP. The v19-inspired application shell is now the usable workspace surface. The MVP includes Google sign-in/demo entry, dashboard navigation, core record entry and deletion, local browser persistence, and clear demo/workspace labelling. Firebase-backed persistent business data, organisation tenancy, and advanced workflows remain the next implementation layer.
 
-Do not create Trucks, Drivers, Jobs, Dispatch, Trips, Deliveries, Fuel, Maintenance, Invoices, accounting, or other business functionality in this phase.
+Demo data must always be labelled as demo data and must never be described as live company operations.
 
 ## Source checkpoint
 The independence migration is derived from the verified Translend foundation/shell on `gatshaayanda/adminhub-global`, branch `feature/translend-foundation`, beginning at foundation commit `7a933e04fa9be9ed4344a4555b730e2811f38185` and subsequent shell commits. AdminHub Global `main` is a separate stable project and must not be modified as part of this migration.
@@ -21,21 +21,24 @@ The independence migration is derived from the verified Translend foundation/she
 - Vercel deployment is independent of AdminHub Global
 
 ## Authentication
-Firebase Authentication is the only planned identity provider for Translend foundation. Google Sign-In is explicitly supported. Browser authentication obtains a Firebase ID token; protected server routes verify that token with the Translend Firebase Admin SDK before authorization is evaluated.
+Firebase Authentication is the planned identity provider for Translend. Google Sign-In is supported and the main `/translend` route now gates entry behind a Google sign-in or clearly labelled demo workspace. Browser authentication obtains a Firebase ID token; the protected server verification route validates that token with the Translend Firebase Admin SDK.
 
 Google OAuth configuration belongs to the Translend Firebase project only. Authorized domains must include the actual local/production domains used by Translend. Never reuse AdminHub OAuth credentials or domains merely because they already exist there.
+
+## MVP data state
+The current working MVP stores entered records in browser localStorage so the product can be used immediately without pretending that an unverified Firestore organisation model is live. Core areas include Jobs, Dispatch, Trips, Deliveries, Routes, Trucks, Drivers, Maintenance, Inspections, Compliance, Tyres, Fuel, Customers, Rate Cards, Invoices, Receipts, Statements, Expenses, Profitability, Operational P&L, Documents, Reports, and Settings. Areas without a specialised workflow currently use a consistent record-management surface.
+
+The next data-layer phase should move authenticated business records into a deliberate Translend Firestore contract with organisation isolation, audit/authorship metadata, capability-based rules, and server-side verification. Do not casually expose or migrate demo records into production data.
 
 ## Security boundaries
 Never copy AdminHub production Firebase configuration, service-account credentials, OAuth secrets, Firestore data, Basic Auth, business routes, or AdminHub-specific service-worker behavior.
 
 `NEXT_PUBLIC_FIREBASE_*` values identify the Translend web app. `FIREBASE_ADMIN_KEY` is server-only and must never be committed.
 
-Firestore and Storage default to deny. Organization/business access rules are intentionally not implemented until business data contracts exist.
+Firestore and Storage remain default-deny until the business data contracts and authorisation rules are deliberately implemented.
 
-## Product-direction checkpoint (documented, not yet implemented)
-The following decisions are product direction only. They must guide future design and data contracts but must not be treated as implemented functionality until the relevant features are deliberately built and verified.
-
-1. Users have role-based starting dashboards, but dashboards are not isolated mini-apps. Navigation allows users to move into other areas according to their permissions.
+## Product-direction checkpoint
+1. Users have role-based starting dashboards, but dashboards are not isolated mini-apps. Navigation allows users to move into other areas according to permissions.
 2. A user's role determines their normal starting view and permissions; the role does not own the business data.
 3. Records should retain authorship metadata: who created or reported the record, their role at the time where appropriate, timestamp, and later updater/reviewer information where applicable.
 4. Business records belong to the relevant business object/job/trip/delivery/etc. The person entering information is the author, not the owner of that business record.
@@ -45,8 +48,6 @@ The following decisions are product direction only. They must guide future desig
 8. Platform administration and customer organisation administration are separate concepts.
 9. Platform Admin should eventually provide appropriate visibility into organisations, users, usage, application analytics, system health, errors and related platform information, while customer private operational data remains properly protected.
 10. Vercel/Firebase/platform analytics are infrastructure/product administration concerns and must not be confused with customer trucking data.
-
-These decisions do not authorize implementation of dashboards, administration features, analytics, authorship fields, demo-data tooling, or business modules during the current foundation phase.
 
 ## Quality gates
 Do not inherit AdminHub's build-error suppression. `npx tsc --noEmit`, `npm run lint`, `npm run build`, deployment verification, and browser verification are real gates. Do not declare success from source inspection alone.
@@ -68,5 +69,5 @@ When continuing work, report:
 - relevant implementation state
 - next controlled action
 
-## Current migration state
-The independent GitHub repository has been established. The Translend Firebase project identifier is `translend-tms-dcd2a` and the supplied Web App configuration is recorded in `.env.example`. Firebase Console enablement of Google Sign-In, Admin service credentials, Vercel environment variables, and end-to-end deployment verification remain external configuration/verification gates until confirmed.
+## Current configuration state
+The independent GitHub repository is established. The Translend Firebase project identifier is `translend-tms-dcd2a` and the supplied Web App configuration is recorded in `.env.example`. Firebase Console Google Sign-In enablement, Admin service credentials, Vercel environment variables, and end-to-end production deployment/browser verification remain external verification gates until confirmed.
