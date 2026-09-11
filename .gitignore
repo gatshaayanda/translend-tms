@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env.local
+.env*.local
+.vercel/
+firebase-debug.log
+firestore-debug.log
+storage-debug.log
+*.log
+.DS_Store
