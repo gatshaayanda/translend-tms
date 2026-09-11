@@ -2,9 +2,11 @@
 
 ## 1. Purpose
 
-Translend TMS is a real trucking-company transport management system, not a visual demo. It is being built for real trucking operations and must progressively cover customers, trucks, drivers, jobs, trips, deliveries, delivery notes/POD, commercial operations, invoicing, fleet operations, reporting, company administration, and branded business documents.
+Translend TMS is a real trucking-company transport management system, not a visual demo. It is being built for real trucking operations. The product must progressively cover customers, trucks, drivers, jobs, trips, deliveries, Delivery Notes/POD, commercial operations, invoicing, fleet operations, reporting, company administration, and branded business documents.
 
 The current implementation has a working authenticated company/workspace and a real operational vertical slice. The objective is controlled production hardening followed by expansion into the remaining TMS domains.
+
+This project is intentionally different from the user's other web products. Do not force Translend into a generic CRUD/SaaS pattern. The trucking workflow, real paperwork, dispatch/delivery chain, POD, invoicing, fleet, and operational visibility are the product.
 
 ---
 
@@ -12,7 +14,7 @@ The current implementation has a working authenticated company/workspace and a r
 
 - GitHub: `https://github.com/gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Known checkpoint when this document was created: `24bed21`
+- Latest known checkpoint before this document revision: `24bed21`
 - Local authoritative working project remains the existing Windows rebuild workspace. Do not move or restructure it.
 - Do not initialise another Git repository.
 - Do not restart the application from scratch.
@@ -45,11 +47,13 @@ Golden rule:
 
 > If reality differs from expectation: STOP, inspect the actual state, determine why, then make the smallest correct change.
 
+Every coding session must begin by reading this file and inspecting the actual current repository state. Conversation memory is not implementation truth; the repository is.
+
 Never guess repository state, patch an old iteration, recreate working architecture unnecessarily, weaken security to make a feature work, or claim something works without verification.
 
 Before every substantial change:
 
-1. Inspect the actual current source and infrastructure state.
+1. Inspect actual source and infrastructure state.
 2. Identify the exact implementation path.
 3. Make one controlled change.
 4. Inspect the diff.
@@ -67,7 +71,7 @@ The real product flow is:
 
 A user may create their own workspace or be invited to an existing workspace.
 
-For an invitation to work, the authenticated Google/Gmail identity must match the intended invited account and the membership must be correctly created/active.
+For an invitation to work, the authenticated Google/Gmail identity must match the intended invited account and the membership must be correctly created and active.
 
 If an invited user cannot enter a workspace, inspect:
 
@@ -81,13 +85,13 @@ If an invited user cannot enter a workspace, inspect:
 
 Do not create an access bypass or weaken authorization.
 
-### Important clarification about Admin
+### Admin clarification
 
 There is **no separate platform-super-admin architecture requirement**.
 
-The contracting company/person needs an authenticated administrative/management area so they can see how their company's Translend system is performing and manage the company's workspace as appropriate.
+The person contracting the application needs authenticated administrative/management visibility into their company's Translend workspace so they can see how the application is performing and manage the company workspace as appropriate.
 
-This remains part of the normal company/workspace model. Do not invent a second authentication hierarchy or unrelated admin product layer unless explicitly requested later.
+This remains part of the normal company/workspace model. Do not invent a second authentication hierarchy or unrelated platform-admin product layer unless explicitly requested later.
 
 ---
 
@@ -97,8 +101,13 @@ The following real workflow exists and must be preserved:
 
 **Google user → user profile → organization → owner membership → secure Firestore workspace → Control Tower → Customers → Trucks → Drivers → Jobs → Trips → Deliveries**
 
-Currently working/substantially working in the real workspace:
+Currently working/substantially working:
 
+- authentication
+- workspace/company creation and access
+- organization membership
+- Firestore workspace isolation
+- Control Tower
 - Customers: real Firestore list/search/create
 - Trucks: real Firestore list/create
 - Drivers: real Firestore roster/create
@@ -106,11 +115,14 @@ Currently working/substantially working in the real workspace:
 - Trips: job + truck + driver → trip
 - Trips: status progression
 - Deliveries: delivery records + POD workflow structure
-- Control Tower: real workspace status/data
-
-This is a real early operational product, not seeded-only demo behavior.
+- core organization-scoped repository
+- environment separation
+- role-aware rules foundation
+- Vercel deployment
 
 Creation works. Complete user-facing edit/delete is not yet finished.
+
+This is a real early operational product, not seeded-only demo behavior.
 
 ---
 
@@ -131,7 +143,7 @@ The generic organization-scoped repository supports create, update, list, subscr
 
 ## 7. Current Hardening Priorities
 
-### Priority 1 — Firestore indexes
+### 7.1 Firestore indexes
 
 Inspect actual local and Firebase state.
 
@@ -141,22 +153,13 @@ Known discrepancy:
 - `firestore.indexes.json` was not present in the known GitHub state at checkpoint `24bed21`.
 - `firebase.json` did not currently reference an indexes file.
 
-Do not blindly recreate indexes. Determine the actual state first and make infrastructure reproducible.
+Do not blindly recreate indexes. Determine actual state first and make infrastructure reproducible.
 
-### Priority 2 — Firebase Storage / POD upload
+### 7.2 Firebase Storage / POD upload
 
 There is a real deployed runtime CORS failure when uploading POD files from the Vercel application.
 
-Investigate:
-
-- actual Storage bucket
-- Firebase client configuration
-- Storage helper
-- Storage rules
-- authenticated user state
-- active organization membership
-- deployed origin
-- bucket CORS configuration
+Investigate actual Storage bucket, Firebase client configuration, Storage helper, Storage rules, authenticated user state, active organization membership, deployed origin, and bucket CORS configuration.
 
 Required result:
 
@@ -164,19 +167,19 @@ Required result:
 
 Do not make Storage public merely to bypass the problem.
 
-### Priority 3 — Vercel Analytics
+### 7.3 Vercel Analytics
 
-Inspect the application/package state and integrate Vercel Analytics if it is still absent.
+Inspect application/package state and integrate Vercel Analytics if still absent.
 
-### Priority 4 — CRUD completion
+### 7.4 CRUD completion
 
 Complete safe user-facing edit/archive/delete behavior where appropriate. The repository already has update and soft-delete capability.
 
-### Priority 5 — Firestore rules cleanup
+### 7.5 Firestore rules cleanup
 
 Clean deployment warnings without weakening organization isolation or role-based access.
 
-### Priority 6 — End-to-end verification
+### 7.6 End-to-end verification
 
 Verify:
 
@@ -188,20 +191,15 @@ Verify refresh, navigation, authentication, Firestore reads/writes, deployed beh
 
 # 8. REAL BUSINESS DOCUMENT REQUIREMENTS
 
-The contracting company supplied real Delivery Note and Tax Invoice content. These are now business requirements. Do not design these workflows purely from generic TMS assumptions.
+The contracting company supplied real Delivery Note and Tax Invoice content. These are business requirements. Do not design these workflows purely from generic TMS assumptions.
 
 ## 8.1 Delivery Note
 
-A Translend Delivery Note needs to support:
-
-### Header
+Support:
 
 - Delivery Note number
 - Date
 - Time
-
-### Company / transport details
-
 - Company details
 - Supplied To
 - Vehicle Registration
@@ -209,61 +207,42 @@ A Translend Delivery Note needs to support:
 - Driver Name
 - Order No. / POD Ref.
 - Loading Point
-
-### Delivery lines
-
-A delivery note may contain multiple lines. Each line can contain:
-
-- line number
+- multiple delivery/material lines
 - material delivered
 - arrival
 - departure
 - quantity
-- driver sign
-- foreman sign
-
-The system should eventually support structured material/delivery line items rather than treating a delivery as one undifferentiated value.
-
-### Receipt acknowledgement
-
-- Received by name
-- Receiver signature
-- Receiver cell/contact
-
-### Delivery condition/discrepancies
-
-The workflow must accommodate:
-
+- driver signature
+- foreman signature
+- received-by name
+- receiver signature
+- receiver cell/contact
 - shortages
 - damages
 - discrepancies
 - notes/evidence
 
----
+A delivery note may contain multiple material lines. Model these structurally; do not reduce the document to a single free-text delivery field.
 
 ## 8.2 POD
 
-POD is more than a single file upload.
+POD is more than one file URL.
 
 Conceptually:
 
 **Job → Trip → Delivery → Delivery Note → delivery lines → acknowledgement/signatures → POD evidence → exceptions/discrepancies → invoice eligibility**
 
-POD evidence may initially be:
+POD evidence may initially be photos, PDFs/documents, and signed delivery-note files. Digital signature capture can be added later.
 
-- photos
-- PDFs/documents
-- signed delivery-note files
-
-Digital signature capture can be added later. The immediate priority remains fixing the existing secure Firebase Storage upload.
+The immediate priority remains fixing the existing secure Firebase Storage upload.
 
 ---
 
-# 9. Branded PDF Generation
+# 9. BRANDED PDF GENERATION
 
-Branded PDF generation is a core product capability for appropriate business documents.
+Branded PDF generation is a core product capability, not an optional reporting feature.
 
-The application should eventually generate professional PDFs for:
+Eventually generate professional PDFs for:
 
 - Delivery Notes
 - POD/delivery documentation where appropriate
@@ -278,9 +257,7 @@ Principle:
 
 Generated PDFs should follow the contracting company's real paperwork, terminology, and professional presentation rather than being generic SaaS documents.
 
-### Document settings should eventually be configurable
-
-Relevant company/admin settings can include:
+Document/company settings should eventually support:
 
 - company name
 - logo
@@ -299,15 +276,13 @@ Relevant company/admin settings can include:
 
 Do not hardcode sensitive financial details into frontend source.
 
-If original visual document files become available later, use them as visual references without changing the underlying business requirements.
-
 ---
 
-# 10. Invoice Requirements
+# 10. INVOICE REQUIREMENTS
 
 The supplied Translend invoice contains:
 
-### Invoice identity
+### Identity
 
 - Date
 - Invoice number
@@ -332,9 +307,9 @@ The supplied Translend invoice contains:
 
 ### Invoice notes
 
-The supplied document includes requirements around:
+The supplied document includes:
 
-- claims/discrepancies being reported within 48 hours of delivery
+- claims/discrepancies reported within 48 hours of delivery
 - quantities based on load measurements unless otherwise agreed
 - prices exclusive of VAT
 - delivery acknowledgement by site representative signature and/or company stamp
@@ -342,7 +317,7 @@ The supplied document includes requirements around:
 
 Treat these as configurable business-document requirements rather than unnecessarily hardcoding them.
 
-### Invoice lines
+### Lines
 
 - item
 - date
@@ -358,19 +333,13 @@ Treat these as configurable business-document requirements rather than unnecessa
 - bank/payment details
 - invoice payment reference
 
-Default business currency: **BWP**
+Default business currency: **BWP**.
 
-Payment terms must support:
-
-- EOM
-- NET days
-- custom terms where appropriate
-
-The supplied business uses E.O.M. as a real payment-term example.
+Payment terms must support EOM, NET days, and custom terms where appropriate. The supplied business uses E.O.M. as a real payment-term example.
 
 ---
 
-# 11. Invoice / Delivery Relationship
+# 11. INVOICE / DELIVERY RELATIONSHIP
 
 The invoice explicitly references Delivery Note numbers.
 
@@ -384,9 +353,9 @@ Do not build invoices as isolated manual forms if operational data can support s
 
 ---
 
-# 12. Delivery Exceptions
+# 12. DELIVERY EXCEPTIONS
 
-The system should eventually support structured exceptions including:
+Eventually support structured exceptions including:
 
 - shortage
 - damage
@@ -397,20 +366,119 @@ The system should eventually support structured exceptions including:
 - vehicle issue
 - other
 
-Each exception may eventually include:
+Each exception may include description, reported by/at, evidence/photos/documents, status, and resolution.
 
-- description
-- reported by
-- reported at
-- evidence/photos/documents
-- status
-- resolution
-
-Do not overbuild this before the existing delivery/POD flow is stable.
+Do not overbuild this before delivery/POD is stable.
 
 ---
 
-# 13. Commercial Expansion
+# 13. REFERENCE REPOSITORIES — USE AS ENGINEERING/PRODUCT CONTEXT
+
+These are the user's own reference repositories. They are not permission to copy unrelated architecture. Inspect them when a question overlaps their strengths.
+
+### AdminHub Global
+
+`https://github.com/gatshaayanda/adminhub-global`
+
+Use as a reference for the user's established admin/dashboard patterns, reusable Next.js conventions, and product-system approach.
+
+### Accessibility Canvas
+
+`https://github.com/gatshaayanda/accessibility-canvas`
+
+Use as a reference for accessibility-conscious UI, interaction quality, semantic structure, and accessible product patterns. Accessibility is part of Translend quality, not a final cosmetic pass.
+
+### PurePress / current product reference
+
+`https://github.com/gatshaayanda/purepress`
+
+The current repository content identifies this as the BoardSignal v10 product source, including persistent authenticated rooms, operational admin controls, Firebase patterns, PWA support, analytics, testing, security boundaries, and explicit acceptance checks. Use it as a reference for mature product discipline, not as a source for transplanting chess-specific functionality.
+
+Reference principle:
+
+**AdminHub = reusable product/admin foundation patterns**
+
+**Accessibility Canvas = accessibility/interaction quality reference**
+
+**PurePress/BoardSignal = mature product operations, testing, Firebase/PWA/security and acceptance-check discipline**
+
+**Translend = its own trucking-domain architecture and source of truth**
+
+---
+
+# 14. COMPETITOR / MARKET BENCHMARK
+
+Before major feature decisions, check current leading fleet/TMS products online. The goal is not to clone them; it is to ensure Translend does not omit the obvious capabilities a real trucking operator now expects.
+
+Recent benchmark research indicates that leading products such as Motive and Samsara increasingly combine dispatch, driver workflows, stop-level task completion, document/signature capture, real-time operational visibility, maintenance, inspections, compliance, fuel, alerts, reporting, and customer visibility.
+
+Relevant current examples:
+
+- Motive driver workflows guide drivers through stops, can automatically record arrival/departure with geofencing, collect documents/signatures, and support custom forms. citeturn0search0turn0search3
+- Motive Dispatch provides job creation/import, route planning, resource assignment, real-time dispatch tracking, driver-submitted notes/photos/signatures, customer tracking links/ETAs, and dispatch reporting/alerts. citeturn0search7turn0search15
+- Motive's current driver experience combines dispatch, compliance, inspections, documents/qualifications, POD, safety, timecards, and messaging. citeturn0search2
+- Samsara's current platform includes maintenance, routing/dispatch, compliance, fuel, documents/workflows, reports, issues, notifications and alerts. citeturn0search17
+- Samsara's workflow/document tooling emphasizes digital POD, trip sheets, digital signatures, document capture, alerts, and a unified operations view. citeturn0search11
+- Samsara maintenance connects defects/inspections to work orders, cost tracking, vendor performance and asset uptime. citeturn0search4
+
+### Translend benchmark rule
+
+For every major domain, ask:
+
+> What is the obvious real-world job the operator is trying to accomplish, and what would a serious current competitor already make easy?
+
+Then build the smallest Translend-native version that solves that job well.
+
+Do not add features merely because a competitor has them. Add them when they directly improve the trucking workflow, reduce manual work, improve visibility, protect data, or improve billing/operational accuracy.
+
+### High-value capabilities to benchmark and progressively cover
+
+1. Dispatch board / operational control tower
+2. Driver mobile workflow
+3. Stop-by-stop status
+4. Arrival/departure capture
+5. POD and signature capture
+6. Customer/job/order visibility
+7. Route/dispatch planning
+8. Exceptions and alerts
+9. Vehicle inspections
+10. Maintenance and defects
+11. Compliance/document expiry
+12. Fuel and operating cost tracking
+13. Driver/vehicle utilization
+14. Customer updates / tracking where practical
+15. Invoicing tied to completed operational work
+16. Receivables/statements
+17. Reporting and profitability
+18. Audit/history
+19. Offline/mobile resilience where operationally valuable
+20. Accessible, simple, low-friction interfaces
+
+Translend does not need expensive telematics or every enterprise feature to be credible. It does need to make the core operational chain exceptionally obvious and reliable.
+
+---
+
+# 15. PRODUCT PRINCIPLE: MAKE THE OBVIOUS THING OBVIOUS
+
+The UI should make the next operational action obvious.
+
+Examples:
+
+- A dispatcher should immediately see what needs attention.
+- A driver should immediately know the next stop/task.
+- A delivery should immediately show whether POD is complete.
+- A manager should immediately see what is delayed, missing, or at risk.
+- A completed delivery should clearly become invoice-ready when business conditions are met.
+- A customer record should connect clearly to jobs, trips, deliveries and invoices.
+- A truck should make its current status, defects, maintenance and availability understandable.
+
+Prefer exception-first visibility over dashboards full of decorative metrics.
+
+Use clear statuses, actionable empty states, direct next actions, and meaningful history.
+
+---
+
+# 16. COMMERCIAL EXPANSION
 
 After operational hardening and Delivery Note/POD refinement, build:
 
@@ -428,7 +496,7 @@ Invoices should be based on actual completed/approved operational records where 
 
 ---
 
-# 14. Fleet Expansion
+# 17. FLEET EXPANSION
 
 After the core operational spine is reliable:
 
@@ -442,7 +510,7 @@ These should integrate with real trucks, drivers, and trips rather than becoming
 
 ---
 
-# 15. Operations Expansion
+# 18. OPERATIONS EXPANSION
 
 Future operations work includes:
 
@@ -453,10 +521,13 @@ Future operations work includes:
 - POD robustness
 - exceptions
 - operational status visibility
+- driver-facing workflows
+- useful alerts/notifications
+- customer-facing progress visibility where practical
 
 ---
 
-# 16. Platform / Product Hardening
+# 19. PRODUCT HARDENING
 
 Future hardening includes:
 
@@ -467,13 +538,16 @@ Future hardening includes:
 - automated tests
 - production error/loading/empty states
 - mobile/PWA refinement
+- offline-safe workflows where appropriate
 - Cloud Functions only where genuinely necessary
 
 Do not add backend complexity simply because it is available. Prefer processing on-device where practical and safe.
 
+Accessibility should be treated as a quality gate, not a last-minute polish pass.
+
 ---
 
-# 17. Current Scope Status
+# 20. CURRENT SCOPE STATUS
 
 ### Working / substantially working
 
@@ -514,6 +588,8 @@ Do not add backend complexity simply because it is available. Prefer processing 
 - tyres
 - fuel
 - richer routes/dispatch
+- driver-facing workflow
+- customer tracking/updates where appropriate
 - reports
 - documents
 - audit/activity
@@ -523,67 +599,82 @@ Do not add backend complexity simply because it is available. Prefer processing 
 
 ---
 
-# 18. Build Philosophy
+# 21. STRATEGIC BUILD ORDER
 
-Translend must feel like a real operational system.
+Use Claude aggressively for the largest safe contiguous work packages, but every package must still follow START → INSPECT → BUILD → VERIFY → CHECKPOINT.
 
-Prefer:
+Unless inspection reveals a dependency/blocker, use this order:
 
-- simple workflows
-- clear terminology
-- useful defaults
-- real business records
-- secure workspace isolation
-- traceable data
-- professional documents
-- reliable mobile-friendly operation
+### Phase A — Foundation hardening
 
-Avoid:
+1. Inspect actual repository/infrastructure state.
+2. Resolve Firestore index discrepancy.
+3. Fix Firebase Storage/POD upload.
+4. Integrate/verify Vercel Analytics.
+5. Complete edit/delete lifecycle.
+6. Clean Firestore rules warnings.
+7. End-to-end verify current operational spine.
+8. Checkpoint.
 
-- unnecessary jargon
-- fake dashboards
-- mock-only workflows presented as real
-- duplicate architecture
-- speculative abstractions
-- overengineering
-- rebuilding functioning components
-- generic workflows that contradict supplied company paperwork
+### Phase B — Real delivery workflow
 
-The system should become more capable without becoming unnecessarily complicated.
+9. Upgrade Delivery into a first-class Delivery Note workflow.
+10. Add structured material/delivery lines.
+11. Add acknowledgement/signature/evidence handling.
+12. Add structured exceptions.
+13. Make POD reliable and obvious.
+14. Add branded Delivery Note/POD PDF generation.
+15. Checkpoint.
 
----
+### Phase C — Commercial workflow
 
-# 19. Strategic Build Order
+16. Add rate cards/job rates.
+17. Add expenses.
+18. Build invoice generation from completed/approved deliveries.
+19. Add branded Tax Invoice PDFs.
+20. Add receipts and payment tracking.
+21. Add statements/receivables.
+22. Add profitability/P&L.
+23. Checkpoint.
 
-Execute in this order unless inspection reveals a more urgent dependency/blocker:
+### Phase D — Fleet and dispatch
 
-1. Inspect actual repository/infrastructure state
-2. Resolve Firestore index discrepancy
-3. Fix Firebase Storage/POD upload
-4. Integrate/verify Vercel Analytics
-5. Complete edit/delete lifecycle
-6. Clean Firestore rules warnings
-7. End-to-end verify current operational spine
-8. Checkpoint
-9. Upgrade Delivery → Delivery Note → POD workflow
-10. Add branded PDF document generation
-11. Build Commercial / Invoice workflow
-12. Build company owner/admin visibility and configuration
-13. Expand Fleet
-14. Expand Operations
-15. Reports, audit, documents, testing and final production hardening
+24. Maintenance.
+25. Inspections/defects.
+26. Compliance/expiry visibility.
+27. Tyres.
+28. Fuel.
+29. Better dispatch board.
+30. Driver-facing/mobile workflow.
+31. Route/stop progression and useful alerts.
+32. Customer progress visibility where practical.
+33. Checkpoint.
+
+### Phase E — Production excellence
+
+34. Reports.
+35. Audit/activity.
+36. Documents.
+37. Automated tests.
+38. Accessibility verification.
+39. Offline/mobile resilience where appropriate.
+40. Performance, loading, empty and error states.
+41. Security review.
+42. Final end-to-end production verification.
 
 The order can change only when actual inspection demonstrates a dependency or blocker.
 
 ---
 
-# 20. Agent Handoff Rule
+# 22. AGENT HANDOFF RULE
 
 Every coding agent must begin by reading this document and inspecting the actual repository state.
 
-Do not assume that a prior patch, screenshot, conversation summary, or remembered architecture is newer than the current repository.
+Do not assume that a prior patch, screenshot, conversation summary, remembered architecture, or competitor feature list is newer than the current repository.
 
 The current repository is the implementation truth.
+
+Competitor research is a benchmark, not an instruction to clone another product.
 
 When uncertain:
 
@@ -593,9 +684,27 @@ When uncertain:
 
 ## Important Reference Links
 
+### Translend
+
 - Repository: https://github.com/gatshaayanda/translend-tms
 - Firebase project: https://console.firebase.google.com/project/translend-tms-dcd2a/overview
-- Firebase Firestore indexes: https://console.firebase.google.com/project/translend-tms-dcd2a/firestore/indexes
-- Vercel application: https://translend-tms.vercel.app/
+- Firestore indexes: https://console.firebase.google.com/project/translend-tms-dcd2a/firestore/indexes
+- Deployed application: https://translend-tms.vercel.app/
 
-These links are references for inspection. Do not assume a URL proves current state; verify the live configuration and repository.
+### User's engineering/product references
+
+- AdminHub Global: https://github.com/gatshaayanda/adminhub-global
+- Accessibility Canvas: https://github.com/gatshaayanda/accessibility-canvas
+- PurePress / current BoardSignal source: https://github.com/gatshaayanda/purepress
+
+### Competitor benchmark references
+
+- Motive Driver Workflow: https://helpcenter.gomotive.com/hc/en-us/articles/30914499707549-Driver-Workflow
+- Motive Dispatch: https://helpcenter.gomotive.com/hc/en-us/articles/30898637140893-Dispatch
+- Motive Dispatch Overview: https://helpcenter.gomotive.com/hc/en-us/articles/31079587105693-Dispatch-Overview
+- Motive Driver App Overview: https://helpcenter.gomotive.com/hc/en-us/articles/31054123805853-Driver-App-Overview
+- Samsara Fleet Application Suite: https://www.samsara.com/pages/fleet-application-suite
+- Samsara Connected Workflows: https://www.samsara.com/products/platform/connected-forms
+- Samsara Connected Maintenance: https://www.samsara.com/products/telematics/fleet-maintenance
+
+These links are inspection references. They do not override the repository or the contracting company's actual business requirements.
