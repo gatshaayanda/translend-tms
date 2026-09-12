@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { jobsRepo, tripsRepo, trucksRepo, driversRepo, deliveriesRepo } from "@/lib/firebase/modules";
@@ -21,15 +22,17 @@ export default function ControlTowerPage() {
 
   useEffect(() => {
     if (!activeOrg) return;
+    const orgId = activeOrg.id;
     let cancelled = false;
+
     async function load() {
       try {
         const [jobs, trips, trucks, drivers, deliveries] = await Promise.all([
-          jobsRepo.list(activeOrg.id, { environment: "LIVE" }),
-          tripsRepo.list(activeOrg.id, { environment: "LIVE" }),
-          trucksRepo.list(activeOrg.id, { environment: "LIVE" }),
-          driversRepo.list(activeOrg.id, { environment: "LIVE" }),
-          deliveriesRepo.list(activeOrg.id, { environment: "LIVE" }),
+          jobsRepo.list(orgId, { environment: "LIVE" }),
+          tripsRepo.list(orgId, { environment: "LIVE" }),
+          trucksRepo.list(orgId, { environment: "LIVE" }),
+          driversRepo.list(orgId, { environment: "LIVE" }),
+          deliveriesRepo.list(orgId, { environment: "LIVE" }),
         ]);
         if (!cancelled) setData({ jobs, trips, trucks, drivers, deliveries });
       } catch (err) {
@@ -37,6 +40,7 @@ export default function ControlTowerPage() {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load Control Tower data.");
       }
     }
+
     load();
     return () => { cancelled = true; };
   }, [activeOrg]);
@@ -134,7 +138,7 @@ function StatCard({ label, value, accent }: { label: string; value: number; acce
   );
 }
 
-function Panel({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+function Panel({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return <div className="panel"><h3>{title}</h3><p className="panel-sub">{subtitle}</p>{children}</div>;
 }
 
