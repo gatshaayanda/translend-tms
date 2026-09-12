@@ -33,6 +33,157 @@ Git/GitHub are the source of truth and checkpoints. The current repository state
 
 ---
 
+## PORTABLE PRODUCT-BUILD FORMULA — ADMINHUB / ADHUBMVP / PUREPRESS / TRANSLEND
+
+The projects that led to this application established a reusable build pattern. Treat this as a **project lineage and workflow formula**, not as permission to copy an old project blindly.
+
+### The lineage
+
+**AdHub / AdHubMVP** → prove the product idea, core workflow and reusable application patterns.
+
+**AdminHub / AdminHub Base** → establish the reusable technical operating system: Next.js application structure, authentication/workspace patterns, portals, shared UI, Firebase integration, PWA/product shell and operational conventions.
+
+**PurePress** → treat the existing product/reference surface as a finished design and information-architecture source when a project already has a designed frontend. Extract the product language and intended user experience; do not confuse the reference implementation with the new application's runtime.
+
+**Translend v19** → combine those lessons correctly: take the existing designed FACE, preserve/build on the real ENGINE, and wire the two together natively instead of rebuilding either side unnecessarily.
+
+### The formula for future projects
+
+**1. IDENTIFY THE PRODUCT**
+
+Write down what the product is, who uses it, the main workflows and the outcome it must deliver. Do not begin by redesigning the UI or changing the stack.
+
+**2. IDENTIFY THE AUTHORITATIVE STARTING POINT**
+
+Determine whether the project starts from:
+
+- an existing working application,
+- an AdminHub/base application,
+- an AdHubMVP-derived application,
+- a PurePress/HTML/Figma-designed frontend,
+- or a combination of these.
+
+Explicitly record the exact repository and branch/commit that is authoritative. Never mix generations because they have similar names.
+
+**3. SEPARATE FACE FROM ENGINE**
+
+Classify every existing asset as one of:
+
+- **FACE** — HTML, Figma, screenshots, visual mockups, copy, layout and interaction specification.
+- **ENGINE** — authentication, workspace/membership, database, repositories, APIs, security rules, uploads, business logic and existing CRUD.
+- **SHELL** — AdminHub-style application frame, navigation, shared components, responsive behavior, PWA and common utilities.
+- **PRODUCT DATA** — real records and domain fields already persisted.
+
+The FACE tells us what the product should look/feel like. The ENGINE tells us what is actually true. The SHELL provides reusable application infrastructure. PRODUCT DATA determines what can honestly be shown as live.
+
+**4. MAP BEFORE REBUILDING**
+
+Create a simple reference-to-runtime map:
+
+`reference surface → native route/component → repository/data source → supported fields → unsupported fields`
+
+For every reference element:
+
+- if real data exists, wire it;
+- if the workflow exists, preserve and expose it;
+- if the UI concept exists but its data domain does not, build the native surface and clearly mark it as **Database still being configured** / planned;
+- if the concept belongs to another route, put it on the correct native route;
+- never fabricate customer-facing live numbers merely to make the reference look complete.
+
+**5. ADAPT, DO NOT RESTART**
+
+The default operation is:
+
+`inspect current → preserve working engine → adapt FACE natively → connect real data → add missing domain only when justified`
+
+Do not:
+
+- restart from an old AdminHub patch,
+- pull a previous project's implementation simply because it looks cleaner,
+- replace Firebase with another backend,
+- replace a working repository with mock state,
+- or create a second parallel application engine.
+
+**6. BUILD IN COHERENT PASSES**
+
+Use page/domain-level passes, not endless cosmetic micro-patches:
+
+`shared shell → core routes → operational workflows → secondary/control surfaces → finance/reporting → responsive polish → verification`
+
+A page is not complete merely because its styling is close. It is complete when its visual hierarchy, real data, workflow behavior and empty/unavailable states are coherent.
+
+**7. HANDLE MISSING DOMAINS HONESTLY**
+
+When the reference expects a domain that the current engine does not have, do not invent persistence just to satisfy the mockup.
+
+Use a polished state such as:
+
+> **Database still being configured**
+> This surface is ready for the real domain records when that repository/data model exists.
+
+The UI can therefore progress without corrupting the application's source of truth.
+
+**8. VERIFY THE WHOLE CHAIN**
+
+Verification is:
+
+`source → typecheck/build → deployment → runtime route → authentication/workspace → live repository data → mutation/CRUD → responsive UI`
+
+A green-looking frontend is not enough. A Vercel deployment is not proof that the business workflow works. A successful CRUD mutation is not proof that the reference surface is correctly implemented.
+
+**9. CHECKPOINT THE LEARNING**
+
+When a mistake exposes a reusable rule, update `AGENTS.md` before the next major pass. The goal is that future projects inherit the lesson rather than rediscovering it.
+
+### Critical lesson from the Translend work
+
+The major failure mode to avoid is **version drift**:
+
+> A current project asks for the latest AdminHub/PurePress pattern, but an older patch or remembered version gets applied because the names look familiar.
+
+This can break wiring, route contracts, repository assumptions and testing even when the patch itself appears valid.
+
+Therefore every project should maintain an explicit **authoritative lineage record**:
+
+`PROJECT → BASE/LINEAGE → AUTHORITATIVE REPO → AUTHORITATIVE BRANCH → CURRENT HEAD → REFERENCE ASSETS → ENGINE → DEPLOYMENT`
+
+Never skip this record.
+
+---
+
+## CURRENT TRANSLEND CHECKPOINT — AFTER BUILD FIX
+
+Current authoritative branch: `v19-authoritative`.
+
+The latest implementation checkpoint includes the native v19 surface expansion and the Fleet rebuild. The immediately preceding Vercel build failed for a known source-level JSX syntax error in `src/components/v19/FinancialAndControlViews.tsx`.
+
+That failure was isolated to malformed JSX in the finance `DemoTable` rendering expression. The component has now been rewritten into valid JSX structure and committed as:
+
+`bca354f9710322c3b365da921eb55692cdee1e02`
+
+At the time this context was written, Vercel had accepted the new commit and was **deploying/pending**. Do not call the deployment green until the Vercel status becomes successful.
+
+The previous Fleet checkpoint remains:
+
+`ba530f6318bc002d3bd386d925a9eb42be4f8644`
+
+The Fleet pass added native operational surfaces including live fleet KPIs, map/status structure, trip lookup, route/profitability presentation and honest unavailable-data states while retaining truck CRUD. Continue auditing it against the original HTML rather than treating the first pass as final.
+
+### Immediate continuation rule
+
+After the build-fix deployment resolves:
+
+1. Confirm Vercel build result for `bca354f9710322c3b365da921eb55692cdee1e02`.
+2. If it fails, inspect the actual build error and fix the root cause; do not stop at reporting it.
+3. If it succeeds, continue the HTML-vs-native audit.
+4. Audit Fleet section-by-section against the original `translend_v19_preview.html`.
+5. Then audit Operations Hub, Trips, Delivery Notes & POs, Fuel & Workshop, Invoicing & Statements, Performance Dashboard and each Financials route.
+6. Preserve the existing Firebase/Firestore engine throughout.
+7. Where the reference requires unavailable data, use the explicit configuration state rather than fixtures.
+8. Commit coherent progress and update this checkpoint when the continuation point materially changes.
+
+---
+
 ## VISUAL REFERENCE — v19 FACE
 
 The original `translend_v19_preview.html` and the supplied Figma design are **visual/product references**, not the runtime application.
@@ -192,7 +343,7 @@ Delivery behavior remains real and persisted. Do not replace it with static HTML
 - Do not deploy to an unrelated Vercel project.
 - If CI/build evidence is unavailable, state that explicitly.
 - Inspect the commit/ref being deployed before treating deployment status as evidence for the current code.
-- The connected Vercel account currently exposes `adminhub-global` rather than a confirmed `translend-tms` Vercel project. Do not deploy Translend there merely because it is the available project.
+- The Translend repository is currently connected to a Vercel deployment that reports directly through GitHub commit status. Use that evidence for Translend; do not confuse it with the separate `adminhub-global` project.
 
 ---
 
@@ -288,4 +439,4 @@ Do NOT:
 
 ## MOST IMPORTANT RULE
 
-**This is a continuing application. The v19 HTML/Figma is the FACE. Firebase/Auth/Firestore/UploadThing are the ENGINE. Continue forward from the authoritative repository. Never restart from an older system.**
+**This is a continuing application. The v19 HTML/Figma is the FACE. Firebase/Auth/Firestore/UploadThing are the ENGINE. AdminHub/AdHubMVP provide reusable SHELL/operating-system lessons. PurePress/reference assets provide product/design specification lessons. Continue forward from the authoritative repository. Never restart from an older system.**
