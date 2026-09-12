@@ -1,0 +1,2856 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Translend TMS · Truck Division — v19 (secure, accessible, live)</title>
+<!-- styles moved to translend_design.css -->
+<style>
+
+/* ============================================================
+   TRANSLEND TMS · Truck Division — Working Mockup V16
+   Brand-aligned redesign · light theme · logistics SaaS
+   Brand palette: Teal #0C6C7D · Orange #F26419 · Cream #FBF9F6
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:ital,wght@1,700;1,800;1,900&display=swap');
+
+:root{
+  /* === Translend brand colors === */
+  --teal:#0C6C7D;
+  --teal-600:#0A5C6B;
+  --teal-700:#084B57;
+  --teal-100:#D4E8EC;
+  --teal-50:#EAF3F5;
+  --orange:#F26419;
+  --orange-600:#D9550E;
+  --orange-100:#FCDFCE;
+  --orange-50:#FEEFE4;
+  --cream:#FBF9F6;
+  --cream-2:#F4F0E9;
+
+  /* === Neutral system (light theme) === */
+  --bg:#F4F6F8;
+  --bg-app:#EEF2F4;
+  --surface:#FFFFFF;
+  --surface-2:#FBFBFC;
+  --surface-3:#F7F9FA;
+  --border:#E3E8EC;
+  --border-strong:#CDD6DC;
+  --divider:#EAEEF1;
+
+  /* === Type === */
+  --ink:#0E2A30;        /* primary text — deep teal-tinted near-black */
+  --ink-2:#324A50;      /* secondary text */
+  --ink-3:#4B6166;     /* lifted for WCAG AA */      /* muted text */
+  --ink-4:#8A9CA2;      /* placeholder */
+
+  /* === Aliases for legacy class hooks === */
+  --text-primary:var(--ink);
+  --text-secondary:var(--ink-2);
+  --text-muted:var(--ink-3);
+  --purple:var(--teal);
+  --purple-light:var(--teal-600);
+  --purple-dark:var(--teal-700);
+  --yellow:var(--orange);
+  --yellow-bright:var(--orange-600);
+  --bg-dark:var(--bg);
+  --bg-card:var(--surface);
+  --bg-card2:var(--surface-3);
+  --bg-card3:var(--surface-2);
+
+  /* === Status semantics === */
+  --green:#16A085;
+  --green-100:#D9F0EA;
+  --red:#D64545;
+  --red-100:#FADEDE;
+  --blue:#2D6FA8;     /* lifted for WCAG AA */
+  --blue-100:#DAE9F4;
+  --amber:#C58418;     /* lifted for WCAG AA */
+  --amber-100:#FBEACC;
+  --orange-status:#F26419;
+  --teal-status:#0C6C7D;
+
+  /* === System === */
+  --sidebar-w:248px;
+  --radius-sm:8px;
+  --radius:12px;
+  --radius-lg:16px;
+  --shadow-xs:0 1px 2px rgba(14,42,48,.04);
+  --shadow-sm:0 1px 3px rgba(14,42,48,.06), 0 1px 2px rgba(14,42,48,.04);
+  --shadow:0 4px 14px rgba(14,42,48,.06), 0 2px 4px rgba(14,42,48,.04);
+  --shadow-md:0 8px 24px rgba(14,42,48,.07), 0 3px 8px rgba(14,42,48,.04);
+  --shadow-lg:0 16px 40px rgba(14,42,48,.10), 0 4px 12px rgba(14,42,48,.05);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  display:flex;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-feature-settings:'cv11','ss01','ss03';
+  letter-spacing:-0.005em;
+}
+
+/* ============== SIDEBAR ============== */
+.sidebar{
+  width:var(--sidebar-w);
+  position:fixed; top:0; left:0; bottom:0; z-index:20;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+  display:flex; flex-direction:column;
+}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+
+.sidebar-logo{
+  padding:22px 20px 18px;
+  border-bottom:1px solid var(--divider);
+}
+.logo-badge{
+  display:flex;align-items:center;gap:10px;
+  padding:0; background:transparent; box-shadow:none;
+}
+/* Replace the old "T" badge with the real Translend mark */
+.logo-icon{
+  width:38px;height:38px;border-radius:0;background:transparent;color:transparent;
+  font-size:0;font-weight:0;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'><path fill='%23F26419' d='M48 45c0 14-12 26-26 26S-4 59-4 45s12-26 26-26 26 12 26 26z'/><circle cx='22' cy='45' r='9' fill='white'/><path fill='%23F26419' d='M55 20l52 25L55 70l8-12-22-13 22-13z'/></svg>");
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+  flex:0 0 auto;
+}
+.logo-text{display:flex;flex-direction:column}
+.logo-text .brand{
+  font-family:'Poppins','Inter',sans-serif;
+  font-style:italic;
+  font-weight:800;
+  font-size:22px;
+  letter-spacing:-0.02em;
+  color:var(--teal);
+  line-height:1;
+  text-transform:lowercase;
+}
+.logo-text .sub{
+  display:block;font-size:9.5px;font-weight:600;
+  color:var(--ink-3);
+  letter-spacing:0.08em;text-transform:uppercase;
+  margin-top:5px;
+}
+
+.nav-section{padding:16px 12px 4px}
+.nav-label{
+  font-size:10px;font-weight:700;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--ink-4);
+  padding:0 10px 10px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 12px;border-radius:9px;
+  color:var(--ink-2);
+  font-size:13px;font-weight:500;
+  text-decoration:none;margin-bottom:2px;cursor:pointer;
+  transition:all .15s ease;
+  border:1px solid transparent;
+}
+.nav-item:hover{background:var(--teal-50);color:var(--teal-700)}
+.nav-item.active{
+  background:var(--teal-50);
+  color:var(--teal-700);
+  font-weight:600;
+  border-color:var(--teal-100);
+}
+.nav-item.active .nav-icon{color:var(--orange)}
+.nav-item.active::after{
+  content:'';display:block;width:3px;height:18px;
+  background:var(--orange);border-radius:3px;margin-left:auto;
+}
+.nav-icon{width:18px;text-align:center;font-size:14px;color:var(--ink-3)}
+.nav-badge{
+  margin-left:auto;background:var(--orange);color:#fff;
+  font-size:9px;font-weight:800;padding:2px 7px;border-radius:999px;
+  letter-spacing:0.04em;
+}
+.nav-item.active .nav-badge + ::after,
+.nav-item.active:has(.nav-badge)::after{display:none}
+.nav-divider{height:1px;background:var(--divider);margin:14px 16px}
+
+.sidebar-footer{
+  padding:14px;border-top:1px solid var(--divider);
+  margin-top:auto;background:var(--surface);
+}
+.user-chip{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface-3);
+  padding:10px 12px;border-radius:10px;
+  border:1px solid var(--border);
+}
+.user-avatar{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--teal),var(--teal-600));
+  color:#fff;font-weight:700;font-size:13px;
+}
+.user-info .name{font-size:12.5px;font-weight:700;color:var(--ink)}
+.user-info .role{font-size:10.5px;color:var(--ink-3);margin-top:1px}
+
+/* ============== MAIN LAYOUT ============== */
+.main{
+  margin-left:var(--sidebar-w);
+  width:calc(100% - var(--sidebar-w));
+  height:100vh; overflow-y:auto;
+  background:var(--bg);
+}
+.main::-webkit-scrollbar{width:8px}
+.main::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+
+.topbar{
+  position:sticky; top:0; z-index:15;
+  padding:18px 32px;
+  display:flex; justify-content:space-between; align-items:center; gap:20px;
+  background:rgba(255,255,255,0.85);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+}
+.topbar-left h1{
+  font-size:20px;font-weight:700;color:var(--ink);
+  letter-spacing:-0.015em;
+}
+.topbar-left .breadcrumb{
+  font-size:12px;color:var(--ink-3);margin-top:4px;
+  font-weight:500;
+}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.filter-chip,.btn-action,.quick-chip{
+  display:flex;align-items:center;gap:7px;
+  padding:9px 14px;border-radius:9px;
+  font-size:12.5px;font-weight:500;
+  border:1px solid var(--border);
+  transition:all .15s ease;
+}
+.filter-chip{background:var(--surface);color:var(--ink-2)}
+.topbar-period-filter{min-width:210px;justify-content:space-between}
+.topbar-period-filter select{flex:1;text-align:left}
+.filter-chip:hover{border-color:var(--border-strong)}
+.filter-chip select{
+  background:transparent;border:none;outline:none;
+  color:var(--ink);font-size:12.5px;font-weight:500;cursor:pointer;
+}
+.btn-action{
+  background:var(--orange);color:#fff;font-weight:600;
+  border:none;cursor:pointer;
+  box-shadow:0 1px 2px rgba(242,100,25,.25);
+}
+.btn-action:hover{background:var(--orange-600);box-shadow:0 4px 10px rgba(242,100,25,.28)}
+
+.page{display:none;padding:28px 32px 40px}
+.page.active{display:block}
+.section{margin-bottom:24px}
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-bottom:14px;
+}
+.section-title{
+  font-size:15px;font-weight:700;color:var(--ink);
+  display:flex;align-items:center;gap:8px;
+  letter-spacing:-0.01em;
+}
+.section-sub{font-size:12px;color:var(--ink-3);margin-top:3px;font-weight:500}
+
+/* ============== KPI / OPS CARDS ============== */
+.kpi-stack-grid{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:14px;margin-bottom:22px;align-items:start;
+}
+.kpi-stack{display:grid;grid-template-rows:auto auto;gap:10px;min-width:0;width:100%}
+
+.ops-info-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px 18px 14px;
+  position:relative;overflow:hidden;
+  min-height:104px;
+  box-shadow:var(--shadow-xs);
+  width:100%;
+  transition:all .18s ease;
+}
+.ops-info-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
+.ops-info-card:before{display:none}
+.ops-info-card .kpi-icon{
+  width:34px;height:34px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  position:absolute;right:14px;top:14px;
+  background:var(--teal-50);
+}
+.kpi-icon.purple{background:var(--teal-50);color:var(--teal)}
+.kpi-icon.yellow{background:var(--orange-50);color:var(--orange)}
+.kpi-icon.green{background:var(--green-100);color:var(--green)}
+.kpi-icon.blue{background:var(--blue-100);color:var(--blue)}
+.kpi-icon.orange{background:var(--orange-50);color:var(--orange)}
+.kpi-icon.red{background:var(--red-100);color:var(--red)}
+.kpi-icon.teal{background:var(--teal-50);color:var(--teal)}
+
+.kpi-card{
+  position:relative; overflow:hidden;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:18px 56px 16px 20px;
+  min-height:104px;
+  box-shadow:var(--shadow-xs);
+  transition:all .18s ease;
+}
+.kpi-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
+.kpi-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;border-radius:0 3px 3px 0;
+  background:var(--teal);
+}
+.kpi-card.yellow::before{background:var(--orange)}
+.kpi-card.green::before{background:var(--green)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.blue::before{background:var(--blue)}
+.kpi-card.orange::before{background:var(--orange)}
+.kpi-card.teal::before{background:var(--teal)}
+.kpi-card .icon{
+  position:absolute;right:16px;top:16px;font-size:20px;opacity:.5;
+}
+.kpi-label{
+  font-size:10.5px;font-weight:700;letter-spacing:0.08em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;
+}
+.kpi-value{
+  font-size:24px;font-weight:700;line-height:1.1;
+  color:var(--ink);letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+}
+.kpi-sub{
+  font-size:11.5px;color:var(--ink-3);
+  margin-top:6px;line-height:1.45;font-weight:500;
+}
+.kpi-sub .up{color:var(--green);font-weight:700}
+.kpi-sub .down{color:var(--red);font-weight:700}
+.kpi-sub .amber{color:var(--amber);font-weight:700}
+
+.compact-stat{
+  display:flex;align-items:center;gap:12px;
+  min-height:84px;padding:12px 14px;border-radius:12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+  width:100%;
+}
+.donut{
+  width:52px;height:52px;border-radius:50%;
+  background:conic-gradient(var(--ring) calc(var(--pct)*1%), var(--bg-app) 0);
+  position:relative;flex:0 0 auto;
+}
+.donut::after{
+  content:attr(data-value);position:absolute;inset:7px;border-radius:50%;
+  background:var(--surface);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10.5px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.compact-stat strong{
+  display:block;font-size:12.5px;font-weight:700;
+  margin-bottom:3px;line-height:1.25;color:var(--ink);
+}
+.compact-stat span{
+  display:block;font-size:11px;color:var(--ink-3);
+  line-height:1.4;font-weight:500;
+}
+
+/* ============== GRIDS ============== */
+.grid-2{display:grid;grid-template-columns:1.35fr 1fr;gap:18px}
+.grid-2-equal{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+/* ============== PANELS ============== */
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:22px 22px 20px;
+  box-shadow:var(--shadow-xs);
+}
+.panel.tms{
+  background:var(--surface);
+  border-color:var(--teal-100);
+}
+.panel h3{
+  font-size:14px;font-weight:700;color:var(--ink);
+  margin-bottom:5px;letter-spacing:-0.01em;
+}
+.panel .panel-sub{
+  font-size:12px;color:var(--ink-3);
+  margin-bottom:16px;line-height:1.5;font-weight:500;
+}
+
+/* ============== LIST ROWS ============== */
+.list{display:flex;flex-direction:column;gap:8px}
+.list-row{
+  display:flex;justify-content:space-between;gap:14px;
+  align-items:flex-start;
+  padding:13px 14px;border-radius:10px;
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  transition:all .15s ease;
+}
+.list-row:hover{background:var(--surface-2);border-color:var(--border)}
+.list-row strong{
+  display:block;font-size:12.5px;font-weight:600;
+  margin-bottom:4px;color:var(--ink);
+}
+.list-row .muted{
+  font-size:11.5px;color:var(--ink-3);
+  line-height:1.5;font-weight:500;
+}
+
+/* ============== BADGES ============== */
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:6px;
+  font-size:10.5px;font-weight:600;
+  border:1px solid transparent;white-space:nowrap;
+  letter-spacing:0.01em;
+}
+.badge.green{background:var(--green-100);color:#0F7B66;border-color:#BDE5DA}
+.badge.red{background:var(--red-100);color:#9F2727;border-color:#F3C3C3}
+.badge.yellow{background:var(--amber-100);color:#8A6014;border-color:#F1D7A1}
+.badge.blue{background:var(--blue-100);color:#1A5680;border-color:#BAD5E8}
+.badge.purple{background:var(--teal-50);color:var(--teal-700);border-color:var(--teal-100)}
+.badge.teal{background:var(--teal-50);color:var(--teal-700);border-color:var(--teal-100)}
+.badge.orange{background:var(--orange-50);color:#9C3F0C;border-color:var(--orange-100)}
+.badge.gray{background:var(--surface-3);color:var(--ink-2);border-color:var(--border)}
+
+/* ============== PERFORMANCE / VEHICLE CARDS ============== */
+.performance-form-grid{
+  display:grid;grid-template-columns:minmax(0,1fr) 340px;
+  gap:18px;align-items:stretch;
+}
+.performance-left{display:flex;flex-direction:column;gap:18px;height:100%}
+.performance-cards-row{
+  display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));
+  gap:14px;align-items:stretch;
+}
+.performance-left .panel{flex:1;display:flex;flex-direction:column;padding:20px}
+.performance-form-grid > .form-card{height:100%;align-self:stretch}
+.performance-list{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:14px;align-items:stretch;
+}
+
+.vehicle-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px;
+  cursor:pointer;
+  transition:all .18s ease;
+  box-shadow:var(--shadow-xs);
+  min-height:198px;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.vehicle-card:hover{
+  border-color:var(--teal-100);
+  box-shadow:var(--shadow-sm);
+  transform:translateY(-1px);
+}
+.vehicle-card-top{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:12px;gap:8px;
+}
+.vehicle-plate{
+  background:var(--ink);
+  border-radius:6px;padding:6px 12px;
+  font-size:14px;font-weight:700;letter-spacing:0.08em;
+  color:#fff;line-height:1.2;
+  font-family:'Inter',monospace;
+}
+.vehicle-name{
+  font-size:12px;color:var(--ink-2);
+  margin-bottom:10px;line-height:1.45;font-weight:500;
+}
+.vehicle-revenue{
+  font-size:22px;font-weight:700;color:var(--ink);
+  margin-bottom:4px;letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+}
+.vehicle-month{
+  font-size:11px;color:var(--ink-3);
+  line-height:1.4;font-weight:500;
+}
+.progress-bar{
+  height:5px;background:var(--bg-app);
+  border-radius:3px;margin-top:12px;overflow:hidden;
+}
+.progress-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.fill-green{background:var(--green)}
+.fill-yellow{background:var(--orange)}
+.fill-red{background:var(--red)}
+.fill-blue{background:var(--teal)}
+
+.utilisation-ring{text-align:center;min-width:52px}
+.ring-val{font-size:16px;font-weight:700;color:var(--orange);font-variant-numeric:tabular-nums}
+.ring-label{font-size:9.5px;color:var(--ink-3);font-weight:600;letter-spacing:0.04em;text-transform:uppercase}
+.vehicle-status-row{margin-top:10px}
+
+/* ============== FORMS ============== */
+.form-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:22px;
+  box-shadow:var(--shadow-xs);
+}
+.form-card h3{
+  font-size:14px;font-weight:700;color:var(--ink);
+  margin-bottom:16px;letter-spacing:-0.01em;
+}
+.form-group{margin-bottom:14px}
+.form-group label{
+  display:block;font-size:10.5px;font-weight:600;
+  color:var(--ink-2);margin-bottom:6px;
+  letter-spacing:0.04em;text-transform:uppercase;
+}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.form-grid.three{grid-template-columns:repeat(3,1fr)}
+.form-group.full{grid-column:1/-1}
+
+.form-input,.form-select,.form-textarea{
+  width:100%;padding:10px 12px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--ink);
+  font-size:12.5px;
+  font-family:inherit;
+  transition:all .15s ease;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{
+  outline:none;
+  border-color:var(--teal);
+  box-shadow:0 0 0 3px var(--teal-50);
+}
+.form-input::placeholder{color:var(--ink-4)}
+.form-textarea{min-height:80px;resize:vertical;line-height:1.5}
+
+.form-row-actions,.form-actions{
+  display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;
+}
+.btn-primary,.btn-secondary,.btn-ghost{
+  padding:10px 16px;border-radius:8px;
+  font-size:12.5px;font-weight:600;
+  cursor:pointer;border:1px solid transparent;
+  transition:all .15s ease;
+  font-family:inherit;
+}
+.btn-primary{
+  background:var(--teal);color:#fff;border:none;
+  box-shadow:0 1px 2px rgba(12,108,125,.2);
+}
+.btn-primary:hover{background:var(--teal-600);box-shadow:0 3px 8px rgba(12,108,125,.28)}
+.btn-secondary{
+  background:var(--orange);color:#fff;border:none;
+  box-shadow:0 1px 2px rgba(242,100,25,.18);
+}
+.btn-secondary:hover{background:var(--orange-600)}
+.btn-ghost{
+  background:var(--surface);color:var(--ink-2);
+  border:1px solid var(--border);
+}
+.btn-ghost:hover{background:var(--surface-3);border-color:var(--border-strong)}
+
+/* ============== DATA TABLE ============== */
+.data-table{
+  width:100%;border-collapse:collapse;
+  font-size:12.5px;
+}
+.data-table th{
+  background:var(--surface-3);
+  padding:11px 14px;text-align:left;
+  font-size:10.5px;font-weight:700;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:0.06em;
+  border-bottom:1px solid var(--border);
+}
+.data-table td{
+  padding:13px 14px;
+  border-bottom:1px solid var(--divider);
+  vertical-align:middle;color:var(--ink);
+  font-weight:500;
+}
+.data-table td strong{font-weight:600;color:var(--ink)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface-3)}
+
+/* ============== NOTICES ============== */
+.notice{
+  padding:12px 14px;border-radius:10px;
+  font-size:12px;line-height:1.55;
+  border:1px solid var(--amber-100);
+  background:#FDF7E8;color:#8A6014;
+  font-weight:500;
+}
+.notice.blue{border-color:var(--blue-100);background:#EDF4FB;color:#1A5680}
+
+/* ============== DOC GRID ============== */
+.doc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.doc-card{
+  padding:18px;border-radius:14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+}
+.doc-card h4{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--ink)}
+.doc-card p{font-size:11.5px;color:var(--ink-3);line-height:1.6;margin-bottom:14px;font-weight:500}
+.doc-tags{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ============== STATEMENT / INVOICE PREVIEW ============== */
+.statement-box{
+  background:#fff;color:#111;
+  border-radius:12px;padding:28px;
+  box-shadow:var(--shadow-md);
+  border:1px solid var(--border);
+}
+.statement-box h4{font-size:20px;margin-bottom:6px;color:var(--teal);font-weight:700}
+.statement-box p{font-size:13px;line-height:1.5;color:var(--ink-2)}
+.statement-box table{margin-top:14px;width:100%;border-collapse:collapse}
+.statement-box th{
+  background:var(--surface-3);color:var(--ink-3);
+  border-bottom:1px solid var(--border);
+  padding:9px 11px;text-align:left;font-size:11px;
+  font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
+}
+.statement-box td{
+  color:var(--ink);border-bottom:1px solid var(--divider);
+  padding:9px 11px;font-size:12px;
+}
+.letterhead{
+  display:flex;justify-content:space-between;gap:24px;
+  border-bottom:2px solid var(--teal);
+  padding-bottom:14px;margin-bottom:18px;
+}
+.letterhead-brand{font-size:24px;font-weight:800;color:var(--teal);font-style:italic;font-family:'Poppins',sans-serif}
+.letterhead-sub{font-size:12px;color:var(--ink-3);line-height:1.5}
+
+.summary-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:12px;margin:18px 0;
+}
+.summary-strip .box{
+  background:var(--surface-3);
+  border:1px solid var(--border);
+  border-radius:10px;padding:14px;
+}
+.summary-strip .box .small{
+  font-size:10.5px;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:0.06em;
+  font-weight:700;
+}
+.summary-strip .box .big{
+  font-size:18px;font-weight:700;margin-top:4px;
+  color:var(--ink);letter-spacing:-0.01em;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ============== MINI CARDS ============== */
+.mini-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.mini-card{
+  padding:16px;border-radius:12px;
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+}
+.mini-card .title{
+  font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;
+  color:var(--ink-3);font-weight:700;
+}
+.mini-card .value{
+  font-size:22px;font-weight:700;margin-top:8px;
+  color:var(--ink);letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+}
+.mini-card .note{
+  font-size:11.5px;color:var(--ink-3);
+  margin-top:6px;line-height:1.5;font-weight:500;
+}
+
+/* ============== ALERT ============== */
+.alert{
+  background:var(--amber-100);color:#8A6014;
+  border:1px solid #F1D7A1;
+  padding:12px 16px;border-radius:10px;
+  margin-bottom:16px;font-size:12.5px;line-height:1.5;
+  font-weight:500;
+}
+
+/* ============== MAP BOX ============== */
+.map-box{
+  background:linear-gradient(180deg,#F0F5F6 0%,#E5EEF0 100%);
+  border:1px solid var(--border);
+  border-radius:12px;
+  min-height:340px;
+  position:relative;overflow:hidden;
+}
+.map-box svg{
+  position:absolute;inset:0;opacity:.45;
+  width:100%;height:100%;
+}
+.map-box svg line{stroke:#9DB5BD !important}
+.map-box svg polyline:nth-of-type(1){stroke:var(--orange) !important;opacity:.85 !important;stroke-width:5 !important}
+.map-box svg polyline:nth-of-type(2){stroke:var(--teal) !important;opacity:.7 !important;stroke-width:4 !important}
+.map-label{
+  position:absolute;font-size:11px;color:var(--ink-2);
+  background:rgba(255,255,255,.92);padding:3px 8px;
+  border-radius:6px;font-weight:600;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+}
+.vehicle-dot{
+  position:absolute;width:14px;height:14px;border-radius:50%;
+  background:var(--green);border:2px solid #fff;
+  box-shadow:0 0 0 0 rgba(22,160,133,.4),var(--shadow-sm);
+  animation:pulse 2s infinite;cursor:pointer;
+}
+.vehicle-dot.idle{background:var(--orange)}
+.vehicle-dot.alert-dot{background:var(--red)}
+.vehicle-dot .tooltip{
+  position:absolute;bottom:22px;left:50%;
+  transform:translateX(-50%);
+  background:var(--ink);color:#fff;
+  padding:7px 10px;border-radius:8px;
+  font-size:10.5px;white-space:nowrap;display:none;
+  z-index:3;font-weight:500;line-height:1.4;
+  box-shadow:var(--shadow-md);
+}
+.vehicle-dot:hover .tooltip{display:block}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(22,160,133,.4),var(--shadow-sm)}
+  50%{box-shadow:0 0 0 10px rgba(22,160,133,0),var(--shadow-sm)}
+}
+
+.trip-pull-card .mini-item{
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  border-radius:10px;padding:14px;margin-top:12px;
+}
+.trip-pull-card .mini-item strong{
+  display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px;
+}
+.trip-pull-card .mini-item span{
+  font-size:11.5px;color:var(--ink-3);
+  line-height:1.5;font-weight:500;
+}
+
+/* ============== BAR LIST ============== */
+.bar-list{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.bar-row{
+  display:grid;grid-template-columns:150px 1fr 78px;
+  gap:12px;align-items:center;
+}
+.bar-row .label{
+  font-size:12.5px;color:var(--ink-2);
+  line-height:1.25;font-weight:600;
+}
+.bar-track{
+  height:8px;background:var(--bg-app);
+  border-radius:999px;overflow:hidden;
+  border:1px solid var(--divider);
+}
+.bar-fill{
+  height:100%;border-radius:999px;
+  background:var(--teal);
+  transition:width .4s ease;
+}
+.bar-fill.green{background:var(--green)}
+.bar-fill.red{background:var(--red)}
+.bar-fill.teal{background:var(--teal)}
+.bar-fill.blue{background:var(--blue)}
+.bar-fill.yellow{background:var(--orange)}
+.bar-value{
+  font-size:12px;color:var(--ink);
+  text-align:right;line-height:1.25;
+  font-weight:600;font-variant-numeric:tabular-nums;
+}
+
+/* ============== CHARTS ============== */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}
+.chart-panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;padding:22px;
+  box-shadow:var(--shadow-xs);
+  min-height:220px;
+}
+.chart-panel h3{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:5px}
+.chart-panel .panel-sub{
+  font-size:12px;color:var(--ink-3);
+  margin-bottom:14px;line-height:1.5;font-weight:500;
+}
+.chart-bars{
+  height:140px;display:flex;align-items:flex-end;
+  gap:12px;padding:10px 4px 0;
+  border-bottom:1px solid var(--divider);
+}
+.chart-bar{
+  flex:1;border-radius:6px 6px 0 0;
+  background:var(--teal);
+  min-height:18px;position:relative;
+}
+.chart-bar.alt{background:var(--orange)}
+.chart-labels{
+  display:grid;grid-template-columns:repeat(6,1fr);
+  gap:8px;margin-top:10px;
+  font-size:11px;color:var(--ink-3);
+  text-align:center;font-weight:600;
+}
+
+.kpi-dashboard-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;margin-bottom:22px;
+}
+.kpi-dashboard-grid .kpi-card{min-height:104px}
+
+.kpi-finance-layout{
+  display:grid;grid-template-columns:1.35fr .65fr;
+  gap:18px;margin-bottom:22px;align-items:stretch;
+}
+.kpi-finance-layout.reverse{grid-template-columns:.78fr 1.22fr}
+.kpi-finance-layout.equal{grid-template-columns:1fr 1fr}
+
+.dashboard-panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:22px;
+  box-shadow:var(--shadow-xs);
+  overflow:hidden;
+}
+.dashboard-panel h3{
+  font-size:14px;font-weight:700;color:var(--ink);
+  margin-bottom:5px;letter-spacing:-0.01em;
+}
+.dashboard-panel .panel-sub{
+  font-size:12px;color:var(--ink-3);
+  line-height:1.5;margin-bottom:16px;font-weight:500;
+}
+
+/* ============== MANAGER STRIP / COMBO BARS ============== */
+.manager-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+.manager-tile{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px 18px;box-shadow:var(--shadow-xs);
+  position:relative;overflow:hidden;
+}
+.manager-tile::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--teal);
+}
+.manager-tile.yellow::before{background:var(--orange)}
+.manager-tile.green::before{background:var(--green)}
+.manager-tile.blue::before{background:var(--blue)}
+.manager-tile.red::before{background:var(--red)}
+.manager-tile .tile-label{
+  font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;
+  color:var(--ink-3);font-weight:700;margin-bottom:6px;
+}
+.manager-tile .tile-value{
+  font-size:22px;font-weight:700;line-height:1.1;
+  color:var(--ink);letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+}
+.manager-tile .tile-note{
+  font-size:11.5px;color:var(--ink-3);
+  margin-top:6px;line-height:1.4;font-weight:500;
+}
+
+.combo-bars{
+  height:220px;display:grid;grid-template-columns:repeat(6,1fr);
+  gap:18px;align-items:end;
+  border-bottom:1px solid var(--divider);
+  padding:12px 4px 0;
+}
+.combo-group{
+  height:100%;display:flex;align-items:end;justify-content:center;
+  gap:6px;position:relative;padding-bottom:24px;
+}
+.combo-group .bar{
+  width:22px;border-radius:5px 5px 0 0;min-height:20px;
+  background:var(--teal);
+  transition:all .3s ease;
+}
+.combo-group .bar.cost{background:var(--orange)}
+.combo-group .bar.cash{background:var(--green)}
+.combo-group .bar.maint{background:var(--red)}
+.combo-group .month{
+  position:absolute;bottom:0;font-size:11px;
+  color:var(--ink-3);white-space:nowrap;
+  font-weight:600;
+}
+
+.dashboard-legend{
+  display:flex;gap:16px;flex-wrap:wrap;
+  margin-top:14px;font-size:11px;color:var(--ink-2);
+  align-items:center;font-weight:500;
+}
+.dashboard-legend span::before{
+  content:'';display:inline-block;width:8px;height:8px;
+  border-radius:2px;background:var(--teal);margin-right:6px;
+  vertical-align:middle;
+}
+.dashboard-legend span.cost::before{background:var(--orange)}
+.dashboard-legend span.cash::before{background:var(--green)}
+.dashboard-legend span.maint::before{background:var(--red)}
+.dashboard-legend span.red::before{background:var(--red)}
+.dashboard-legend span.blue::before{background:var(--blue)}
+
+/* ============== WATERFALL ============== */
+.waterfall{
+  display:grid;grid-template-columns:repeat(6,1fr);
+  gap:10px;height:220px;align-items:end;
+  border-bottom:1px solid var(--divider);
+  padding:14px 4px 0;
+}
+.waterfall-step{
+  position:relative;height:100%;
+  display:flex;align-items:end;justify-content:center;
+  padding-bottom:30px;
+}
+.waterfall-step .wf-bar{
+  width:62%;border-radius:5px 5px 0 0;min-height:20px;
+  background:var(--green);
+  transition:all .3s ease;
+}
+.waterfall-step .wf-bar.neg{background:var(--red)}
+.waterfall-step .wf-bar.final{background:var(--orange)}
+.waterfall-step .wf-label{
+  position:absolute;bottom:0;text-align:center;
+  font-size:10px;color:var(--ink-3);line-height:1.3;
+  font-weight:600;
+}
+.waterfall-step .wf-value{
+  position:absolute;top:0;font-size:11px;font-weight:700;
+  color:var(--ink);font-variant-numeric:tabular-nums;
+}
+
+/* ============== STACKED ============== */
+.stacked-list{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.stacked-row{
+  display:grid;grid-template-columns:130px 1fr 72px;
+  gap:12px;align-items:center;
+}
+.stacked-row .label{font-size:12px;color:var(--ink-2);font-weight:600}
+.stacked-row .total{
+  font-size:12px;color:var(--ink);text-align:right;
+  font-weight:700;font-variant-numeric:tabular-nums;
+}
+.stacked-track{
+  height:14px;border-radius:999px;
+  background:var(--bg-app);overflow:hidden;
+  border:1px solid var(--divider);display:flex;
+}
+.seg{height:100%}
+.seg.green{background:var(--green)}
+.seg.yellow{background:var(--orange)}
+.seg.red{background:var(--red)}
+.seg.blue{background:var(--blue)}
+.seg.teal{background:var(--teal)}
+
+/* ============== DONUT METRICS ============== */
+.donut-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.donut-metric{
+  padding:14px;border-radius:12px;
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  display:flex;align-items:center;gap:12px;
+}
+.donut-ring{
+  width:58px;height:58px;border-radius:50%;
+  background:conic-gradient(var(--ring) calc(var(--pct)*1%), var(--bg-app) 0);
+  position:relative;flex:0 0 auto;
+}
+.donut-ring:after{
+  content:attr(data-value);position:absolute;inset:8px;border-radius:50%;
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  font-size:10.5px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.donut-metric strong{display:block;font-size:12.5px;font-weight:700;color:var(--ink)}
+.donut-metric span{
+  font-size:11px;color:var(--ink-3);
+  line-height:1.4;font-weight:500;
+}
+
+/* ============== HEATMAP ============== */
+.kpi-heatmap{
+  display:grid;grid-template-columns:1.15fr repeat(5,1fr);
+  gap:6px;font-size:11px;
+}
+.kpi-heatmap div{
+  padding:10px 8px;border-radius:8px;
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  text-align:center;font-weight:600;
+}
+.kpi-heatmap .head{
+  font-weight:700;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:0.04em;
+  font-size:10px;
+}
+.kpi-heatmap .route{
+  text-align:left;color:var(--ink);font-weight:700;
+}
+.heat-good{background:var(--green-100) !important;color:#0F7B66 !important;border-color:#BDE5DA !important}
+.heat-warn{background:var(--amber-100) !important;color:#8A6014 !important;border-color:#F1D7A1 !important}
+.heat-bad{background:var(--red-100) !important;color:#9F2727 !important;border-color:#F3C3C3 !important}
+.heat-info{background:var(--blue-100) !important;color:#1A5680 !important;border-color:#BAD5E8 !important}
+
+/* ============== FINANCE DRILL ============== */
+.finance-drill-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.finance-drill-card{
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  border-radius:12px;padding:14px;
+}
+.finance-drill-card .small{
+  font-size:10.5px;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:0.06em;font-weight:700;
+}
+.finance-drill-card .big{
+  font-size:22px;font-weight:700;margin-top:6px;
+  color:var(--ink);letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+}
+.finance-drill-card .note{
+  font-size:11px;color:var(--ink-3);
+  line-height:1.4;margin-top:6px;font-weight:500;
+}
+
+/* ============== LINE / BUSINESS METRICS CHART ============== */
+.line-card svg{
+  width:100%;height:120px;display:block;
+  border-radius:8px;
+  background:var(--surface-2);
+  border:1px solid var(--divider);
+  margin-top:10px;
+}
+
+.expense-breakdown-panel{display:flex;flex-direction:column;justify-content:space-between}
+.expense-donut-wrap{
+  display:grid;grid-template-columns:150px 1fr;
+  gap:22px;align-items:center;min-height:230px;
+}
+.expense-donut-ring{
+  width:148px;height:148px;border-radius:50%;
+  background:conic-gradient(var(--ring) calc(var(--pct)*1%), var(--bg-app) 0);
+  position:relative;
+  box-shadow:inset 0 0 0 1px var(--divider);
+}
+.expense-donut-ring::after{
+  content:attr(data-value);position:absolute;inset:22px;border-radius:50%;
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:700;color:var(--ink);
+  letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+}
+.expense-donut-copy strong{
+  display:block;font-size:14px;font-weight:700;
+  margin-bottom:8px;color:var(--ink);
+}
+.expense-donut-copy span{
+  display:block;font-size:12px;color:var(--ink-3);
+  line-height:1.55;font-weight:500;
+}
+.expense-breakdown-list{display:grid;gap:8px;margin-top:14px;font-size:11.5px;color:var(--ink-2);font-weight:500}
+.expense-breakdown-list div{display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dot.fuel{background:var(--orange)}
+.dot.maint{background:var(--red)}
+.dot.admin{background:var(--blue)}
+
+.business-metrics-card{display:flex;flex-direction:column}
+.business-metrics-card .panel-sub{margin-bottom:0}
+.business-line-chart{
+  width:100%;height:440px;
+  margin-top:0;display:block;flex:1 1 auto;
+}
+.business-line-chart text{fill:var(--ink-3);font-size:11px;font-weight:500}
+.business-line-chart .axis{stroke:var(--border-strong);stroke-width:1.5}
+.business-line-chart .gridline{stroke:var(--divider);stroke-width:1}
+.business-line-chart .line{
+  fill:none;stroke-width:3;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.business-line-chart .line.billed{stroke:var(--teal)}
+.business-line-chart .line.receipts{stroke:var(--green)}
+.business-line-chart .line.cost{stroke:var(--orange)}
+.business-line-chart .line.margin{stroke:var(--blue)}
+.business-line-chart .months text{font-size:11px;font-weight:600}
+
+.business-line-legend{
+  display:flex;gap:18px;flex-wrap:wrap;
+  margin-top:14px;padding-top:0;
+  font-size:11.5px;color:var(--ink-2);font-weight:500;
+}
+.business-line-legend span{display:flex;align-items:center;gap:7px}
+.business-line-legend i{
+  width:16px;height:3px;border-radius:999px;display:inline-block;
+}
+.business-line-legend .billed{background:var(--teal)}
+.business-line-legend .receipts{background:var(--green)}
+.business-line-legend .cost{background:var(--orange)}
+.business-line-legend .margin{background:var(--blue)}
+
+/* ============== RESPONSIVE ============== */
+@media (max-width:1280px){
+  .kpi-finance-layout,.kpi-finance-layout.reverse,.kpi-finance-layout.equal,
+  .manager-strip,.donut-metrics,.finance-drill-grid{grid-template-columns:1fr}
+  .kpi-heatmap{grid-template-columns:1fr 1fr}
+  .kpi-heatmap .head{display:none}
+}
+
+/* ============== OPS ENTRY ============== */
+.ops-entry-grid{
+  display:grid;grid-template-columns:minmax(390px,.86fr) minmax(520px,1.14fr);
+  gap:18px;align-items:stretch;
+}
+.ops-entry-grid .form-card,.ops-entry-grid .panel{height:100%;min-height:0}
+
+.expense-wide-card{width:100%;padding:22px}
+.expense-wide-card .expense-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.expense-wide-card .form-group{margin-bottom:10px}
+.expense-wide-card .form-group.full{grid-column:1/-1}
+.expense-wide-card .form-row-actions{margin-top:14px}
+.register-table.compact th{padding:10px 12px}
+.register-table.compact td{padding:10px 12px;font-size:11.5px}
+
+.route-map-panel{display:flex;flex-direction:column}
+.route-map-panel .panel-sub{margin-bottom:14px}
+.route-map-panel .map-box{flex:1;min-height:400px}
+
+.truck-dual-chart{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:16px;
+  align-items:end;height:188px;
+  padding:14px 6px 0;border-bottom:1px solid var(--divider);
+}
+.truck-dual-group{
+  height:100%;display:flex;align-items:end;justify-content:center;
+  gap:7px;position:relative;padding-bottom:20px;
+}
+.truck-dual-group .bar{
+  width:22px;border-radius:5px 5px 0 0;min-height:22px;
+  background:var(--teal);
+}
+.truck-dual-group .bar.unloaded{background:var(--orange)}
+.truck-dual-group .month{
+  position:absolute;bottom:0;font-size:11px;
+  color:var(--ink-3);font-weight:600;
+}
+
+.chart-legend{
+  display:flex;gap:14px;align-items:center;
+  margin-top:12px;font-size:11.5px;color:var(--ink-2);
+  font-weight:500;flex-wrap:wrap;
+}
+.legend-dot{
+  width:9px;height:9px;border-radius:2px;
+  display:inline-block;margin-right:6px;background:var(--teal);
+  vertical-align:middle;
+}
+.legend-dot.yellow{background:var(--orange)}
+.legend-dot.green{background:var(--green)}
+
+.driver-efficiency-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.driver-eff-row{
+  display:grid;grid-template-columns:120px 1fr 110px 120px;
+  gap:14px;align-items:center;
+  padding:12px 14px;border-radius:10px;
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+}
+.driver-eff-row .driver-name{
+  font-size:12.5px;font-weight:700;color:var(--ink);
+}
+.driver-eff-row .metric{
+  font-size:11px;color:var(--ink-3);
+  text-align:right;line-height:1.3;font-weight:500;
+}
+.driver-eff-row .metric strong{
+  display:block;font-size:12.5px;color:var(--ink);font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+
+
+
+/* ============== FUEL & WORKSHOP REFINEMENTS ============== */
+.fuel-workshop-forms{grid-template-columns:1fr 1fr;align-items:stretch}
+.fuel-workshop-forms .form-card{height:100%}
+.fuel-register-panel .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.fuel-register-table{min-width:1100px}
+.fuel-register-table th,.fuel-register-table td{white-space:nowrap}
+.fuel-control-stack{display:flex;flex-direction:column;gap:16px;height:100%}
+.fuel-tile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
+.fuel-tile-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fuel-tile-grid .finance-drill-card{min-height:70px;padding:10px 11px;display:flex;align-items:flex-start}
+.fuel-tile-grid .finance-drill-card .small{font-size:9.2px;line-height:1.15;min-height:15px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.fuel-tile-grid .finance-drill-card .big{font-size:15.5px;line-height:1.05;white-space:nowrap;margin-top:5px;min-height:17px;display:flex;align-items:center}
+.fuel-tile-grid .finance-drill-card .note{font-size:9.4px;line-height:1.18;margin-top:4px}
+.fuel-tile-grid .badge{font-size:8.4px;padding:1px 5px;border-radius:5px;line-height:1.2}
+.fuel-stack-heading{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:7px;letter-spacing:-.01em}
+.fuel-stack-heading[style]{margin-top:12px!important}
+@media (max-width:1180px){.fuel-workshop-forms,.fuel-tile-grid.three{grid-template-columns:1fr}.fuel-tile-grid{grid-template-columns:1fr}}
+
+/* ============== FINANCIAL ============== */
+.financial-summary{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;margin-bottom:22px;
+}
+.financial-summary .kpi-card{min-height:104px}
+
+.financial-layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+.financial-table tr.section-row td{
+  background:var(--teal-50);
+  color:var(--teal-700);font-weight:700;
+  text-transform:uppercase;font-size:10.5px;
+  letter-spacing:0.06em;
+}
+.financial-table tr.total-row td{
+  font-weight:700;background:var(--surface-3);color:var(--ink);
+}
+.financial-table td:last-child,.financial-table th:last-child{
+  text-align:right;font-variant-numeric:tabular-nums;
+}
+
+/* ============== DELIVERY / DOC PREVIEW ============== */
+.delivery-form-preview-grid{
+  display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);
+  gap:18px;align-items:stretch;
+}
+.delivery-form-preview-grid > .panel{
+  height:100%;align-self:stretch;overflow:hidden;
+}
+.preview-panel{display:flex;flex-direction:column;gap:12px}
+.preview-panel .data-table th,.preview-panel .data-table td{padding:8px 10px;font-size:10.5px}
+
+.doc-preview{
+  background:#fff;color:#222;
+  border-radius:10px;padding:16px 18px;
+  box-shadow:var(--shadow-sm);
+  font-family:'Inter',Arial,sans-serif;
+  font-size:10.5px;line-height:1.35;
+  border:1px solid var(--border);overflow:hidden;
+  flex:1;min-height:0;
+}
+.doc-preview.compact{max-height:340px}
+.doc-preview .doc-title{
+  text-align:center;font-size:16px;font-weight:800;
+  letter-spacing:0.04em;margin-bottom:10px;color:var(--teal);
+}
+.doc-preview .doc-top{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:12px;align-items:start;
+  border-bottom:2px solid var(--teal);
+  padding-bottom:8px;margin-bottom:10px;
+}
+.doc-preview .doc-company{font-size:10px;color:#444;line-height:1.4}
+.doc-preview .doc-company strong{color:var(--teal);font-style:italic;font-family:'Poppins';font-size:13px;letter-spacing:-0.01em}
+.doc-preview .doc-meta{text-align:right;font-size:10.5px;color:#222;line-height:1.5}
+.doc-preview .doc-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.doc-preview .doc-block{
+  border:1px solid #e0e4e7;border-radius:8px;
+  padding:10px;background:#FBFBFC;
+}
+.doc-preview .doc-block h5{
+  font-size:9.5px;text-transform:uppercase;letter-spacing:0.06em;
+  margin-bottom:7px;color:#555;font-weight:700;
+}
+.doc-preview .field{display:grid;grid-template-columns:88px 1fr;gap:6px;margin-bottom:5px}
+.doc-preview .field span:first-child{font-weight:600;color:#555}
+.doc-preview .field b{color:#111;font-weight:600}
+.doc-preview table{width:100%;border-collapse:collapse;margin:10px 0;font-size:9.5px}
+.doc-preview th{
+  background:#f4f4f7;color:#444;text-align:left;
+  padding:6px;border:1px solid #ddd;
+  text-transform:uppercase;font-size:8.5px;font-weight:700;
+}
+.doc-preview td{padding:7px 6px;border:1px solid #e5e5e5;color:#222}
+.doc-preview .small-note{
+  font-size:9px;color:#444;line-height:1.45;margin-top:8px;
+}
+.doc-preview .sign-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  gap:8px;margin-top:10px;font-size:9.5px;
+}
+.doc-preview .sign-box{
+  border-top:1px solid #333;padding-top:6px;text-align:center;color:#555;font-weight:500;
+}
+.po-preview .doc-title{color:var(--orange)}
+.po-preview .doc-top{border-bottom-color:var(--orange)}
+
+/* ============== SERVICE ORDER ============== */
+.service-order-form{padding:22px}
+.service-order-form h3{margin-bottom:14px}
+.service-order-form .form-grid{
+  grid-template-columns:repeat(4,1fr);
+  gap:12px 12px;
+}
+.service-order-form .form-group{margin-bottom:0}
+.service-order-form .form-input,.service-order-form .form-select{padding:9px 11px}
+.service-order-form .form-textarea{min-height:64px;padding:9px 11px}
+.service-order-action-row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+  gap:12px;align-items:end;margin-top:14px;
+}
+.service-order-action-row .form-group{margin-bottom:0}
+.service-order-action-row .btn-primary,.service-order-action-row .btn-secondary{
+  height:40px;white-space:nowrap;
+}
+
+.service-control-card .list{gap:8px}
+.service-control-card .list-row{padding:11px 12px}
+
+/* ============== GROUPED CHART (cashflow) ============== */
+.grouped-chart{
+  height:220px;display:grid;grid-template-columns:repeat(12,1fr);
+  gap:12px;align-items:end;
+  padding:16px 6px 0;
+  border-bottom:1px solid var(--divider);
+  margin-top:14px;
+}
+.month-bars{
+  height:100%;display:flex;flex-direction:column;
+  justify-content:flex-end;align-items:center;
+  gap:8px;min-width:0;
+}
+.month-bars .bars{
+  height:170px;width:100%;display:flex;
+  align-items:flex-end;justify-content:center;gap:4px;
+}
+.month-bars span{
+  width:13px;border-radius:4px 4px 0 0;
+  display:block;min-height:14px;
+}
+.month-bars .cash-in{background:var(--green)}
+.month-bars .cash-out{background:var(--orange)}
+.month-label{
+  font-size:11px;color:var(--ink-3);
+  white-space:nowrap;font-weight:600;
+}
+
+
+.cashflow-full-panel{width:100%}
+.cashflow-annual-chart{height:260px;gap:16px}
+.cashflow-annual-chart .month-bars .bars{height:205px}
+.cashflow-annual-chart .month-bars span{width:16px}
+.cashflow-statement-panel .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cashflow-statement-table{min-width:1120px}
+.cashflow-statement-table th,.cashflow-statement-table td{white-space:nowrap}
+.cashflow-statement-table td:first-child,.cashflow-statement-table th:first-child{min-width:240px;text-align:left}
+
+/* ============== TRANSACTION WORKSPACE ============== */
+.transaction-workspace{display:grid;grid-template-columns:1.08fr 1fr;gap:18px;align-items:stretch}
+.transaction-workspace .panel{height:100%}
+.transaction-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.t-account-preview{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.t-account-box{
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  border-radius:10px;padding:14px;
+}
+.t-account-box h4{
+  font-size:12.5px;font-weight:700;margin-bottom:10px;
+  color:var(--ink);
+}
+.t-account-row{
+  display:flex;justify-content:space-between;
+  border-bottom:1px solid var(--divider);
+  padding:7px 0;font-size:11.5px;color:var(--ink-2);
+  font-weight:500;
+}
+.t-account-row strong{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.t-account-row:last-child{border-bottom:none}
+
+.ledger-preview-controls{
+  margin-top:14px;padding:14px;border-radius:10px;
+  background:var(--surface-3);border:1px solid var(--divider);
+  display:grid;grid-template-columns:1.15fr .85fr;gap:12px;align-items:end;
+}
+.ledger-preview-controls .form-group{margin-bottom:0}
+.ledger-balance-chip{
+  border:1px solid var(--teal-100);background:var(--teal-50);
+  border-radius:9px;padding:10px 12px;min-height:58px;
+}
+.ledger-balance-chip .small{
+  font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-3);font-weight:700;margin-bottom:4px;
+}
+.ledger-balance-chip .big{
+  font-size:18px;font-weight:800;color:var(--ink);
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.ledger-output-title{
+  margin:15px 0 8px;font-size:12px;font-weight:800;
+  color:var(--ink);letter-spacing:-.01em;
+}
+.ledger-output-queue{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;margin-top:0;
+}
+.ledger-output-card{
+  background:var(--surface-3);border:1px solid var(--divider);
+  border-radius:10px;padding:12px;display:flex;justify-content:space-between;
+  align-items:center;gap:10px;min-height:74px;
+}
+.ledger-output-card strong{
+  display:block;font-size:12px;font-weight:800;color:var(--ink);margin-bottom:4px;
+}
+.ledger-output-card span{
+  display:block;font-size:10.5px;line-height:1.35;color:var(--ink-3);font-weight:500;
+}
+.ledger-output-card .btn-ghost{
+  padding:7px 10px;font-size:11px;white-space:nowrap;background:var(--surface);
+}
+.ledger-output-card.urgent{border-color:var(--amber-100);background:#FDF7E8}
+
+/* ============== COMPACT JOURNAL LEDGER PREVIEW ============== */
+.ledger-preview-panel{
+  padding:16px 18px 15px;
+  align-self:start;
+}
+.ledger-preview-panel h3{font-size:13px;margin-bottom:3px}
+.ledger-preview-panel .panel-sub{font-size:10.5px;margin-bottom:8px;line-height:1.35}
+.ledger-preview-panel .t-account-preview{gap:8px;margin-top:7px}
+.ledger-preview-panel .t-account-box{padding:9px 10px;border-radius:8px}
+.ledger-preview-panel .t-account-box h4{font-size:10.8px;margin-bottom:5px}
+.ledger-preview-panel .t-account-row{padding:4px 0;font-size:10.3px;gap:8px}
+.ledger-preview-panel .t-account-row strong{font-size:10.2px;white-space:nowrap}
+.ledger-preview-panel .ledger-preview-controls{
+  margin-top:8px;padding:8px;border-radius:8px;
+  grid-template-columns:1.25fr .75fr;gap:8px;
+}
+.ledger-preview-panel .ledger-preview-controls label{font-size:9px;margin-bottom:4px}
+.ledger-preview-panel .ledger-preview-controls .form-select{padding:6px 8px;font-size:10.5px;border-radius:7px}
+.ledger-preview-panel .ledger-balance-chip{padding:7px 9px;min-height:42px;border-radius:8px}
+.ledger-preview-panel .ledger-balance-chip .small{font-size:8.8px;margin-bottom:2px}
+.ledger-preview-panel .ledger-balance-chip .big{font-size:13.5px}
+.ledger-preview-panel .ledger-output-title{margin:9px 0 6px;font-size:10.8px}
+.ledger-preview-panel .ledger-output-queue{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.ledger-preview-panel .ledger-output-card{padding:8px 9px;min-height:50px;border-radius:8px;gap:6px}
+.ledger-preview-panel .ledger-output-card strong{font-size:10.4px;margin-bottom:2px}
+.ledger-preview-panel .ledger-output-card span{font-size:9px;line-height:1.25}
+.ledger-preview-panel .ledger-output-card .btn-ghost{padding:5px 7px;font-size:9.5px;border-radius:7px}
+
+/* ============== WIDE P&L STATEMENT ============== */
+.pnl-full-panel{width:100%;overflow:hidden}
+.pnl-full-panel .table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pnl-wide-table{min-width:1280px;width:100%;font-size:10.3px;table-layout:auto}
+.pnl-wide-table th,.pnl-wide-table td{padding:8px 9px;white-space:nowrap}
+.pnl-wide-table th:first-child,.pnl-wide-table td:first-child{text-align:left;min-width:190px;position:sticky;left:0;background:var(--surface);z-index:1}
+.pnl-wide-table tr.section-row td:first-child{background:var(--teal-50)}
+.pnl-wide-table tr.total-row td:first-child{background:var(--surface-3)}
+.pnl-wide-table th{font-size:9px}
+.pnl-wide-table td:not(:first-child),.pnl-wide-table th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+
+@media (max-width:1280px){
+  .ledger-preview-controls,.ledger-output-queue{grid-template-columns:1fr}
+}
+
+@media (max-width:1280px){
+  .service-order-action-row,.transaction-workspace,.t-account-preview{grid-template-columns:1fr}
+  .grouped-chart{grid-template-columns:repeat(6,1fr)}
+}
+@media (max-width:1280px){
+  .delivery-form-preview-grid{grid-template-columns:1fr}
+  .doc-preview.compact{max-height:none}
+}
+@media (max-width:1380px){
+  .kpi-stack-grid{grid-template-columns:repeat(5,1fr);gap:10px}
+  .ops-info-card{padding:14px 14px 12px}
+  .kpi-value{font-size:21px}
+}
+@media (max-width:1180px){
+  .kpi-stack-grid{grid-template-columns:repeat(3,1fr)}
+  .grid-2,.grid-2-equal,.performance-form-grid,.ops-entry-grid,
+  .doc-grid,.mini-cards,.chart-grid,.financial-layout,
+  .ready-pay-grid,.raise-preview-grid{grid-template-columns:1fr}
+  .kpi-dashboard-grid,.financial-summary{grid-template-columns:repeat(2,1fr)}
+  .form-grid.three,.account-form-grid,.contract-form-grid,
+  .service-order-form .form-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:980px){
+  .performance-form-grid,.performance-cards-row{grid-template-columns:1fr}
+  body{display:block;overflow:auto}
+  .sidebar{position:static;width:100%;height:auto}
+  .main{margin-left:0;width:100%;height:auto;overflow:visible}
+  .kpi-stack-grid,.form-grid,.form-grid.three,.summary-strip,
+  .kpi-dashboard-grid,.financial-summary,.ops-entry-grid,
+  .expense-wide-card .expense-form-grid{grid-template-columns:1fr}
+  .topbar{position:static;padding:14px 18px}
+  .page{padding:18px}
+}
+
+/* ============== INVOICING-SPECIFIC ============== */
+.account-form-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:12px 14px;margin-bottom:16px;
+}
+.account-form-grid .span-2{grid-column:span 2}
+.contract-form-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:12px 14px;margin-bottom:16px;
+}
+.billing-compact-panel .data-table th,.billing-compact-panel .data-table td{padding:9px 11px}
+
+.ready-pay-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;align-items:stretch}
+.ready-pay-grid .panel{height:100%}
+.raise-preview-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:18px;align-items:stretch}
+.raise-stack{display:grid;grid-template-rows:auto auto;gap:16px;height:100%}
+.raise-stack .form-card{height:100%}
+
+.invoice-preview-box{height:100%;display:flex;flex-direction:column}
+.invoice-preview-box .statement-box{flex:1;min-height:540px;overflow:hidden}
+.invoice-box-header{
+  display:flex;justify-content:space-between;gap:18px;
+  border-bottom:2px solid var(--teal);
+  padding-bottom:14px;margin-bottom:16px;
+}
+.invoice-logo{
+  font-size:24px;font-weight:800;color:var(--teal);
+  letter-spacing:-0.02em;font-style:italic;
+  font-family:'Poppins','Inter',sans-serif;
+  text-transform:lowercase;
+}
+.invoice-meta{text-align:right;font-size:12.5px;color:var(--ink-2);line-height:1.6}
+.invoice-meta strong{color:var(--ink);font-weight:700;font-size:13px}
+.invoice-preview-table{
+  width:100%;border-collapse:collapse;
+  margin-top:14px;font-size:12.5px;
+}
+.invoice-preview-table th{
+  background:var(--surface-3);color:var(--ink-2);
+  border:1px solid var(--border);padding:10px;text-align:left;
+  font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;
+}
+.invoice-preview-table td{
+  border:1px solid var(--divider);padding:10px;color:var(--ink);
+}
+.invoice-total-row td{
+  font-weight:800;background:var(--teal-50);color:var(--teal-700);
+}
+
+.maintenance-metric-card .driver-eff-row{
+  grid-template-columns:110px 1fr 100px 130px;
+}
+.maintenance-metric-card .panel-sub{margin-bottom:10px}
+
+
+
+/* ========================================================
+   v17 ADDITIONS — Icons · Dark mode · Mobile responsive
+   ======================================================== */
+
+/* --- inline Lucide icons --- */
+.ico{
+  display:inline-block;vertical-align:-3px;
+  flex-shrink:0;color:currentColor;
+}
+.nav-icon,.kpi-icon,.section-title,.kpi-card .icon,.manager-tile .icon{
+  /* parent containers may already set color */
+}
+.nav-icon{
+  width:18px;height:18px;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--ink-3);
+}
+.nav-item.active .nav-icon{color:var(--orange)}
+.nav-item .ico{width:18px;height:18px}
+.kpi-icon .ico{width:18px;height:18px}
+.kpi-card .icon{font-size:0;opacity:.6}
+.kpi-card .icon .ico{width:22px;height:22px;opacity:1}
+.manager-tile .ico{width:18px;height:18px}
+.section-title .ico{width:18px;height:18px;color:var(--orange)}
+.panel h3 .ico,.dashboard-panel h3 .ico,.form-card h3 .ico,
+.chart-panel h3 .ico,.statement-box h4 .ico{
+  width:16px;height:16px;color:var(--orange);
+  vertical-align:-2px;margin-right:2px;
+}
+.kpi-sub .ico{width:11px;height:11px;vertical-align:-1px}
+.badge .ico{width:11px;height:11px;vertical-align:-2px;margin-right:2px}
+.list-row .ico,.driver-eff-row .ico{width:14px;height:14px}
+.btn-primary .ico,.btn-secondary .ico,.btn-ghost .ico,.btn-action .ico{
+  width:14px;height:14px;vertical-align:-2px;margin-right:4px;
+}
+.form-group label .ico{width:12px;height:12px;vertical-align:-1px;margin-right:3px;color:var(--ink-3)}
+.filter-chip .ico{width:14px;height:14px}
+/* up/down deltas */
+.kpi-sub .up .ico,.kpi-sub .down .ico{margin-right:2px;vertical-align:-2px;width:11px;height:11px}
+
+/* --- DARK MODE ----------------------------------------- */
+[data-theme="dark"]{
+  /* Surfaces */
+  --bg:#0B1F24;
+  --bg-app:#0E2329;
+  --surface:#13282E;
+  --surface-2:#163139;
+  --surface-3:#0F2429;
+  --border:#22414A;
+  --border-strong:#2D5662;
+  --divider:#1B373F;
+
+  /* Type */
+  --ink:#F0F5F6;
+  --ink-2:#BFD2D6;
+  --ink-3:#7E9AA0;
+  --ink-4:#5A767D;
+
+  /* Aliases for legacy classes */
+  --text-primary:var(--ink);
+  --text-secondary:var(--ink-2);
+  --text-muted:var(--ink-3);
+  --bg-card:var(--surface);
+  --bg-card2:var(--surface-3);
+  --bg-card3:var(--surface-2);
+
+  /* Status — slightly desaturated for dark backgrounds */
+  --teal-50:rgba(12,108,125,.18);
+  --teal-100:rgba(12,108,125,.30);
+  --orange-50:rgba(242,100,25,.14);
+  --orange-100:rgba(242,100,25,.26);
+  --green-100:rgba(22,160,133,.20);
+  --red-100:rgba(214,69,69,.20);
+  --blue-100:rgba(45,125,181,.20);
+  --amber-100:rgba(232,163,58,.20);
+
+  --shadow-xs:0 1px 2px rgba(0,0,0,.30);
+  --shadow-sm:0 2px 4px rgba(0,0,0,.30), 0 1px 2px rgba(0,0,0,.20);
+  --shadow:0 4px 14px rgba(0,0,0,.30), 0 2px 4px rgba(0,0,0,.20);
+  --shadow-md:0 8px 24px rgba(0,0,0,.35);
+  --shadow-lg:0 16px 40px rgba(0,0,0,.40);
+}
+
+[data-theme="dark"] body{background:var(--bg)}
+[data-theme="dark"] .topbar{background:rgba(19,40,46,.85)}
+[data-theme="dark"] .sidebar{background:var(--surface);border-right-color:var(--border)}
+[data-theme="dark"] .sidebar-footer{background:var(--surface)}
+[data-theme="dark"] .map-box{
+  background:linear-gradient(180deg,#15323A 0%,#0D2329 100%);
+}
+[data-theme="dark"] .map-box svg line{stroke:#2D5662 !important}
+[data-theme="dark"] .map-label{
+  background:rgba(19,40,46,.92);color:var(--ink-2);
+  border-color:var(--border);
+}
+[data-theme="dark"] .vehicle-plate{background:var(--surface-2);color:#F0F5F6}
+/* keep printed docs (delivery note / PO / invoice) on white paper */
+[data-theme="dark"] .statement-box,
+[data-theme="dark"] .doc-preview{
+  background:#fff;color:#111;
+}
+[data-theme="dark"] .doc-preview .doc-block{background:#FBFBFC}
+[data-theme="dark"] .logo-text .brand{color:#5BC5D3}
+[data-theme="dark"] .invoice-logo,
+[data-theme="dark"] .doc-preview .doc-company strong{color:var(--teal)}
+[data-theme="dark"] .badge.green{background:var(--green-100);color:#5FD9C2}
+[data-theme="dark"] .badge.red{background:var(--red-100);color:#F58D8D}
+[data-theme="dark"] .badge.yellow{background:var(--amber-100);color:#F5C265}
+[data-theme="dark"] .badge.blue{background:var(--blue-100);color:#6EAEDC}
+[data-theme="dark"] .badge.teal,
+[data-theme="dark"] .badge.purple{background:var(--teal-100);color:#5BC5D3}
+[data-theme="dark"] .badge.orange{background:var(--orange-100);color:#F58F4F}
+[data-theme="dark"] .heat-good{background:var(--green-100) !important;color:#5FD9C2 !important}
+[data-theme="dark"] .heat-warn{background:var(--amber-100) !important;color:#F5C265 !important}
+[data-theme="dark"] .heat-bad{background:var(--red-100) !important;color:#F58D8D !important}
+[data-theme="dark"] .heat-info{background:var(--blue-100) !important;color:#6EAEDC !important}
+[data-theme="dark"] .financial-table tr.section-row td{color:#5BC5D3}
+[data-theme="dark"] .invoice-total-row td{background:var(--teal-100);color:#5BC5D3}
+[data-theme="dark"] .data-table tr:hover td{background:var(--surface-3)}
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-textarea{
+  background:var(--surface-2);color:var(--ink);
+  border-color:var(--border);
+}
+[data-theme="dark"] .form-input:focus,
+[data-theme="dark"] .form-select:focus,
+[data-theme="dark"] .form-textarea:focus{
+  border-color:var(--teal);
+  box-shadow:0 0 0 3px var(--teal-50);
+}
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.85)}
+[data-theme="dark"] .business-line-chart .gridline{stroke:var(--divider)}
+[data-theme="dark"] .business-line-chart .axis{stroke:var(--border-strong)}
+
+/* --- THEME TOGGLE BUTTON --- */
+.theme-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:9px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--ink-2);cursor:pointer;
+  transition:all .15s ease;
+}
+.theme-toggle:hover{
+  background:var(--surface-3);
+  border-color:var(--border-strong);
+  color:var(--ink);
+}
+.theme-toggle .ico{width:18px;height:18px}
+.theme-toggle .ico-sun{display:none}
+[data-theme="dark"] .theme-toggle .ico-moon{display:none}
+[data-theme="dark"] .theme-toggle .ico-sun{display:inline-block}
+
+/* --- MOBILE: hamburger toggle + drawer --- */
+.menu-toggle{
+  display:none;
+  width:38px;height:38px;border-radius:9px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--ink-2);cursor:pointer;
+  align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.menu-toggle:hover{background:var(--surface-3)}
+.menu-toggle .ico{width:20px;height:20px}
+.sidebar-scrim{
+  display:none;position:fixed;inset:0;z-index:19;
+  background:rgba(11,31,36,.55);backdrop-filter:blur(2px);
+}
+.sidebar-scrim.open{display:block}
+
+/* ========================================================
+   MOBILE RESPONSIVE — overrides
+   ======================================================== */
+@media (max-width:980px){
+  body{display:block;overflow:auto;height:auto}
+  .sidebar{
+    position:fixed;
+    width:280px;
+    height:100vh;top:0;left:0;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    box-shadow:var(--shadow-lg);
+    z-index:30;
+  }
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0;width:100%;height:auto;overflow:visible}
+  .topbar{
+    position:sticky;top:0;
+    padding:12px 16px;
+    gap:10px;
+  }
+  .menu-toggle{display:inline-flex}
+  .topbar-left h1{font-size:17px}
+  .topbar-left .breadcrumb{
+    font-size:11px;
+    display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .topbar-right{gap:8px}
+  .topbar-period-filter{min-width:190px}
+  .filter-chip{padding:8px 10px;font-size:11.5px}
+  .filter-chip select{font-size:11.5px;max-width:90px}
+  .btn-action{padding:8px 12px;font-size:11.5px}
+
+  .page{padding:16px}
+  .section{margin-bottom:18px}
+
+  /* All grids stack on mobile */
+  .kpi-stack-grid,.kpi-dashboard-grid,.financial-summary,
+  .manager-strip,.donut-metrics,.finance-drill-grid,
+  .grid-2,.grid-2-equal,.performance-form-grid,.performance-cards-row,
+  .ops-entry-grid,.doc-grid,.mini-cards,.chart-grid,.financial-layout,
+  .ready-pay-grid,.raise-preview-grid,.delivery-form-preview-grid,
+  .kpi-finance-layout,.kpi-finance-layout.reverse,.kpi-finance-layout.equal,
+  .transaction-workspace,.t-account-preview,.expense-donut-wrap,
+  .form-grid,.form-grid.three,.account-form-grid,.contract-form-grid,
+  .service-order-form .form-grid,.expense-wide-card .expense-form-grid,
+  .summary-strip,.service-order-action-row{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  .kpi-heatmap{
+    grid-template-columns:1fr;gap:4px;
+  }
+  .kpi-heatmap .head{display:none}
+  .summary-strip{grid-template-columns:repeat(2,1fr);gap:8px}
+  .summary-strip .box .big{font-size:16px}
+
+  /* Cards & panels */
+  .panel,.form-card,.dashboard-panel,.chart-panel{padding:16px}
+  .ops-info-card,.kpi-card{padding:14px 14px 12px;min-height:auto}
+  .ops-info-card .kpi-icon{top:12px;right:12px}
+  .kpi-value{font-size:22px}
+  .kpi-card{padding:14px 50px 12px 16px}
+  .kpi-card::before{width:3px}
+
+  /* Tables — horizontal scroll instead of squishing */
+  .data-table,.invoice-preview-table,.financial-table{
+    font-size:11px;
+  }
+  .data-table th,.data-table td{padding:8px 10px}
+  .panel > .data-table,.panel > div > .data-table,
+  .doc-preview table{
+    display:block;overflow-x:auto;white-space:nowrap;
+    -webkit-overflow-scrolling:touch;
+  }
+  .panel .data-table tr{display:table-row}
+  .financial-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* Charts shrink */
+  .combo-bars,.truck-dual-chart,.grouped-chart,.waterfall{
+    height:180px;gap:6px;padding:10px 4px 0;
+  }
+  .combo-group{padding-bottom:22px}
+  .combo-group .bar{width:14px;border-radius:3px 3px 0 0}
+  .truck-dual-group .bar{width:14px}
+  .waterfall-step{padding-bottom:30px}
+  .waterfall-step .wf-bar{width:78%}
+  .waterfall-step .wf-value{font-size:10px}
+  .waterfall-step .wf-label{font-size:9px}
+  .month-bars .bars{height:130px}
+  .month-bars span{width:9px}
+  .business-line-chart{height:300px}
+  .map-box{min-height:240px}
+  .route-map-panel .map-box{min-height:240px}
+  .expense-donut-ring{width:130px;height:130px}
+  .expense-donut-ring::after{font-size:22px;inset:18px}
+
+  /* Driver / bar rows */
+  .driver-eff-row,
+  .maintenance-metric-card .driver-eff-row{
+    grid-template-columns:1fr;
+    gap:8px;text-align:left;
+    padding:12px;
+  }
+  .driver-eff-row .metric{text-align:left}
+  .bar-row{grid-template-columns:110px 1fr 70px;gap:8px}
+  .stacked-row{grid-template-columns:100px 1fr 60px;gap:8px}
+
+  /* Forms — full-width inputs, single column */
+  .form-row-actions,.form-actions,.transaction-actions{
+    flex-direction:column;align-items:stretch;
+  }
+  .form-row-actions .btn-primary,.form-row-actions .btn-secondary,
+  .form-row-actions .btn-ghost,.form-actions button,
+  .transaction-actions button{
+    width:100%;text-align:center;justify-content:center;padding:12px;
+  }
+
+  /* Sidebar tweaks for mobile */
+  .nav-item{padding:11px 14px;font-size:14px}
+  .nav-icon{width:20px;height:20px}
+  .nav-item .ico{width:20px;height:20px}
+
+  /* Document previews remain readable */
+  .doc-preview{font-size:9.5px}
+  .doc-preview .doc-title{font-size:14px}
+  .doc-preview .doc-top,.doc-preview .doc-two{
+    grid-template-columns:1fr;gap:6px;
+  }
+  .invoice-box-header{flex-direction:column;gap:10px;align-items:flex-start}
+  .invoice-meta{text-align:left}
+
+  /* List rows wrap nicely */
+  .list-row{flex-direction:column;gap:8px;align-items:flex-start}
+  .list-row .badge{align-self:flex-start}
+}
+
+@media (max-width:520px){
+  .topbar{flex-wrap:wrap}
+  .topbar-left{order:1;flex:1 1 auto;min-width:0}
+  .topbar-right{order:2;flex:0 0 auto;gap:6px}
+  .filter-chip{display:none}
+  .menu-toggle{order:0}
+  .page{padding:12px}
+  .panel,.form-card,.dashboard-panel,.chart-panel{padding:14px;border-radius:12px}
+  .vehicle-card{padding:14px;min-height:auto}
+  .vehicle-revenue{font-size:18px}
+  .kpi-value{font-size:20px}
+  .logo-text .brand{font-size:20px}
+  .business-line-chart{height:240px}
+}
+
+
+/* === Content refinement additions === */
+.helper-text{font-size:10.5px;color:var(--ink-3);margin-top:5px;line-height:1.4;font-weight:500}
+.metric-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.metric-row.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.metric-row.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+.compact-note{font-size:11.5px;color:var(--ink-3);line-height:1.5;font-weight:500;margin-top:8px}
+.evidence-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 8px;background:var(--surface-3);border:1px solid var(--border);color:var(--ink-2)}
+.invoice-mini-list{display:grid;gap:8px;margin-top:10px}
+.invoice-mini-list div{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:8px;background:var(--surface-3);border:1px solid var(--divider);font-size:11.5px;font-weight:500;color:var(--ink-2)}
+@media (max-width:1180px){.metric-row,.metric-row.three,.metric-row.five{grid-template-columns:1fr 1fr}}
+@media (max-width:700px){.metric-row,.metric-row.three,.metric-row.five{grid-template-columns:1fr}}
+
+
+
+/* ============== FLEET PAGE V18 REFINEMENTS ============== */
+#page-truck-fleet .grid-2{align-items:stretch}
+#page-truck-fleet .trip-pull-card{display:flex;flex-direction:column;min-height:100%}
+.trip-log-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px;flex:1;align-content:start}
+.trip-log-grid .mini-item{margin-top:0}
+.trip-log-grid .mini-item strong{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.trip-log-grid .mini-item .trip-status-text{font-size:10.5px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.trip-actions{margin-top:auto;padding-top:14px}
+.fleet-km-full{width:100%}
+.fleet-km-full .truck-dual-chart{height:250px;grid-template-columns:repeat(8,1fr);gap:20px}
+.fleet-route-status-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:18px;align-items:stretch}
+.fleet-route-status-grid .chart-panel{height:100%}
+.fleet-trip-status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-content:stretch}
+.fleet-trip-status-grid .finance-drill-card{min-height:126px;display:flex;flex-direction:column;justify-content:space-between}
+.fleet-trip-status-grid .finance-drill-card .small{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.fleet-trip-status-grid .finance-drill-card .big{font-size:18px;line-height:1.15}
+.fleet-trip-status-grid .finance-drill-card .note{font-size:11.2px}
+@media (max-width:1180px){
+  .fleet-route-status-grid,.fleet-trip-status-grid{grid-template-columns:1fr}
+  .fleet-km-full .truck-dual-chart{grid-template-columns:repeat(4,1fr)}
+}
+
+
+/* V18 delivery/PO refinement: make supplier PO preview fill the PO capture card height */
+.po-form-preview-grid{align-items:stretch;}
+.po-form-preview-grid > .panel{height:100%;align-self:stretch;}
+.po-preview-panel{display:flex;flex-direction:column;}
+.po-preview-panel .panel-sub{margin-bottom:12px;}
+.po-preview-fill{flex:1 1 auto;max-height:none !important;min-height:0;height:auto;display:flex;flex-direction:column;justify-content:space-between;}
+.po-preview-fill .doc-top{margin-bottom:14px;}
+.po-preview-fill .doc-two{margin-bottom:14px;}
+.po-preview-fill table{margin:14px 0;}
+.po-preview-fill .small-note{margin-top:auto;padding-top:14px;}
+
+
+
+/* === V18 invoice/statement refinements === */
+.fleet-trip-status-grid .finance-drill-card{
+  min-height:94px;
+  padding:12px 13px;
+  border-radius:12px;
+}
+.fleet-trip-status-grid .finance-drill-card .small{
+  font-size:9.8px;
+  margin-bottom:4px;
+}
+.fleet-trip-status-grid .finance-drill-card .big{
+  font-size:16px;
+  margin-top:3px;
+}
+.fleet-trip-status-grid .finance-drill-card .note{
+  font-size:10.7px;
+  line-height:1.35;
+  margin-top:5px;
+}
+.rate-card-panel{display:flex;flex-direction:column;gap:12px;height:100%}
+.rate-tile-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.rate-tile-grid .finance-drill-card{
+  min-height:86px;
+  padding:11px 12px;
+  border-radius:12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.rate-tile-grid .finance-drill-card .small{
+  font-size:9.6px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+  margin-bottom:3px;
+}
+.rate-tile-grid .finance-drill-card .big{
+  font-size:15.8px;
+  line-height:1.15;
+  margin-top:2px;
+}
+.rate-tile-grid .finance-drill-card .note{
+  font-size:10.5px;
+  line-height:1.35;
+  margin-top:4px;
+}
+.rate-card-input{
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  border-radius:12px;
+  padding:13px;
+}
+.rate-card-input h4{
+  font-size:12.5px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:10px;
+}
+.rate-input-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;
+}
+.rate-input-grid .form-group{margin-bottom:0}
+.rate-input-grid .form-input,.rate-input-grid .form-select{padding:8px 10px;font-size:12px}
+.rate-input-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.rate-input-actions .btn-primary,.rate-input-actions .btn-ghost{padding:8px 12px;font-size:12px}
+.statement-preview-grid{
+  display:grid;
+  grid-template-columns:1fr 1.05fr;
+  gap:18px;
+  align-items:stretch;
+}
+.statement-preview-grid .raise-stack{display:grid;grid-template-rows:auto 1fr;gap:16px;height:100%}
+.statement-preview-grid .form-card,.statement-preview-grid .panel{height:100%}
+.statement-form-card .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.statement-preview-box{height:100%;display:flex;flex-direction:column}
+.statement-preview-box .statement-box{flex:1;min-height:560px;overflow:hidden}
+.statement-preview-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px}
+.statement-preview-table th{
+  background:var(--surface-3);color:var(--ink-2);border:1px solid var(--border);
+  padding:9px;text-align:left;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;
+}
+.statement-preview-table td{border:1px solid var(--divider);padding:9px;color:var(--ink)}
+.statement-total-row td{font-weight:800;background:var(--teal-50);color:var(--ink)}
+.ageing-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:14px;
+}
+.ageing-tile{
+  background:var(--surface-3);
+  border:1px solid var(--divider);
+  border-radius:10px;
+  padding:12px;
+}
+.ageing-tile .small{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:700}
+.ageing-tile .big{font-size:15px;font-weight:700;color:var(--ink);margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-0.02em}
+.ageing-tile .note{font-size:10.5px;color:var(--ink-3);margin-top:4px;line-height:1.35;font-weight:500}
+
+/* Compact receivables ageing bars */
+.receivables-bar-list{gap:7px;margin-top:8px}
+.receivables-bar-list .stacked-row{grid-template-columns:128px 1fr 72px;gap:10px;align-items:center}
+.receivables-bar-list .stacked-row .label{font-size:11px;line-height:1.15}
+.receivables-bar-list .stacked-row .total{font-size:11px;line-height:1.15}
+.receivables-bar-list .stacked-track{height:7px}
+.receivables-bar-note{font-size:10.5px;margin-top:8px;display:flex;gap:14px;flex-wrap:wrap;color:var(--ink-3);font-weight:500}
+.receivables-bar-note span{display:flex;align-items:center;gap:6px}
+.receivables-bar-note i{display:inline-block;width:8px;height:8px;border-radius:2px}
+.receivables-bar-note .current{background:var(--green)}
+.receivables-bar-note .thirty{background:var(--orange)}
+.receivables-bar-note .sixty{background:var(--red)}
+@media (max-width:1280px){
+  .statement-preview-grid{grid-template-columns:1fr}
+  .statement-preview-box .statement-box{min-height:auto}
+}
+@media (max-width:980px){
+  .rate-tile-grid,.rate-input-grid,.statement-form-card .form-grid,.ageing-grid{grid-template-columns:1fr}
+}
+
+/* === V18 Performance Dashboard refinements === */
+.monthly-billing-full{display:block;margin-bottom:22px;width:100%;}
+.monthly-billing-full .combo-bars{grid-template-columns:repeat(12,1fr);gap:10px;height:270px;padding:14px 6px 0;}
+.monthly-billing-full .combo-group{gap:4px;padding-bottom:26px;}
+.monthly-billing-full .combo-group .bar{width:18px;}
+.monthly-billing-full .dashboard-legend{margin-top:14px;}
+.heatmap-expense-layout{display:grid;grid-template-columns:1.35fr .65fr;gap:18px;margin-bottom:22px;align-items:stretch;}
+.heatmap-expense-layout .dashboard-panel{min-height:318px;}
+.kpi-heatmap.heatmap-wide{grid-template-columns:.95fr 1.45fr repeat(5,1fr);gap:6px;}
+.expense-tight{padding:20px;}
+.expense-tight .expense-donut-wrap{grid-template-columns:112px 1fr;gap:16px;min-height:188px;}
+.expense-tight .expense-donut-ring{width:112px;height:112px;}
+.expense-tight .expense-donut-ring::after{inset:18px;font-size:20px;}
+.expense-tight .expense-donut-copy strong{font-size:13px;}
+.expense-tight .expense-donut-copy span{font-size:11.5px;line-height:1.45;}
+.expense-tight .expense-breakdown-list{font-size:10.8px;gap:6px;margin-top:10px;}
+.business-metrics-full{display:block;margin-bottom:22px;width:100%;}
+.business-metrics-full .business-line-chart{height:460px;width:100%;}
+.business-metrics-full .business-line-legend{margin-top:12px;}
+@media (max-width:1280px){
+  .heatmap-expense-layout{grid-template-columns:1fr;}
+  .monthly-billing-full .combo-bars{grid-template-columns:repeat(6,1fr);}
+  .kpi-heatmap.heatmap-wide{grid-template-columns:1fr 1fr;}
+}
+
+
+/* ============================================================
+   v19 ADDITIONS — design-system polish (additive only)
+   ============================================================ */
+
+/* Focus ring — visible keyboard focus on every interactive */
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(12,108,125,.32);
+  border-radius: 8px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ transition:none !important; animation:none !important; }
+}
+
+/* Tabular figures on financial numbers */
+.kpi-value,.tile-value,.big,.data-table td,.financial-table td{
+  font-feature-settings: 'tnum' 1, 'cv11' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sign-in gate */
+#translend-signin{
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background:var(--cream); z-index:100;
+}
+#translend-signin .signin-card{
+  background:var(--surface); padding:32px 36px; border-radius:16px; box-shadow:var(--shadow-lg);
+  max-width:380px; text-align:center;
+}
+#translend-signin .signin-brand{
+  font-family:'Poppins','Inter',sans-serif; font-style:italic; font-weight:800;
+  font-size:28px; color:var(--teal); letter-spacing:-0.02em;
+}
+#translend-signin .signin-sub{
+  font-size:12px; color:var(--ink-3); margin-top:4px; letter-spacing:0.08em; text-transform:uppercase;
+}
+#translend-signin .signin-headline{ font-size:18px; font-weight:700; color:var(--ink); margin:18px 0 8px; }
+#translend-signin .signin-detail{ font-size:13px; color:var(--ink-2); line-height:1.5; margin-bottom:20px; }
+#translend-signin button{
+  display:inline-flex; align-items:center; gap:10px; padding:10px 18px;
+  background:var(--teal); color:#fff; border:none; border-radius:10px;
+  font-weight:600; font-size:13.5px; cursor:pointer; transition:all .15s ease;
+}
+#translend-signin button:hover{ background:var(--teal-600); }
+
+/* Toast */
+.toast{
+  position:fixed; right:18px; bottom:18px; z-index:9999; max-width:420px;
+  padding:12px 14px; border-radius:10px; background:var(--teal); color:#fff;
+  font:13px Inter,system-ui,sans-serif; line-height:1.45;
+  box-shadow:0 10px 30px rgba(0,0,0,.18); opacity:0; transform:translateY(8px);
+  transition:opacity .18s, transform .18s; pointer-events:none;
+}
+.toast.is-visible{ opacity:1; transform:translateY(0); }
+.toast--success{ background:var(--green); }
+.toast--warn   { background:var(--amber); color:#1f1300; }
+.toast--error  { background:var(--red); }
+
+/* Empty-state inside any panel */
+.panel-empty{
+  padding:18px; color:var(--ink-3); font-size:13px; text-align:center;
+  border-top:1px dashed var(--border);
+}
+
+/* Live data indicator chip on topbar */
+.topbar [data-sync-stamp]{
+  font-size:11px; color:var(--ink-3); font-weight:600; letter-spacing:0.04em;
+  text-transform:uppercase;
+}
+body[data-live-data=connected] .topbar [data-sync-stamp]::before{
+  content:''; display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:var(--green); margin-right:6px; vertical-align:middle;
+}
+body[data-live-data=offline]   .topbar [data-sync-stamp]::before{
+  content:''; display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:var(--red);   margin-right:6px; vertical-align:middle;
+}
+
+/* Busy state */
+body[data-busy="1"] button[aria-busy="true"]{ opacity:.65; pointer-events:none; }
+
+/* Badge component (unified, used by adapter) */
+.badge{
+  display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px;
+  font-size:11px; font-weight:700; letter-spacing:0.02em; line-height:1.4;
+}
+.badge--green   { background:var(--green-100);  color:#0F6A56; }
+.badge--red     { background:var(--red-100);    color:#902323; }
+.badge--amber   { background:var(--amber-100);  color:#7A4D00; }
+.badge--blue    { background:var(--blue-100);   color:#1A4878; }
+.badge--neutral { background:var(--surface-3);  color:var(--ink-2); }
+
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:ital,wght@1,700;1,800;1,900&display=swap"/>
+<meta name="description" content="Translend TMS — Truck Division. Operational, financial and compliance management for logistics SMBs."/>
+<meta name="theme-color" content="#0C6C7D"/>
+<link rel="icon" type="image/svg+xml" href="./assets/translend-mark.svg"/>
+
+
+<style>
+/* Preview-only: live indicator chip + ribbon styling, no layout overrides */
+[data-sync-stamp]{
+  white-space: nowrap; font-weight: 600; color: var(--ink-2);
+  display: inline-flex; align-items: center;
+}
+[data-sync-stamp]::before{
+  content:''; display:inline-block; width:8px; height:8px; border-radius:50%;
+  background: var(--green); margin-right:6px; vertical-align: middle;
+}
+</style>
+</head>
+<body>
+<!-- sign-in gate removed for preview -->
+<div id="translend-app">
+<aside class="sidebar">
+<div class="sidebar-logo">
+<div class="logo-badge">
+<div aria-label="Translend logo" class="logo-icon"></div>
+<div class="logo-text"><span class="brand">translend</span><span class="sub">any load · any road</span></div>
+</div>
+</div>
+<div class="nav-section">
+<div class="nav-label">Truck Division</div>
+<a class="nav-item active" data-page="truck-ops" onclick="showPage('truck-ops', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"></path><path d="M15 18H9"></path><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"></path><circle cx="17" cy="18" r="2"></circle><circle cx="7" cy="18" r="2"></circle></svg></span>Operations Hub <span class="nav-badge">TODAY</span></a>
+<a class="nav-item" data-page="truck-fleet" onclick="showPage('truck-fleet', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"></path><path d="M15 5.764v15"></path><path d="M9 3.236v15"></path></svg></span>Fleet &amp; Live Map</a>
+<a class="nav-item" data-page="truck-delivery" onclick="showPage('truck-delivery', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><rect height="4" rx="1" ry="1" width="8" x="8" y="2"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg></span>Delivery Notes &amp; POs</a>
+<a class="nav-item" data-page="truck-fuel" onclick="showPage('truck-fuel', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><line x1="3" x2="15" y1="22" y2="22"></line><line x1="4" x2="14" y1="9" y2="9"></line><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"></path><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"></path></svg></span>Fuel &amp; Workshop</a>
+<a class="nav-item" data-page="truck-invoicing" onclick="showPage('truck-invoicing', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M14 8H8"></path><path d="M16 12H8"></path><path d="M13 16H8"></path></svg></span>Invoicing &amp; Statements</a>
+<a class="nav-item" data-page="truck-kpi" onclick="showPage('truck-kpi', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 16h8"></path><path d="M7 11h12"></path><path d="M7 6h3"></path></svg></span>Performance Dashboard</a>
+</div>
+<div class="nav-divider"></div>
+<div class="nav-section">
+<div class="nav-label">Financials</div>
+<a class="nav-item" data-page="financial-transactions" onclick="showPage('financial-transactions', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><rect height="20" rx="2" width="16" x="4" y="2"></rect><line x1="8" x2="16" y1="6" y2="6"></line><line x1="16" x2="16" y1="14" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg></span>Journal Entry</a>
+<a class="nav-item" data-page="financial-pl" onclick="showPage('financial-pl', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span>P&amp;L Statement</a>
+<a class="nav-item" data-page="financial-cashflow" onclick="showPage('financial-cashflow', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"></path></svg></span>Cash Flow</a>
+<a class="nav-item" data-page="financial-balance" onclick="showPage('financial-balance', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg></span>Balance Sheet</a>
+<a class="nav-item" data-page="financial-trial" onclick="showPage('financial-trial', this)"><span class="nav-icon"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"></path><path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"></path><path d="M3 5a2 2 0 0 0 2 2h3"></path><path d="M3 3v13a2 2 0 0 0 2 2h3"></path></svg></span>Trial Balance</a>
+</div>
+<div class="sidebar-footer">
+<div class="user-chip"><div class="user-avatar">A</div><div class="user-info"><div class="name">Agang</div><div class="role">Owner · Truck Division</div></div></div>
+</div>
+</aside>
+<div class="sidebar-scrim" onclick="toggleSidebar()"></div>
+<main class="main" role="main">
+<header class="topbar" role="banner">
+<button aria-label="Open menu" class="menu-toggle" onclick="toggleSidebar()"><svg aria-hidden="true" class="ico" fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="20"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button>
+<div class="topbar-left">
+<h1 id="page-title">Operations Hub</h1>
+<div class="breadcrumb" id="page-breadcrumb">Truck Division · delivery-note workflow, cash, fleet and billing blockers</div>
+</div>
+<div class="topbar-right">
+<span data-sync-stamp id="translend-sync-stamp" class="filter-chip" aria-live="polite">Loading…</span>
+<button aria-label="Toggle theme" class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode"><svg aria-hidden="true" class="ico ico-moon" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="18"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><svg aria-hidden="true" class="ico ico-sun" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="18"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></button>
+<div class="filter-chip topbar-period-filter"><svg aria-hidden="true" class="ico" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24" width="16"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect height="18" rx="2" width="18" x="3" y="4"></rect><path d="M3 10h18"></path></svg> <select><option>This Month</option><option>Today</option><option>Last Month</option><option>This Quarter</option><option>Financial Year</option><option>Custom Range</option></select></div></header>
+</div>
+<section class="page active" data-crumb="Truck Division · delivery-note workflow, cash, fleet and billing blockers" data-title="Operations Hub" id="page-truck-ops">
+<div class="metric-row five section">
+<div class="manager-tile" data-tile="ready-to-invoice"><div class="tile-label">Ready to Invoice</div><div class="tile-value">BWP 48,760</div><div class="tile-note">18 completed delivery notes · POD evidence attached</div></div>
+<div class="manager-tile green" data-tile="cash-received-mtd"><div class="tile-label">Cash Received MTD</div><div class="tile-value">BWP 92,400</div><div class="tile-note">64% of May invoices collected</div></div>
+<div class="manager-tile yellow" data-tile="ar-over-30"><div class="tile-label">Receivables Over 30 Days</div><div class="tile-value">BWP 31,950</div><div class="tile-note">3 customer accounts need follow-up</div></div>
+<div class="manager-tile blue" data-tile="loaded-km-ratio"><div class="tile-label">Loaded KM Ratio</div><div class="tile-value">76%</div><div class="tile-note">Loaded km ÷ total km · target 75%</div></div>
+<div class="manager-tile red" data-tile="critical-blockers"><div class="tile-label">Critical Blockers</div><div class="tile-value">7</div><div class="tile-note">POD, compliance and margin alerts</div></div>
+</div>
+<div class="grid-2 section">
+<div class="panel">
+<h3>Today’s Action Queue</h3>
+<div class="panel-sub">Operational and financial blockers that need a decision today.</div>
+<div class="list">
+<div class="list-row"><div><strong>18 completed delivery notes ready to invoice</strong><div class="muted">Raise draft invoices from signed PODs · BWP 48,760 unbilled.</div></div><span class="badge teal">Billing</span></div>
+<div class="list-row"><div><strong>5 delivery notes pending evidence</strong><div class="muted">Receiver name, cell number or POD photo missing for older site deliveries · BWP 13,980 at risk.</div></div><span class="badge red">Evidence</span></div>
+<div class="list-row"><div><strong>2 routes below target gross margin</strong><div class="muted">Kgale → Lobatse and Oodi → Mogoditshane need rate or empty-km review before repeat dispatch.</div></div><span class="badge yellow">Margin</span></div>
+<div class="list-row"><div><strong>B 482 BRT service due in 740 km</strong><div class="muted">Book workshop slot before the next quarry run; next planned interval set at 15,000 km.</div></div><span class="badge blue">Workshop</span></div>
+<div class="list-row"><div><strong>B 916 BKR roadworthy expires in 9 days</strong><div class="muted">Compliance hold will block dispatch if not renewed before 27/05/2026.</div></div><span class="badge red">Compliance</span></div>
+<div class="list-row"><div><strong>Fuel/km 12% above target on B 345 BNG</strong><div class="muted">BWP 5.04/km vs BWP 4.50/km target; check idle time, load weight and route variance.</div></div><span class="badge orange">Fuel</span></div>
+</div>
+</div>
+<div class="panel">
+<h3>Quick Actions</h3>
+<div class="panel-sub">Common workflows for a delivery-note first haulage operation.</div>
+<div class="list">
+<div class="list-row"><div><strong>Create job</strong><div class="muted">Customer, site instruction, material, route, rate type and expected delivery notes.</div></div><span class="badge green">Create</span></div>
+<div class="list-row"><div><strong>Capture delivery note / POD</strong><div class="muted">Record truck, driver, loading point, delivered material, quantity, receiver and POD photo.</div></div><span class="badge purple">POD</span></div>
+<div class="list-row"><div><strong>Raise invoice from completed DNs</strong><div class="muted">Use completed delivery notes only; pending evidence stays in the billing blocker queue.</div></div><span class="badge teal">Invoice</span></div>
+<div class="list-row"><div><strong>Log fuel, tyre or workshop cost</strong><div class="muted">Allocate expenses to truck, trip, delivery note, supplier and cost category.</div></div><span class="badge yellow">Cost</span></div>
+<div class="list-row"><div><strong>Generate statement / POD pack</strong><div class="muted">Output customer statement, attached POD bundle, receipt or driver trip sheet.</div></div><span class="badge blue">Document</span></div>
+</div>
+</div>
+</div>
+<div class="section ops-entry-grid">
+<div class="form-card expense-wide-card" data-panel="log-truck-expense">
+<h3>Log Truck Expense</h3>
+<div class="expense-form-grid">
+<div class="form-group"><label>Date *</label><input name="Date" class="form-input" type="date" value="2026-05-18"/><div class="helper-text">Use receipt date, not capture date.</div></div>
+<div class="form-group"><label>Expense Category *</label><select class="form-select"><option>Fuel</option><option>Tyres</option><option>Maintenance &amp; Service</option><option>Repairs &amp; Spares</option><option>Driver Allowance / Subsistence</option><option>Quarry / Loading Fees</option><option>Weighbridge / Overload Penalty</option><option>Insurance</option><option>Tracking Expenses</option><option>Permits / Licences</option><option>Tolls</option><option>Other Operating</option></select></div>
+<div class="form-group"><label>Amount (BWP) *</label><input name="Amount_BWP" class="form-input" value="1,240.00"/></div>
+<div class="form-group"><label>Allocate to Truck</label><select class="form-select"><option>B 482 BRT</option><option>B 345 BNG</option><option>B 916 BKR</option><option>B 672 BDL</option><option>Fleet-wide (no single truck)</option></select></div>
+<div class="form-group"><label>Supplier</label><input name="Supplier" class="form-input" value="Gaborone Diesel Depot"/></div>
+<div class="form-group"><label>Receipt / Reference</label><input class="form-input" value="FUEL-88431"/></div>
+<div class="form-group full"><label>What was bought / paid for? *</label><input class="form-input" value="78 L diesel for Kgale crusher run delivery notes DN-0521 to DN-0523"/></div>
+</div>
+<div class="form-row-actions"><button class="btn-primary" type="button">Save Expense</button><button class="btn-secondary" type="button">Save &amp; Attach Receipt</button><button class="btn-ghost" type="button">Clear</button></div>
+</div>
+<div class="panel" data-panel="expense-register">
+<h3>Expense Register</h3>
+<div class="panel-sub">Recent truck operating costs by supplier, evidence status and vehicle allocation.</div>
+<table class="data-table register-table compact">
+<tr><th scope="col">Date</th><th scope="col">Category</th><th scope="col">Truck</th><th scope="col">Supplier</th><th scope="col">Evidence</th><th scope="col">Amount</th><th scope="col">Status</th></tr>
+<tr><td>18/05</td><td>Fuel</td><td>B 482 BRT</td><td>Gaborone Diesel Depot</td><td><span class="badge green">Receipt</span></td><td>BWP 1,240</td><td><span class="badge green">Posted</span></td></tr>
+<tr><td>17/05</td><td>Tyres</td><td>B 345 BNG</td><td>Tyre Point BW</td><td><span class="badge green">Invoice</span></td><td>BWP 7,600</td><td><span class="badge yellow">Review</span></td></tr>
+<tr><td>16/05</td><td>Workshop</td><td>B 916 BKR</td><td>Volta Spares</td><td><span class="badge red">Missing</span></td><td>BWP 2,850</td><td><span class="badge yellow">Hold</span></td></tr>
+<tr><td>15/05</td><td>Tracking</td><td>Fleet</td><td>TrackLink BW</td><td><span class="badge green">Invoice</span></td><td>BWP 1,350</td><td><span class="badge blue">Recurring</span></td></tr>
+</table>
+</div>
+</div>
+<div class="section ops-entry-grid">
+<div class="form-card expense-wide-card" data-panel="log-receipt">
+<h3>Log Customer Receipt</h3>
+<div class="expense-form-grid">
+<div class="form-group"><label>Date Received *</label><input class="form-input" type="date" value="2026-05-18"/></div>
+<div class="form-group"><label>Received From *</label><input class="form-input" value="Kgale Civil Works (Pty) Ltd"/></div>
+<div class="form-group"><label>Amount Received (BWP) *</label><input class="form-input" value="18,500.00"/></div>
+<div class="form-group"><label>Payment Method</label><select class="form-select"><option>FNB EFT</option><option>Stanbic EFT</option><option>Cash</option><option>Cheque</option><option>Orange Money</option><option>Mascom MyZaka</option><option>Smega</option></select></div>
+<div class="form-group"><label>Apply to Invoice / DN</label><input name="Invoice_ID" class="form-input" value="INV-2026-0041"/></div>
+<div class="form-group"><label>Allocation</label><select class="form-select"><option>Customer invoice payment</option><option>Deposit / advance</option><option>Part payment</option><option>Other receipt</option></select></div>
+<div class="form-group full"><label>Notes</label><input name="Notes" class="form-input" value="Part payment against May aggregate supply and haulage"/></div>
+</div>
+<div class="form-row-actions"><button class="btn-primary" type="button">Save Receipt</button><button class="btn-secondary" type="button">Generate Receipt</button><button class="btn-ghost" type="button">Clear</button></div>
+</div>
+<div class="panel" data-panel="cash-receipts">
+<h3>Cash Receipts Journal</h3>
+<div class="panel-sub">Customer receipts allocated to invoices, deposits and part-payments.</div>
+<table class="data-table register-table compact">
+<tr><th scope="col">Date</th><th scope="col">Receipt</th><th scope="col">Customer</th><th scope="col">Reference</th><th scope="col">Method</th><th scope="col">Amount</th></tr>
+<tr><td>18/05</td><td>RCPT-0064</td><td>Kgale Civil Works</td><td>INV-0041</td><td>FNB EFT</td><td>BWP 18,500</td></tr>
+<tr><td>17/05</td><td>RCPT-0063</td><td>Northgate Aggregates</td><td>Deposit</td><td>Cash</td><td>BWP 5,000</td></tr>
+<tr><td>15/05</td><td>RCPT-0062</td><td>Lobatse BuildMart</td><td>INV-0038</td><td>Stanbic EFT</td><td>BWP 22,700</td></tr>
+<tr><td>14/05</td><td>RCPT-0061</td><td>Mogoditshane Civils</td><td>Part payment</td><td>FNB EFT</td><td>BWP 9,800</td></tr>
+</table>
+</div>
+</div>
+<div class="section">
+<div class="section-header"><div><div class="section-title">Truck Performance</div><div class="section-sub">Per-truck revenue, utilisation, cost/km and compliance for the current month.</div></div></div>
+<div class="performance-form-grid">
+<div class="performance-left">
+<div class="performance-cards-row">
+<div class="vehicle-card"><div><div class="vehicle-card-top"><div class="vehicle-plate">B 482 BRT</div><div class="utilisation-ring"><div class="ring-val">82%</div><div class="ring-label">Loaded KM</div></div></div><div class="vehicle-name">Volvo FMX 440 Tipper · 20m³ · Mpho Ralebala</div><div class="vehicle-revenue">BWP 156,400</div><div class="vehicle-month">34 DNs · 6,120 km · BWP 25.56/km · GM 33%</div><div class="progress-bar"><div class="progress-fill fill-green" style="width:82%"></div></div></div><div class="vehicle-status-row"><span class="badge green">STRONG</span></div></div>
+<div class="vehicle-card"><div><div class="vehicle-card-top"><div class="vehicle-plate">B 345 BNG</div><div class="utilisation-ring"><div class="ring-val">71%</div><div class="ring-label">Loaded KM</div></div></div><div class="vehicle-name">Side Tipper · 34t payload · Kabelo Motsumi</div><div class="vehicle-revenue">BWP 132,950</div><div class="vehicle-month">26 DNs · 5,580 km · BWP 23.83/km · GM 27%</div><div class="progress-bar"><div class="progress-fill fill-yellow" style="width:71%"></div></div></div><div class="vehicle-status-row"><span class="badge yellow">STEADY</span></div></div>
+<div class="vehicle-card"><div><div class="vehicle-card-top"><div class="vehicle-plate">B 916 BKR</div><div class="utilisation-ring"><div class="ring-val">58%</div><div class="ring-label">Loaded KM</div></div></div><div class="vehicle-name">Flatbed · 14t payload · Thato Sechele</div><div class="vehicle-revenue">BWP 79,300</div><div class="vehicle-month">17 DNs · 3,210 km · BWP 24.70/km · GM 18%</div><div class="progress-bar"><div class="progress-fill fill-red" style="width:58%"></div></div></div><div class="vehicle-status-row"><span class="badge red">REVIEW</span></div></div>
+</div>
+<div class="panel register-panel" data-panel="truck-register"><h3>Truck Register</h3><div class="panel-sub">Fleet status, service and compliance checks.</div><table class="data-table"><tr><th scope="col">Truck</th><th scope="col">Type</th><th scope="col">Capacity</th><th scope="col">Driver</th><th scope="col">Compliance</th><th scope="col">Next Service</th><th scope="col">Status</th></tr><tr><td><strong>B 482 BRT</strong></td><td>Tipper</td><td>20m³</td><td>Mpho Ralebala</td><td><span class="badge green">Clear</span></td><td>740 km</td><td><span class="badge green">Active</span></td></tr><tr><td><strong>B 345 BNG</strong></td><td>Side Tipper</td><td>34t</td><td>Kabelo Motsumi</td><td><span class="badge yellow">Tyre watch</span></td><td>2,180 km</td><td><span class="badge green">Active</span></td></tr><tr><td><strong>B 916 BKR</strong></td><td>Flatbed</td><td>14t</td><td>Thato Sechele</td><td><span class="badge red">RW expiring</span></td><td>5,600 km</td><td><span class="badge yellow">Compliance Hold</span></td></tr><tr><td><strong>B 672 BDL</strong></td><td>Water Tanker</td><td>18,000 L</td><td>Neo Gaone</td><td><span class="badge green">Clear</span></td><td>3,420 km</td><td><span class="badge blue">Scheduled</span></td></tr></table></div>
+</div>
+<div class="form-card" data-panel="add-truck"><h3>Add Truck</h3><form><div class="form-group"><label>Registration</label><input class="form-input" placeholder="e.g. B 482 BRT"/></div><div class="form-group"><label>Truck Type</label><select class="form-select"><option>Tipper Truck</option><option>Side Tipper</option><option>Flatbed</option><option>Lowbed / Lowloader</option><option>Water Tanker</option><option>Reefer Truck</option></select></div><div class="form-grid"><div class="form-group"><label>Volume (m³)</label><input name="Volume" class="form-input" placeholder="20"/></div><div class="form-group"><label>Payload / GVM</label><input class="form-input" placeholder="34t / 56t GVM"/></div></div><div class="form-grid"><div class="form-group"><label>Roadworthy Expiry</label><input class="form-input" type="date"/></div><div class="form-group"><label>Insurance Expiry</label><input class="form-input" type="date"/></div></div><div class="form-group"><label>Status</label><select class="form-select"><option>Active</option><option>In Workshop</option><option>Awaiting Parts</option><option>Compliance Hold</option><option>Off-Fleet</option></select></div><div class="form-actions"><button class="btn-primary" type="button">Add Truck</button><button class="btn-ghost" type="button">Clear</button></div></form></div>
+</div>
+</div>
+<div class="section">
+<div class="section-header"><div><div class="section-title">Driver Performance</div><div class="section-sub">Fuel discipline, idle time, incidents and POD compliance by assigned driver.</div></div></div>
+<div class="performance-form-grid">
+<div class="performance-left">
+<div class="performance-cards-row">
+<div class="vehicle-card"><div><div class="vehicle-card-top"><div class="vehicle-plate">MR</div><div class="utilisation-ring"><div class="ring-val">91</div><div class="ring-label">Score</div></div></div><div class="vehicle-name">Mpho Ralebala · B 482 BRT</div><div class="vehicle-revenue">BWP 156,400</div><div class="vehicle-month">34 DNs · Fuel BWP 4.32/km · POD 98% · Idle 7%</div><div class="progress-bar"><div class="progress-fill fill-green" style="width:91%"></div></div></div><div class="vehicle-status-row"><span class="badge green">STRONG</span></div></div>
+<div class="vehicle-card"><div><div class="vehicle-card-top"><div class="vehicle-plate">KM</div><div class="utilisation-ring"><div class="ring-val">77</div><div class="ring-label">Score</div></div></div><div class="vehicle-name">Kabelo Motsumi · B 345 BNG</div><div class="vehicle-revenue">BWP 132,950</div><div class="vehicle-month">26 DNs · Fuel BWP 5.04/km · POD 92% · Idle 13%</div><div class="progress-bar"><div class="progress-fill fill-yellow" style="width:77%"></div></div></div><div class="vehicle-status-row"><span class="badge yellow">COACH</span></div></div>
+<div class="vehicle-card"><div><div class="vehicle-card-top"><div class="vehicle-plate">TS</div><div class="utilisation-ring"><div class="ring-val">84</div><div class="ring-label">Score</div></div></div><div class="vehicle-name">Thato Sechele · B 916 BKR</div><div class="vehicle-revenue">BWP 79,300</div><div class="vehicle-month">17 DNs · 0 incidents · 1 complaint · POD 96%</div><div class="progress-bar"><div class="progress-fill fill-blue" style="width:84%"></div></div></div><div class="vehicle-status-row"><span class="badge blue">STEADY</span></div></div>
+</div>
+<div class="panel register-panel" data-panel="driver-register"><h3>Driver Register</h3><div class="panel-sub">Licence, PrDP, WhatsApp and assigned-truck records.</div><table class="data-table"><tr><th scope="col">Driver</th><th scope="col">Truck</th><th scope="col">Licence</th><th scope="col">PrDP Expiry</th><th scope="col">WhatsApp</th><th scope="col">Incidents</th><th scope="col">Status</th></tr><tr><td><strong>Mpho Ralebala</strong></td><td>B 482 BRT</td><td>EC</td><td>14/11/2026</td><td>+267 72 104 882</td><td>0</td><td><span class="badge green">Clear</span></td></tr><tr><td><strong>Kabelo Motsumi</strong></td><td>B 345 BNG</td><td>EC</td><td>03/09/2026</td><td>+267 74 880 119</td><td>0</td><td><span class="badge yellow">Coach</span></td></tr><tr><td><strong>Thato Sechele</strong></td><td>B 916 BKR</td><td>C</td><td>28/05/2026</td><td>+267 76 410 663</td><td>1 complaint</td><td><span class="badge red">Renew PrDP</span></td></tr></table></div>
+</div>
+<div class="form-card" data-panel="add-driver"><h3>Add Driver</h3><form><div class="form-group"><label>Driver Name</label><input name="Driver_Name" class="form-input" placeholder="Full name"/></div><div class="form-group"><label>Phone / WhatsApp</label><input class="form-input" placeholder="+267 ..."/></div><div class="form-grid"><div class="form-group"><label>Licence Class</label><select class="form-select"><option>C</option><option>EC</option><option>EC1</option><option>C1</option></select></div><div class="form-group"><label>PrDP Expiry</label><input name="PrDP_Expiry" class="form-input" type="date"/></div></div><div class="form-group"><label>Assigned Truck</label><select class="form-select"><option>B 482 BRT</option><option>B 345 BNG</option><option>B 916 BKR</option><option>B 672 BDL</option></select></div><div class="form-actions"><button class="btn-primary" type="button">Add Driver</button><button class="btn-ghost" type="button">Clear</button></div></form></div>
+</div>
+</div>
+</section>
+<section class="page" data-page="truck-fleet" data-crumb="Truck Division · Live movement, route progress, service alerts and trip history" data-title="Fleet &amp; Live Map" id="page-truck-fleet">
+<div class="metric-row five section">
+<div class="manager-tile" data-tile="active-trucks"><div class="tile-label">Active Trucks</div><div class="tile-value">6</div><div class="tile-note">4 loaded · 1 returning empty · 1 idle</div></div>
+<div class="manager-tile green"><div class="tile-label">Loaded KM Today</div><div class="tile-value">412</div><div class="tile-note">76% loaded km ratio</div></div>
+<div class="manager-tile yellow"><div class="tile-label">Empty KM Today</div><div class="tile-value">129</div><div class="tile-note">Review Oodi backhaul gap</div></div>
+<div class="manager-tile blue" data-tile="pods-captured"><div class="tile-label">PODs Captured</div><div class="tile-value">14/19</div><div class="tile-note">5 awaiting POD photos</div></div>
+<div class="manager-tile red"><div class="tile-label">Route Alerts</div><div class="tile-value">2</div><div class="tile-note">1 idle dwell · 1 variance</div></div>
+</div>
+<div class="grid-2 section">
+<div class="panel route-map-panel">
+<h3>Live Fleet Map</h3>
+<div class="panel-sub">Live position of active trucks, pickup dwell time and delivery ETA.</div>
+<div class="map-box">
+<svg viewbox="0 0 800 430"><line stroke="#B7C6CC" stroke-width="3" x1="80" x2="720" y1="350" y2="80"></line><line stroke="#B7C6CC" stroke-width="3" x1="180" x2="660" y1="90" y2="360"></line><polyline fill="none" opacity=".8" points="110,330 220,270 360,210 520,160 690,100" stroke="#F26419" stroke-width="5"></polyline><polyline fill="none" opacity=".7" points="180,110 300,170 420,240 565,315 660,360" stroke="#0C6C7D" stroke-width="4"></polyline></svg>
+<div class="map-label" style="left:8%;top:75%">Depot · Gaborone West</div><div class="map-label" style="left:22%;top:20%">Kgale Quarry</div><div class="map-label" style="left:55%;top:34%">A1 Corridor</div><div class="map-label" style="left:70%;top:18%">Lobatse Site</div><div class="map-label" style="left:64%;top:78%">Mogoditshane Site</div>
+<div class="vehicle-dot" style="left:49%;top:40%"><div class="tooltip">B 482 BRT · loaded 28t · ETA 14:32 · ping 28 sec ago</div></div>
+<div class="vehicle-dot idle" style="left:23%;top:28%"><div class="tooltip">B 345 BNG · pickup dwell 22 min · target 15 min</div></div>
+<div class="vehicle-dot alert-dot" style="left:66%;top:71%"><div class="tooltip">B 916 BKR · off planned route · review dispatch</div></div>
+</div>
+<div class="dashboard-legend"><span>Moving / loaded</span><span class="cost">Idle / pickup dwell</span><span class="red">Alert / route variance</span></div>
+</div>
+<div class="panel trip-pull-card">
+<h3>Trip Lookup</h3>
+<div class="panel-sub">Pick a truck and date to see trip logs and push data into fuel, delivery note or cost-per-km workflows.</div>
+<div class="form-grid"><div class="form-group"><label>Trip Date</label><input class="form-input" type="date" value="2026-05-18"/></div><div class="form-group"><label>Truck</label><select class="form-select"><option>B 482 BRT</option><option>B 345 BNG</option><option>B 916 BKR</option><option>B 672 BDL</option></select></div></div>
+<div class="trip-log-grid">
+<div class="mini-item"><strong>TRIP-2026-0518-01 <span class="trip-status-text">Completed</span></strong><span>B 482 BRT · Kgale Quarry → Lobatse Site · DN-0521–DN-0523 · 86.4t · 72 km · 62 L diesel</span></div>
+<div class="mini-item"><strong>TRIP-2026-0518-02 <span class="trip-status-text">In progress</span></strong><span>B 482 BRT · Lobatse Site → Gaborone West return · empty 16 km · backhaul check open</span></div>
+<div class="mini-item"><strong>TRIP-2026-0518-03 <span class="trip-status-text">Waiting</span></strong><span>B 345 BNG · Oodi Quarry pickup · dwell 22 min vs 15 min target · WhatsApp dispatcher</span></div>
+<div class="mini-item"><strong>TRIP-2026-0518-04 <span class="trip-status-text">Alert</span></strong><span>B 916 BKR · Mogoditshane Site route variance · review fuel recovery before billing</span></div>
+<div class="mini-item"><strong>TRIP-2026-0518-05 <span class="trip-status-text">Scheduled</span></strong><span>B 672 BDL · Water delivery · Gaborone West → Tlokweng · fixed contract rate · POD pending</span></div>
+<div class="mini-item"><strong>TRIP-2026-0518-06 <span class="trip-status-text">Subcontracted</span></strong><span>B 738 BSK · Crusher run · Bela Bela → Jwaneng · supplier PO matched · client PO awaiting</span></div>
+</div>
+<div class="form-row-actions trip-actions"><button class="btn-primary" type="button">Pre-fill Fuel Log</button><button class="btn-secondary" type="button">Pre-fill Delivery Note</button><button class="btn-ghost" type="button">Open Trip Sheet</button></div>
+</div>
+</div>
+<div class="section">
+<div class="chart-panel fleet-km-full"><h3>Revenue KM vs Empty KM</h3><div class="panel-sub">Monthly distance split used for utilisation and deadhead control.</div><div class="truck-dual-chart"><div class="truck-dual-group"><span class="bar" style="height:66%"></span><span class="bar unloaded" style="height:28%"></span><div class="month">Oct</div></div><div class="truck-dual-group"><span class="bar" style="height:72%"></span><span class="bar unloaded" style="height:24%"></span><div class="month">Nov</div></div><div class="truck-dual-group"><span class="bar" style="height:70%"></span><span class="bar unloaded" style="height:22%"></span><div class="month">Dec</div></div><div class="truck-dual-group"><span class="bar" style="height:78%"></span><span class="bar unloaded" style="height:19%"></span><div class="month">Jan</div></div><div class="truck-dual-group"><span class="bar" style="height:66%"></span><span class="bar unloaded" style="height:34%"></span><div class="month">Feb</div></div><div class="truck-dual-group"><span class="bar" style="height:82%"></span><span class="bar unloaded" style="height:21%"></span><div class="month">Mar</div></div><div class="truck-dual-group"><span class="bar" style="height:76%"></span><span class="bar unloaded" style="height:24%"></span><div class="month">Apr</div></div><div class="truck-dual-group"><span class="bar" style="height:80%"></span><span class="bar unloaded" style="height:20%"></span><div class="month">May</div></div></div><div class="chart-legend"><span><i class="legend-dot"></i>Revenue KM</span><span><i class="legend-dot yellow"></i>Empty KM</span></div></div>
+</div>
+<div class="fleet-route-status-grid section">
+<div class="chart-panel" data-panel="route-profitability"><h3>Route Profitability</h3><div class="panel-sub">Gross margin, BWP/km and evidence status by route.</div><table class="data-table"><tr><th scope="col">Route</th><th scope="col">Rate Type</th><th scope="col">Revenue/km</th><th scope="col">Gross Margin</th><th scope="col">Evidence</th></tr><tr><td>Kgale → Lobatse</td><td>Per tonne</td><td>BWP 31.20</td><td><span class="badge green">34%</span></td><td><span class="badge green">Complete</span></td></tr><tr><td>Oodi → Mogoditshane</td><td>Per m³</td><td>BWP 22.40</td><td><span class="badge yellow">22%</span></td><td><span class="badge yellow">2 PODs</span></td></tr><tr><td>Gaborone West → Tlokweng</td><td>Fixed</td><td>BWP 18.90</td><td><span class="badge red">14%</span></td><td><span class="badge green">Complete</span></td></tr><tr><td>Bela Bela → Jwaneng</td><td>Per km</td><td>BWP 27.60</td><td><span class="badge green">31%</span></td><td><span class="badge blue">Awaiting client PO</span></td></tr><tr><td>Molepolole → CBD</td><td>Per m³</td><td>BWP 21.80</td><td><span class="badge yellow">24%</span></td><td><span class="badge green">Complete</span></td></tr></table></div>
+<div class="fleet-trip-status-grid">
+<div class="finance-drill-card"><div><div class="small">Active Trip <span class="badge green">Moving</span></div><div class="big">B 482 BRT</div><div class="note">loaded 56 km · empty 16 km · GM 32%</div></div></div>
+<div class="finance-drill-card"><div><div class="small">Pickup Dwell <span class="badge yellow">Idle</span></div><div class="big">B 345 BNG</div><div class="note">dwell 22 min · WhatsApp dispatch recommended</div></div></div>
+<div class="finance-drill-card"><div><div class="small">Route Variance <span class="badge red">Alert</span></div><div class="big">B 916 BKR</div><div class="note">off planned route · check driver before fuel recovery</div></div></div>
+<div class="finance-drill-card"><div><div class="small">Dispatch Review <span class="badge red">Alert</span></div><div class="big">Route Variance</div><div class="note">variance detected · review dispatch before close-out</div></div></div>
+</div>
+</div>
+</section>
+<section class="page" data-page="truck-delivery" data-crumb="Truck Division · delivery notes, purchase orders and document output" data-title="Delivery Notes &amp; POs" id="page-truck-delivery">
+<div class="metric-row five section"><div class="manager-tile" data-tile="dns-this-month"><div class="tile-label">DNs This Month</div><div class="tile-value">142</div><div class="tile-note">126 completed · 16 pending evidence</div></div><div class="manager-tile green" data-tile="completed-for-billing"><div class="tile-label">Completed for Billing</div><div class="tile-value">BWP 48,760</div><div class="tile-note">Ready for invoice draft</div></div><div class="manager-tile yellow" data-tile="pending-evidence"><div class="tile-label">Pending Evidence</div><div class="tile-value">16</div><div class="tile-note">Receiver details or POD photo missing</div></div><div class="manager-tile blue" data-tile="customer-pos"><div class="tile-label">Customer POs</div><div class="tile-value">9</div><div class="tile-note">3 open · 6 matched</div></div><div class="manager-tile red" data-tile="supplier-pos"><div class="tile-label">Supplier POs</div><div class="tile-value">BWP 21,450</div><div class="tile-note">Tyres, spares and subcontracted haulage</div></div></div>
+<div class="delivery-form-preview-grid section">
+<div class="form-card service-order-form" data-panel="capture-dn">
+<h3>Capture Delivery Note / POD</h3>
+<div class="form-grid"><div class="form-group"><label>Delivery Note No.</label><input name="DN_ID" class="form-input" value="DN-0524"/></div><div class="form-group"><label>Date</label><input class="form-input" type="date" value="2026-05-18"/></div><div class="form-group"><label>Job / Site Instruction</label><input class="form-input" value="JOB-2026-018"/></div><div class="form-group"><label>Customer PO</label><input class="form-input" value="PO-KCW-114"/></div><div class="form-group"><label>Supplied To</label><input class="form-input" value="Kgale Civil Works (Pty) Ltd"/></div><div class="form-group"><label>Delivery Location</label><input class="form-input" value="Lobatse bypass works"/></div><div class="form-group"><label>Loading Point</label><input class="form-input" value="Kgale Quarry"/></div><div class="form-group"><label>Material Delivered</label><select class="form-select"><option>Concrete stone</option><option>Crusher run</option><option>Rubble removal</option><option>Aggregate supply</option></select></div><div class="form-group"><label>Truck</label><select name="Truck" class="form-select"><option>B 482 BRT</option><option>B 345 BNG</option><option>B 916 BKR</option></select></div><div class="form-group"><label>Driver</label><input name="Driver" class="form-input" value="Mpho Ralebala"/></div><div class="form-group"><label>Quantity</label><input class="form-input" value="28.6t"/></div><div class="form-group"><label>Rate Type</label><select class="form-select"><option>Per tonne</option><option>Per m³</option><option>Per km</option><option>Fixed contract rate</option></select></div><div class="form-group"><label>Arrival</label><input class="form-input" value="11:20"/></div><div class="form-group"><label>Departure</label><input class="form-input" value="11:44"/></div><div class="form-group"><label>Received By</label><input class="form-input" value="A. Molefe"/></div><div class="form-group"><label>Receiver Cell</label><input class="form-input" value="+267 73 554 802"/></div><div class="form-group full"><label>POD Photo / Signed Note</label><input class="form-input" value="DN-0524_signed.jpg"/></div></div>
+<div class="service-order-action-row"><div class="form-group"><label>Evidence Status</label><select class="form-select"><option>Completed - ready to invoice</option><option>Pending receiver name</option><option>Pending cell number</option><option>Pending POD photo</option><option>Rejected / query</option></select></div><button class="btn-primary" type="button">Save Delivery Note</button><button class="btn-secondary" type="button">Attach POD Photo</button></div>
+</div>
+<div class="panel preview-panel" data-panel="dn-preview"><h3>Translend Delivery Note Preview</h3><div class="panel-sub">Layout follows the branded delivery note pack: company details, transport details, material row and receiver sign-off.</div><div class="doc-preview compact"><div class="doc-title">DELIVERY NOTE</div><div class="doc-top"><div class="doc-company"><strong>translend</strong><br/>Plot 16782, Gaborone West, Phase 1<br/>P.O. Box 25020, Gaborone<br/>+267 75 130 273</div><div class="doc-meta"><strong>DN No:</strong> DN-0524<br/><strong>Date:</strong> 18/05/2026<br/><strong>Time:</strong> 11:44</div></div><div class="doc-two"><div class="doc-block"><h5>Company Details</h5><div class="field"><span>Supplied To</span><b>Kgale Civil Works</b></div><div class="field"><span>Location</span><b>Lobatse bypass works</b></div><div class="field"><span>Order / POD</span><b>PO-KCW-114</b></div></div><div class="doc-block"><h5>Transport Details</h5><div class="field"><span>Vehicle</span><b>B 482 BRT</b></div><div class="field"><span>Driver</span><b>Mpho Ralebala</b></div><div class="field"><span>Loading Point</span><b>Kgale Quarry</b></div></div></div><table data-table="expense-register"><tr><th scope="col">No.</th><th scope="col">Material Delivered</th><th scope="col">Arrival</th><th scope="col">Departure</th><th scope="col">Quantity</th><th scope="col">Driver Sign</th><th scope="col">Foreman Sign</th></tr><tr><td>1</td><td>Concrete stone</td><td>11:20</td><td>11:44</td><td>28.6t</td><td>Signed</td><td>Signed</td></tr></table><div class="sign-row"><div class="sign-box">Received by: A. Molefe</div><div class="sign-box">Signature</div><div class="sign-box">Cell: +267 73 554 802</div></div><div class="small-note">Goods/services received in good order and quantity unless otherwise stated. Shortages, damages or discrepancies must be noted at delivery.</div></div></div>
+</div>
+<div class="panel section" data-panel="delivery-notes">
+<h3>Delivery Note Register</h3>
+<div class="panel-sub">Full delivery-note register used to control billing readiness, POD evidence, customer PO matching and statement packs.</div>
+<table class="data-table">
+<tr><th scope="col">DN</th><th scope="col">Date</th><th scope="col">Job</th><th scope="col">Customer</th><th scope="col">Route</th><th scope="col">Material</th><th scope="col">Qty</th><th scope="col">Rate</th><th scope="col">Value</th><th scope="col">Truck</th><th scope="col">Driver</th><th scope="col">Evidence</th><th scope="col">Billing Status</th></tr>
+<tr><td><strong>DN-0528</strong></td><td>18/05/2026</td><td>JOB-2026-018</td><td>Kgale Civil Works</td><td>Kgale Quarry → Lobatse Bypass</td><td>Concrete stone</td><td>29.4t</td><td>BWP 110/t</td><td>BWP 3,234</td><td>B 482 BRT</td><td>Mpho Ralebala</td><td><span class="badge green">Signed + photo</span></td><td><span class="badge green">Ready to invoice</span></td></tr>
+<tr><td><strong>DN-0527</strong></td><td>18/05/2026</td><td>JOB-2026-018</td><td>Kgale Civil Works</td><td>Kgale Quarry → Lobatse Bypass</td><td>Concrete stone</td><td>28.6t</td><td>BWP 110/t</td><td>BWP 3,146</td><td>B 482 BRT</td><td>Mpho Ralebala</td><td><span class="badge green">Signed + photo</span></td><td><span class="badge green">Ready to invoice</span></td></tr>
+<tr><td><strong>DN-0526</strong></td><td>17/05/2026</td><td>JOB-2026-017</td><td>Mogoditshane Civils</td><td>Oodi Pit → Block 8 Site</td><td>Crusher run</td><td>20m³</td><td>BWP 95/m³</td><td>BWP 1,900</td><td>B 345 BNG</td><td>Kabelo Moremi</td><td><span class="badge yellow">POD photo missing</span></td><td><span class="badge yellow">Pending evidence</span></td></tr>
+</table>
+</div>
+<div class="delivery-form-preview-grid po-form-preview-grid section">
+<div class="panel tms" data-panel="po-capture">
+<h3>Purchase Order Capture</h3>
+<div class="panel-sub">Record customer POs received, create Translend supplier POs, and link each PO to the relevant job, delivery notes or cost control item.</div>
+<div class="form-grid three">
+<div class="form-group"><label>PO Direction</label><select name="Direction" class="form-select"><option>Supplier PO issued by Translend</option><option>Customer PO received</option><option>Internal PO / approval</option></select></div>
+<div class="form-group"><label>PO Type</label><select name="PO_Type" class="form-select"><option>Supplier PO</option><option>Customer PO</option><option>Internal PO</option></select></div>
+<div class="form-group"><label>Purchase Order No.</label><input name="PO_ID" class="form-input" value="SPO-2026-0041"/></div>
+<div class="form-group"><label>PO Date</label><input class="form-input" type="date" value="2026-05-18"/></div>
+<div class="form-group"><label>Linked Job / DN</label><select class="form-select"><option>JOB-2026-018 · DN-0527 to DN-0528</option><option>JOB-2026-017 · DN-0525 to DN-0526</option><option>Workshop · B 482 BRT</option><option>New job / unallocated</option></select></div>
+<div class="form-group"><label>Customer PO Ref.</label><input class="form-input" value="PO-KCW-114"/></div>
+<div class="form-group"><label>Supplier / Customer</label><input class="form-input" value="Tyre Point Botswana (Pty) Ltd"/></div>
+<div class="form-group"><label>Contact Person</label><input class="form-input" value="Accounts / Sales Desk"/></div>
+<div class="form-group"><label>Payment Terms</label><select class="form-select"><option>30 Days</option><option>14 Days</option><option>COD</option><option>E.O.M</option></select></div>
+<div class="form-group"><label>Material / Service</label><input name="Scope" class="form-input" value="315/80R22.5 drive tyres"/></div>
+<div class="form-group"><label>Quantity</label><input class="form-input" value="2 each"/></div>
+<div class="form-group"><label>Rate / Unit Price</label><input class="form-input" value="BWP 3,333.34 each"/></div>
+<div class="form-group"><label>PO Value</label><input class="form-input" value="BWP 6,666.68"/></div>
+<div class="form-group"><label>VAT Rate</label><select class="form-select"><option>0% VAT</option></select></div>
+<div class="form-group"><label>Approval Status</label><select name="Approval_Status" class="form-select"><option>Authorised</option><option>Draft</option><option>Awaiting owner approval</option><option>Closed</option></select></div>
+<div class="form-group"><label>Match Requirement</label><select class="form-select"><option>Supplier invoice + delivery proof</option><option>Customer PO + completed DNs</option><option>Manager approval only</option></select></div>
+<div class="form-group"><label>Document Upload</label><input name="Evidence_Status" class="form-input" value="tyre_quote_QT0007125.pdf"/></div>
+<div class="form-group"><label>Status</label><select class="form-select"><option>Open - awaiting supplier invoice</option><option>Matched to delivery notes</option><option>Ready for payment</option><option>Closed</option></select></div>
+</div>
+<div class="form-group" style="margin-top:12px"><label>Notes</label><textarea class="form-textarea">Supplier PO issued for tyres on B 482 BRT. Match against supplier invoice, delivery proof and workshop fitment before payment approval.</textarea></div>
+<div class="form-row-actions"><button class="btn-primary" type="button">Save PO Record</button><button class="btn-secondary" type="button">Generate Supplier PO</button><button class="btn-ghost" type="button">Attach Customer PO</button></div>
+</div>
+<div class="panel tms preview-panel po-preview-panel" data-panel="po-preview">
+<h3>Translend Supplier PO Preview</h3>
+<div class="panel-sub">Outgoing PO format for suppliers, parts, tyres, outsourced haulage and workshop purchases.</div>
+<div class="doc-preview compact po-preview po-preview-fill">
+<div class="doc-title">PURCHASE ORDER</div>
+<div class="doc-top">
+<div class="doc-company"><strong>translend</strong><br/>Plot 16782, Gaborone West, Phase 1<br/>P.O. Box 25020, Gaborone<br/>+267 75 130 273 · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="325d42574053465b5d5c41724640535c415e575c561c515d1c5045">[email&#160;protected]</a></div>
+<div class="doc-meta"><strong>PO No:</strong> SPO-2026-0041<br/><strong>Date:</strong> 18/05/2026<br/><strong>Linked:</strong> B 482 BRT · Workshop</div>
+</div>
+<div class="doc-two">
+<div class="doc-block"><h5>Supplier</h5><div class="field"><span>Account</span><b>Tyre Point Botswana</b></div><div class="field"><span>Contact</span><b>Sales Desk</b></div><div class="field"><span>Terms</span><b>30 Days</b></div></div>
+<div class="doc-block"><h5>Delivery / Cost Allocation</h5><div class="field"><span>Deliver To</span><b>Translend Workshop</b></div><div class="field"><span>Truck</span><b>B 482 BRT</b></div><div class="field"><span>Cost Code</span><b>Tyres · Fleet</b></div></div>
+</div>
+<table data-table="cash-receipts"><tr><th scope="col">No.</th><th scope="col">Description</th><th scope="col">Qty</th><th scope="col">Unit Price</th><th scope="col">Amount</th></tr><tr><td>1</td><td>315/80R22.5 drive tyres · 20PR block pattern</td><td>2</td><td>BWP 3,333.34</td><td>BWP 6,666.68</td></tr><tr><td colspan="4"><strong>VAT 0%</strong></td><td>0.00</td></tr><tr><td colspan="4"><strong>Total Order</strong></td><td><strong>BWP 6,666.68</strong></td></tr></table>
+<div class="small-note">Supplier invoice, delivery proof and workshop fitment record must be matched before payment is released.</div>
+<div class="sign-row"><div class="sign-box">Prepared by</div><div class="sign-box">Authorised by</div><div class="sign-box">Supplier acceptance</div></div>
+</div>
+</div>
+</div>
+<div class="panel section" data-panel="po-control">
+<h3>PO Control Table</h3>
+<div class="panel-sub">Decision view for customer POs, supplier POs and internal approvals: match status, value exposure, linked documents and next action.</div>
+<table class="data-table">
+<tr><th scope="col">Type</th><th scope="col">PO No.</th><th scope="col">Party</th><th scope="col">Linked Job / DNs</th><th scope="col">Scope</th><th scope="col">PO Value</th><th scope="col">Matched / Used</th><th scope="col">Evidence</th><th scope="col">Invoice / Payment Link</th><th scope="col">Status</th><th scope="col">Next Action</th></tr>
+<tr><td>Customer PO</td><td><strong>PO-KCW-114</strong></td><td>Kgale Civil Works</td><td>JOB-2026-018 · DN-0527–0528</td><td>Concrete stone haulage</td><td>BWP 42,000</td><td>BWP 6,380</td><td><span class="badge green">2 PODs complete</span></td><td>Invoice draft pending</td><td><span class="badge green">Open</span></td><td>Create invoice lines by date</td></tr>
+<tr><td>Customer PO</td><td><strong>PO-MGC-087</strong></td><td>Mogoditshane Civils</td><td>JOB-2026-017 · DN-0525–0526</td><td>Crusher run supply</td><td>BWP 18,000</td><td>BWP 3,800</td><td><span class="badge yellow">1 POD photo missing</span></td><td>Blocked from final invoice</td><td><span class="badge yellow">Evidence gap</span></td><td>Request signed POD photo</td></tr>
+<tr><td>Supplier PO</td><td><strong>SPO-2026-0041</strong></td><td>Tyre Point Botswana</td><td>B 482 BRT · Workshop</td><td>315/80R22.5 drive tyres</td><td>BWP 6,667</td><td>BWP 0</td><td><span class="badge yellow">Delivery proof pending</span></td><td>Supplier invoice pending</td><td><span class="badge yellow">Open</span></td><td>Match invoice before payment</td></tr>
+</table>
+</div>
+</section>
+<section class="page" data-page="truck-fuel" data-crumb="Truck Division · fuel, workshop, inspection and compliance control" data-title="Fuel &amp; Workshop" id="page-truck-fuel">
+<div class="metric-row five section"><div class="manager-tile" data-tile="fuel-cost-per-km"><div class="tile-label">Fuel Cost / KM</div><div class="tile-value">BWP 4.61</div><div class="tile-note">Target BWP 4.50 · +2.4%</div></div><div class="manager-tile yellow" data-tile="fuel-percent-revenue"><div class="tile-label">Fuel % of Revenue</div><div class="tile-value">18.8%</div><div class="tile-note">Watch B 345 BNG idle time</div></div><div class="manager-tile blue" data-tile="services-due"><div class="tile-label">Services Due Soon</div><div class="tile-value">2</div><div class="tile-note">Within 1,000 km threshold</div></div><div class="manager-tile red" data-tile="compliance-holds"><div class="tile-label">Compliance Holds</div><div class="tile-value">1</div><div class="tile-note">Roadworthy expires in 9 days</div></div><div class="manager-tile green"><div class="tile-label">Inspection Pass Rate</div><div class="tile-value">94%</div><div class="tile-note">Daily pre-trip checks</div></div></div>
+<div class="grid-2 section fuel-workshop-forms"><div class="form-card" data-panel="log-fuel"><h3>Log Fuel Transaction</h3><div class="form-grid"><div class="form-group"><label>Date</label><input name="Date" class="form-input" type="date" value="2026-05-18"/></div><div class="form-group"><label>Truck</label><select class="form-select"><option>B 482 BRT</option><option>B 345 BNG</option><option>B 916 BKR</option></select></div><div class="form-group"><label>Litres</label><input name="Litres" class="form-input" value="78"/></div><div class="form-group"><label>Total Cost (BWP)</label><input class="form-input" value="1,240.00"/></div><div class="form-group"><label>Odometer</label><input class="form-input" value="188,420"/></div><div class="form-group"><label>Supplier</label><input class="form-input" value="Gaborone Diesel Depot"/></div><div class="form-group full"><label>Linked Delivery Notes / Trip</label><input class="form-input" value="TRIP-2026-0518-01 · DN-0521 to DN-0523"/></div></div><div class="form-row-actions"><button class="btn-primary" type="button">Save Fuel Log</button><button class="btn-secondary" type="button">Attach Receipt</button></div></div><div class="form-card" data-panel="log-maintenance"><h3>Log Maintenance Transaction</h3><div class="form-grid"><div class="form-group"><label>Date</label><input class="form-input" type="date" value="2026-05-18"/></div><div class="form-group"><label>Truck</label><select class="form-select"><option>B 345 BNG</option><option>B 482 BRT</option><option>B 916 BKR</option></select></div><div class="form-group"><label>Expense Type</label><select name="Expense_Type" class="form-select"><option>Tyres</option><option>Scheduled service</option><option>Repairs &amp; spares</option><option>Roadworthy</option><option>Tracker</option></select></div><div class="form-group"><label>Supplier</label><input name="Supplier" class="form-input" value="Joro Tyres Botswana"/></div><div class="form-group"><label>Amount (BWP)</label><input class="form-input" value="7,965.00"/></div><div class="form-group"><label>Linked PO / WO</label><input class="form-input" value="SPO-2026-0017 · WO-2026-0038"/></div><div class="form-group full"><label>Description</label><input class="form-input" value="Two rear axle tyres, fitting and balance for B 345 BNG"/></div></div><div class="form-row-actions"><button class="btn-primary" type="button">Save Maintenance Cost</button><button class="btn-secondary" type="button">Attach Invoice</button></div></div></div>
+<div class="panel section fuel-register-panel" data-panel="fuel-maintenance"><h3>Fuel / Maintenance Expenses</h3><div class="panel-sub">Operating cost register linking fuel, tyres, spares and workshop spend to trucks, suppliers, delivery notes and work orders.</div><div class="table-scroll"><table class="data-table fuel-register-table"><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col">Truck</th><th scope="col">Supplier</th><th scope="col">Description</th><th scope="col">Linked Ref</th><th scope="col">Qty</th><th scope="col">Amount</th><th scope="col">Evidence</th><th scope="col">Status</th><th scope="col">Action</th></tr><tr><td>18/05/2026</td><td>Fuel</td><td><strong>B 482 BRT</strong></td><td>Gaborone Diesel Depot</td><td>Diesel for Kgale Civil Works route</td><td>TRIP-0518-01 · DN-0521–0523</td><td>78 L</td><td>BWP 1,240</td><td><span class="badge green">Receipt</span></td><td><span class="badge green">Posted</span></td><td>Monitor BWP/km</td></tr><tr><td>18/05/2026</td><td>Tyres</td><td><strong>B 345 BNG</strong></td><td>Joro Tyres Botswana</td><td>Rear axle tyre replacement</td><td>SPO-0017 · WO-0038</td><td>2 tyres</td><td>BWP 7,965</td><td><span class="badge green">Invoice</span></td><td><span class="badge yellow">PO matched</span></td><td>Close WO</td></tr><tr><td>17/05/2026</td><td>Repair</td><td><strong>B 916 BKR</strong></td><td>Northgate Workshop</td><td>Brake light wiring and inspection</td><td>WO-0037</td><td>1 job</td><td>BWP 680</td><td><span class="badge blue">Photo</span></td><td><span class="badge yellow">Review</span></td><td>Roadworthy check</td></tr><tr><td>16/05/2026</td><td>Fuel</td><td><strong>B 672 BDL</strong></td><td>Shell Commerce Park</td><td>Diesel for Lobatse aggregate run</td><td>TRIP-0516-03</td><td>64 L</td><td>BWP 1,015</td><td><span class="badge green">Receipt</span></td><td><span class="badge green">Posted</span></td><td>Within target</td></tr><tr><td>15/05/2026</td><td>Service</td><td><strong>B 482 BRT</strong></td><td>Volvo Gaborone</td><td>Scheduled inspection and filters</td><td>WO-0035</td><td>1 service</td><td>BWP 3,850</td><td><span class="badge green">Invoice</span></td><td><span class="badge green">Posted</span></td><td>Next service set</td></tr></table></div></div>
+<div class="grid-2 section"><div class="form-card" data-panel="wo-create"><h3>Maintenance Work Order</h3><div class="form-grid"><div class="form-group"><label>Work Order</label><input class="form-input" value="WO-2026-0038"/></div><div class="form-group"><label>Truck</label><select class="form-select"><option>B 482 BRT</option><option>B 345 BNG</option><option>B 916 BKR</option></select></div><div class="form-group"><label>Work Type</label><select name="Work_Type" class="form-select"><option>Scheduled service</option><option>Repair</option><option>Tyres</option><option>Inspection finding</option><option>Roadworthy preparation</option></select></div><div class="form-group"><label>Priority</label><select name="Priority" class="form-select"><option>High</option><option>Medium</option><option>Low</option></select></div><div class="form-group full"><label>Work Required</label><input name="Work_Required" class="form-input" value="15,000 km service, brake inspection and tyre rotation"/></div></div><div class="form-row-actions"><button class="btn-primary" type="button">Create Work Order</button><button class="btn-secondary" type="button">Create Supplier PO</button></div></div><div class="panel"><h3>Workshop &amp; Compliance Register</h3><div class="panel-sub">Service, insurance, licence disc, tracker and tyre status.</div><table class="data-table"><tr><th scope="col">Truck</th><th scope="col">Next Service</th><th scope="col">Roadworthy</th><th scope="col">Insurance</th><th scope="col">Tracker</th><th scope="col">Tyres</th><th scope="col">Status</th></tr><tr><td><strong>B 482 BRT</strong></td><td><span class="badge yellow">740 km</span></td><td>14/12/2026</td><td>31/01/2027</td><td><span class="badge green">Online</span></td><td><span class="badge green">Good</span></td><td><span class="badge yellow">Book service</span></td></tr><tr><td><strong>B 345 BNG</strong></td><td>2,180 km</td><td>02/10/2026</td><td>31/01/2027</td><td><span class="badge green">Online</span></td><td><span class="badge yellow">Rear axle</span></td><td><span class="badge yellow">Tyre watch</span></td></tr><tr><td><strong>B 916 BKR</strong></td><td>5,600 km</td><td><span class="badge red">27/05/2026</span></td><td>31/01/2027</td><td><span class="badge blue">Weak ping</span></td><td><span class="badge green">Good</span></td><td><span class="badge red">Hold soon</span></td></tr></table></div></div>
+<div class="grid-2 section"><div class="panel" data-panel="daily-inspection"><h3>Daily Inspection Tracking</h3><div class="panel-sub">Pre-trip checks converted into work orders where required.</div><table class="data-table"><tr><th scope="col">Date</th><th scope="col">Truck</th><th scope="col">Driver</th><th scope="col">Checklist</th><th scope="col">Finding</th><th scope="col">Action</th></tr><tr><td>18/05</td><td>B 482 BRT</td><td>Mpho Ralebala</td><td>Passed</td><td>Minor oil seep</td><td><span class="badge yellow">Monitor</span></td></tr><tr><td>18/05</td><td>B 345 BNG</td><td>Kabelo Motsumi</td><td>Passed</td><td>Rear tyre wear</td><td><span class="badge yellow">Supplier PO</span></td></tr><tr><td>17/05</td><td>B 916 BKR</td><td>Thato Sechele</td><td>Failed</td><td>Brake light</td><td><span class="badge red">WO opened</span></td></tr></table></div><div class="panel"><h3>Tyre Cost Control</h3><div class="panel-sub">Tyre spend by truck and supplier for cost/km analysis.</div><div class="fuel-tile-grid three"><div class="finance-drill-card"><div><div class="small">MTD Tyre Spend</div><div class="big">BWP 18,400</div><div class="note">42% of workshop spend</div></div></div><div class="finance-drill-card"><div><div class="small">Highest Cost Truck</div><div class="big">B 345 BNG</div><div class="note">Rear axle wear flagged</div></div></div><div class="finance-drill-card"><div><div class="small">PO Match Rate</div><div class="big">64%</div><div class="note">Supplier invoices linked to POs</div></div></div></div><div class="fuel-stack-heading" style="margin-top:18px">Fuel Exceptions</div><div class="fuel-tile-grid"><div class="finance-drill-card"><div><div class="small">B 482 BRT <span class="badge green">OK</span></div><div class="big">4.32/km</div><div class="note">Below BWP 4.50 target</div></div></div><div class="finance-drill-card"><div><div class="small">B 345 BNG <span class="badge red">Alert</span></div><div class="big">5.04/km</div><div class="note">12% above target · check idle time</div></div></div><div class="finance-drill-card"><div><div class="small">B 916 BKR <span class="badge yellow">Watch</span></div><div class="big">4.68/km</div><div class="note">Route variance on 17/05 trip</div></div></div><div class="finance-drill-card"><div><div class="small">B 672 BDL <span class="badge green">OK</span></div><div class="big">4.12/km</div><div class="note">Best fuel discipline this week</div></div></div></div></div></div>
+</section>
+<section class="page" data-page="truck-invoicing" data-crumb="Truck Division · accounts, billing queue, receipts and statements" data-title="Invoicing &amp; Statements" id="page-truck-invoicing">
+<div class="ready-pay-grid section">
+<div class="panel" data-panel="ready-to-invoice">
+<h3>Ready-to-Invoice Queue</h3>
+<div class="panel-sub">Only completed delivery notes flow into invoice drafts; pending evidence stays blocked.</div>
+<table class="data-table">
+<tr><th scope="col">Date</th><th scope="col">DN</th><th scope="col">Customer</th><th scope="col">Material</th><th scope="col">Qty</th><th scope="col">Rate</th><th scope="col">Amount</th><th scope="col">Status</th></tr>
+<tr><td>18/05/2026</td><td>DN-0528</td><td>Kgale Civil Works</td><td>Concrete stone</td><td>29.4t</td><td>BWP 110/t</td><td>BWP 3,234</td><td><span class="badge green">Ready</span></td></tr>
+<tr><td>18/05/2026</td><td>DN-0527</td><td>Kgale Civil Works</td><td>Concrete stone</td><td>28.6t</td><td>BWP 110/t</td><td>BWP 3,146</td><td><span class="badge green">Ready</span></td></tr>
+<tr><td>18/05/2026</td><td>DN-0526</td><td>Kgale Civil Works</td><td>Concrete stone</td><td>29.1t</td><td>BWP 110/t</td><td>BWP 3,201</td><td><span class="badge green">Ready</span></td></tr>
+<tr><td>17/05/2026</td><td>DN-0525</td><td>Kgale Civil Works</td><td>Crusher run</td><td>20m³</td><td>BWP 95/m³</td><td>BWP 1,900</td><td><span class="badge green">Ready</span></td></tr>
+<tr><td>17/05/2026</td><td>DN-0524</td><td>Mogoditshane Civils</td><td>Crusher run</td><td>20m³</td><td>BWP 95/m³</td><td>BWP 1,900</td><td><span class="badge green">Ready</span></td></tr>
+<tr><td>16/05/2026</td><td>DN-0523</td><td>Northgate Aggregates</td><td>Rubble removal</td><td>20m³</td><td>BWP 45/m³</td><td>BWP 900</td><td><span class="badge green">Ready</span></td></tr>
+<tr><td>16/05/2026</td><td>DN-0522</td><td>Northgate Aggregates</td><td>Rubble removal</td><td>20m³</td><td>BWP 45/m³</td><td>BWP 900</td><td><span class="badge green">Ready</span></td></tr>
+<tr><td>15/05/2026</td><td>DN-0521</td><td>Lobatse BuildMart</td><td>Aggregate supply</td><td>31.8t</td><td>BWP 125/t</td><td>BWP 3,975</td><td><span class="badge green">Ready</span></td></tr>
+</table>
+</div>
+<div class="panel rate-card-panel">
+<div>
+<h3>Rate Card</h3>
+<div class="panel-sub">Customer, material and supplier rates used before dispatch and invoicing.</div>
+</div>
+<div class="rate-tile-grid">
+<div class="finance-drill-card"><div><div class="small">Concrete Stone <span class="badge green">35% GM</span></div><div class="big">BWP 110/t</div><div class="note">Kgale Civil Works · supplier cost BWP 72/t</div></div></div>
+<div class="finance-drill-card"><div><div class="small">Crusher Run <span class="badge yellow">28% GM</span></div><div class="big">BWP 95/m³</div><div class="note">Mogoditshane Civils · supplier cost BWP 68/m³</div></div></div>
+<div class="finance-drill-card"><div><div class="small">Rubble Removal <span class="badge green">32% GM</span></div><div class="big">BWP 900/load</div><div class="note">Northgate Aggregates · fixed load charge</div></div></div>
+<div class="finance-drill-card"><div><div class="small">Long Route <span class="badge blue">Per KM</span></div><div class="big">BWP 27.50/km</div><div class="note">Bela Bela → Jwaneng · subcontractor cost matched</div></div></div>
+</div>
+<div class="rate-card-input">
+<h4>Add New Rate</h4>
+<div class="rate-input-grid">
+<div class="form-group"><label>Customer</label><input class="form-input" value="Tlokweng Site Works"/></div>
+<div class="form-group"><label>Material</label><select class="form-select"><option>Crusher run</option><option>Concrete stone</option><option>Rubble removal</option><option>Aggregate supply</option></select></div>
+<div class="form-group"><label>Rate Type</label><select name="Rate_Type" class="form-select"><option>Per tonne</option><option>Per m³</option><option>Per km</option><option>Fixed contract</option></select></div>
+<div class="form-group"><label>Billing Rate</label><input name="Billing_Rate" class="form-input" value="BWP 105/m³"/></div>
+<div class="form-group"><label>Supplier / Cost Basis</label><input class="form-input" value="Kgale Quarry · BWP 72/m³"/></div>
+<div class="form-group"><label>Effective From</label><input class="form-input" type="date" value="2026-05-18"/></div>
+</div>
+<div class="rate-input-actions"><button class="btn-primary" type="button">Save Rate</button><button class="btn-ghost" type="button">Clear</button></div>
+</div>
+</div>
+</div>
+<div class="raise-preview-grid section">
+<div class="raise-stack">
+<div class="form-card" data-panel="raise-invoice">
+<h3>Raise Invoice</h3>
+<div class="form-grid">
+<div class="form-group"><label>Customer</label><select class="form-select"><option>Kgale Civil Works (Pty) Ltd</option><option>Mogoditshane Civils</option><option>Northgate Aggregates</option></select></div>
+<div class="form-group"><label>Invoice Date</label><input name="Invoice_Date" class="form-input" type="date" value="2026-05-18"/></div>
+<div class="form-group"><label>Delivery Note Range</label><input class="form-input" value="DN-0523 - DN-0528"/></div>
+<div class="form-group"><label>VAT</label><select class="form-select"><option>0% VAT</option></select></div>
+<div class="form-group full"><label>Client Reference / PO</label><input name="Customer_PO" class="form-input" value="PO-KCW-114"/></div>
+</div>
+<div class="form-row-actions"><button class="btn-primary" type="button">Create Draft Invoice</button><button class="btn-secondary" type="button">Attach POD Pack</button><button class="btn-ghost" type="button">Preview Statement</button></div>
+</div>
+<div class="panel" data-panel="accounts-receivable">
+<h3>Accounts Receivable</h3>
+<div class="panel-sub">Customer ledger summary for statement follow-up.</div>
+<table class="data-table">
+<tr><th scope="col">Customer</th><th scope="col">Current</th><th scope="col">30 Days</th><th scope="col">60+ Days</th><th scope="col">Status</th></tr>
+<tr><td>Kgale Civil Works</td><td>BWP 42,100</td><td>BWP 0</td><td>BWP 0</td><td><span class="badge green">Current</span></td></tr>
+<tr><td>Mogoditshane Civils</td><td>BWP 8,900</td><td>BWP 14,200</td><td>BWP 0</td><td><span class="badge yellow">Follow-up</span></td></tr>
+<tr><td>Lobatse BuildMart</td><td>BWP 0</td><td>BWP 17,750</td><td>BWP 0</td><td><span class="badge red">Over 30</span></td></tr>
+</table>
+</div>
+</div>
+<div class="panel invoice-preview-box">
+<h3>Invoice Preview</h3>
+<div class="statement-box">
+<div class="invoice-box-header"><div><div class="invoice-logo">translend</div><div class="letterhead-sub">Plot 16782, Gaborone West, Phase 1<br/>P.O. Box 25020, Gaborone<br/>+267 75 130 273 · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="066976637467726f6968754672746768756a636862286569286471">[email&#160;protected]</a></div></div><div class="invoice-meta"><strong>TAX INVOICE</strong><br/>Date: 18/05/2026<br/>Invoice #: INV-2026-0042<br/>Delivery note #s: DN-0523 - DN-0528</div></div>
+<p><strong>Customer:</strong> Kgale Civil Works (Pty) Ltd · PO-KCW-114</p>
+<table data-table="truck-register" class="invoice-preview-table">
+<tr><th scope="col">Item</th><th scope="col">Date</th><th scope="col">Description</th><th scope="col">Qty</th><th scope="col">Unit Price</th><th scope="col">Amount BWP</th></tr>
+<tr><td>1</td><td>18/05/2026</td><td>Concrete stone · Kgale Quarry to Lobatse Site · DN-0524</td><td>28.6t</td><td>BWP 110/t</td><td>3,146.00</td></tr>
+<tr><td>2</td><td>18/05/2026</td><td>Concrete stone · Kgale Quarry to Lobatse Site · DN-0523</td><td>29.1t</td><td>BWP 110/t</td><td>3,201.00</td></tr>
+<tr><td>3</td><td>17/05/2026</td><td>Diesel advance credit · B 482 BRT</td><td>50 L</td><td>BWP 16/L</td><td>(800.00)</td></tr>
+<tr class="invoice-total-row"><td colspan="5">Sub total</td><td>5,547.00</td></tr><tr><td colspan="5">VAT 0%</td><td>0.00</td></tr><tr class="invoice-total-row"><td colspan="5">Balance Due</td><td>5,547.00</td></tr>
+</table>
+<p class="compact-note">Payment terms: E.O.M · Attached POD pack required for customer statement.</p>
+</div>
+</div>
+</div>
+<div class="statement-preview-grid section">
+<div class="raise-stack">
+<div class="form-card statement-form-card" data-panel="generate-statement">
+<h3>Generate Statement</h3>
+<div class="form-grid">
+<div class="form-group"><label>Customer</label><select class="form-select"><option>Kgale Civil Works (Pty) Ltd</option><option>Mogoditshane Civils</option><option>Lobatse BuildMart</option></select></div>
+<div class="form-group"><label>Statement Date</label><input name="Statement_Date" class="form-input" type="date" value="2026-05-31"/></div>
+<div class="form-group"><label>Period From</label><input class="form-input" type="date" value="2026-05-01"/></div>
+<div class="form-group"><label>Period To</label><input class="form-input" type="date" value="2026-05-31"/></div>
+<div class="form-group"><label>Opening Balance</label><input class="form-input" value="BWP 18,500"/></div>
+<div class="form-group"><label>Include</label><select class="form-select"><option>Invoices, receipts and POD pack</option><option>Invoices and receipts only</option><option>Outstanding invoices only</option></select></div>
+</div>
+<div class="form-row-actions"><button class="btn-primary" type="button">Generate Statement</button><button class="btn-secondary" type="button">Attach POD Pack</button><button class="btn-ghost" type="button">Email PDF</button></div>
+</div>
+<div class="panel">
+<h3>Receivables Ageing by Customer</h3>
+<div class="panel-sub">Ageing view for cash follow-up and statement priority.</div>
+<div class="ageing-grid">
+<div class="ageing-tile" data-tile="ar-current"><div class="small">Current</div><div class="big">BWP 74,200</div><div class="note">68% of AR</div></div>
+<div class="ageing-tile" data-tile="ar-30"><div class="small">30 Days</div><div class="big">BWP 31,950</div><div class="note">Follow-up this week</div></div>
+<div class="ageing-tile" data-tile="ar-60"><div class="small">60+ Days</div><div class="big">BWP 8,600</div><div class="note">Owner call required</div></div>
+<div class="ageing-tile" data-tile="total-ar"><div class="small">Total AR</div><div class="big">BWP 114,750</div><div class="note">34 debtor days</div></div>
+</div>
+<div class="stacked-list receivables-bar-list">
+<div class="stacked-row"><div class="label">Kgale Civil Works</div><div class="stacked-track"><span class="seg green" style="width:100%"></span></div><div class="total">BWP 42,100</div></div>
+<div class="stacked-row"><div class="label">Mogoditshane Civils</div><div class="stacked-track"><span class="seg green" style="width:39%"></span><span class="seg yellow" style="width:61%"></span></div><div class="total">BWP 23,100</div></div>
+<div class="stacked-row"><div class="label">Lobatse BuildMart</div><div class="stacked-track"><span class="seg yellow" style="width:67%"></span><span class="seg red" style="width:33%"></span></div><div class="total">BWP 26,350</div></div>
+<div class="stacked-row"><div class="label">Tlokweng Site Works</div><div class="stacked-track"><span class="seg green" style="width:62%"></span><span class="seg yellow" style="width:38%"></span></div><div class="total">BWP 15,800</div></div>
+<div class="stacked-row"><div class="label">Northgate Aggregates</div><div class="stacked-track"><span class="seg red" style="width:100%"></span></div><div class="total">BWP 7,400</div></div>
+</div>
+<div class="receivables-bar-note"><span><i class="current"></i>Current</span><span><i class="thirty"></i>30 days</span><span><i class="sixty"></i>60+ days</span></div>
+</div>
+</div>
+<div class="panel statement-preview-box" data-panel="statement-preview">
+<h3>Statement Preview</h3>
+<div class="statement-box">
+<div class="invoice-box-header"><div><div class="invoice-logo">translend</div><div class="letterhead-sub">Plot 16782, Gaborone West, Phase 1<br/>P.O. Box 25020, Gaborone<br/>+267 75 130 273 · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="375847524556435e5859447743455659445b525953195458195540">[email&#160;protected]</a></div></div><div class="invoice-meta"><strong>STATEMENT</strong><br/>Date: 31/05/2026<br/>Customer Code: KCW-001<br/>Period: 01/05/2026 - 31/05/2026</div></div>
+<p><strong>Customer:</strong> Kgale Civil Works (Pty) Ltd<br/><strong>Contact:</strong> <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="503133333f253e2423103b37313c357d333926393c237e3528313d203c35">[email&#160;protected]</a> · +267 72 300 114</p>
+<div class="summary-strip">
+<div class="box"><div class="small">Opening</div><div class="big">18,500</div></div>
+<div class="box"><div class="small">Invoices</div><div class="big">42,100</div></div>
+<div class="box"><div class="small">Receipts</div><div class="big">18,500</div></div>
+<div class="box"><div class="small">Balance</div><div class="big">42,100</div></div>
+</div>
+<table data-table="driver-register" class="statement-preview-table">
+<tr><th scope="col">Date</th><th scope="col">Reference</th><th scope="col">Description</th><th scope="col">Debit</th><th scope="col">Credit</th><th scope="col">Balance</th></tr>
+<tr><td>01/05/2026</td><td>OPEN</td><td>Opening balance</td><td>18,500.00</td><td></td><td>18,500.00</td></tr>
+<tr><td>18/05/2026</td><td>INV-0042</td><td>Concrete stone · DN-0523 - DN-0528</td><td>5,547.00</td><td></td><td>24,047.00</td></tr>
+<tr><td>24/05/2026</td><td>RCPT-0064</td><td>Receipt · FNB EFT</td><td></td><td>18,500.00</td><td>5,547.00</td></tr>
+<tr><td>29/05/2026</td><td>INV-0048</td><td>Aggregate supply · DN-0534 - DN-0541</td><td>36,553.00</td><td></td><td>42,100.00</td></tr>
+<tr class="statement-total-row"><td colspan="5">Closing Balance Due</td><td>42,100.00</td></tr>
+</table>
+<p class="compact-note">POD pack attached for all completed delivery notes. VAT shown at 0% for this demo.</p>
+</div>
+</div>
+</div>
+</section>
+<section class="page" data-page="truck-kpi" data-crumb="Truck Division · operating KPIs, billing health, cash conversion and profitability" data-title="Performance Dashboard" id="page-truck-kpi">
+<div class="kpi-dashboard-grid section"><div class="kpi-card" data-tile="revenue-mtd"><div class="kpi-label">Revenue MTD</div><div class="kpi-value">BWP 144,800</div><div class="kpi-sub"><span class="up">+12%</span> vs April pace</div></div><div class="kpi-card green" data-tile="gross-margin"><div class="kpi-label">Gross Margin</div><div class="kpi-value">31.6%</div><div class="kpi-sub">Revenue less fuel, tyres, subcontractors and workshop costs</div></div><div class="kpi-card yellow" data-tile="debtor-days"><div class="kpi-label">Debtor Days</div><div class="kpi-value">34</div><div class="kpi-sub"><span class="amber">4 days above</span> 30-day target</div></div><div class="kpi-card blue" data-tile="doc-readiness"><div class="kpi-label">Document Readiness</div><div class="kpi-value">89%</div><div class="kpi-sub">Completed PODs ÷ delivery notes raised</div></div></div>
+<div class="manager-strip"><div class="manager-tile" data-tile="dns-this-month"><div class="tile-label">Completed DNs</div><div class="tile-value">126</div><div class="tile-note">May to date</div></div><div class="manager-tile green"><div class="tile-label">Loaded KM Ratio</div><div class="tile-value">76%</div><div class="tile-note">Loaded km ÷ total km</div></div><div class="manager-tile yellow" data-tile="fuel-percent-revenue"><div class="tile-label">Fuel / Revenue</div><div class="tile-value">18.8%</div><div class="tile-note">Target below 19%</div></div><div class="manager-tile blue" data-tile="cost-per-km"><div class="tile-label">Cost / KM</div><div class="tile-value">BWP 16.74</div><div class="tile-note">All operating costs</div></div><div class="manager-tile red" data-tile="unbilled-value"><div class="tile-label">Unbilled Value</div><div class="tile-value">BWP 48,760</div><div class="tile-note">Ready-to-invoice DNs</div></div></div>
+<div class="dashboard-panel monthly-billing-full section">
+<h3>Monthly Billing vs Transport Cost</h3>
+<div class="panel-sub">Last 12 months, starting from the current month backwards. Revenue is recognised when invoices are raised.</div>
+<div class="combo-bars">
+<div class="combo-group"><span class="bar" style="height:84%"></span><span class="bar cost" style="height:58%"></span><div class="month">May</div></div>
+<div class="combo-group"><span class="bar" style="height:80%"></span><span class="bar cost" style="height:55%"></span><div class="month">Apr</div></div>
+<div class="combo-group"><span class="bar" style="height:76%"></span><span class="bar cost" style="height:53%"></span><div class="month">Mar</div></div>
+<div class="combo-group"><span class="bar" style="height:71%"></span><span class="bar cost" style="height:50%"></span><div class="month">Feb</div></div>
+<div class="combo-group"><span class="bar" style="height:66%"></span><span class="bar cost" style="height:47%"></span><div class="month">Jan</div></div>
+<div class="combo-group"><span class="bar" style="height:62%"></span><span class="bar cost" style="height:45%"></span><div class="month">Dec</div></div>
+<div class="combo-group"><span class="bar" style="height:58%"></span><span class="bar cost" style="height:43%"></span><div class="month">Nov</div></div>
+<div class="combo-group"><span class="bar" style="height:55%"></span><span class="bar cost" style="height:41%"></span><div class="month">Oct</div></div>
+<div class="combo-group"><span class="bar" style="height:52%"></span><span class="bar cost" style="height:38%"></span><div class="month">Sep</div></div>
+<div class="combo-group"><span class="bar" style="height:49%"></span><span class="bar cost" style="height:36%"></span><div class="month">Aug</div></div>
+<div class="combo-group"><span class="bar" style="height:46%"></span><span class="bar cost" style="height:35%"></span><div class="month">Jul</div></div>
+<div class="combo-group"><span class="bar" style="height:43%"></span><span class="bar cost" style="height:32%"></span><div class="month">Jun</div></div>
+</div>
+<div class="dashboard-legend"><span>Invoiced revenue</span><span class="cost">Transport cost</span></div>
+</div>
+<div class="heatmap-expense-layout section">
+<div class="dashboard-panel">
+<h3>Route &amp; Truck Margin Heatmap</h3>
+<div class="panel-sub">Gross margin by truck, route and operating driver.</div>
+<div class="kpi-heatmap heatmap-wide">
+<div class="head">Truck</div><div class="head">Route</div><div class="head">GM%</div><div class="head">BWP/km</div><div class="head">Fuel%</div><div class="head">POD</div><div class="head">Action</div>
+<div class="route">B 482 BRT</div><div class="route">Kgale Quarry → Lobatse</div><div class="heat-good">34%</div><div class="heat-good">31.20</div><div class="heat-good">17%</div><div class="heat-good">Complete</div><div class="heat-good">Keep</div>
+<div class="route">B 345 BNG</div><div class="route">Oodi Quarry → Mogoditshane</div><div class="heat-warn">22%</div><div class="heat-warn">22.40</div><div class="heat-warn">20%</div><div class="heat-warn">2 missing</div><div class="heat-warn">Review</div>
+<div class="route">B 916 BKR</div><div class="route">G West → Tlokweng Site</div><div class="heat-bad">14%</div><div class="heat-bad">18.90</div><div class="heat-bad">25%</div><div class="heat-good">Complete</div><div class="heat-bad">Reprice</div>
+<div class="route">B 274 BTF</div><div class="route">Bela Bela → Jwaneng</div><div class="heat-good">31%</div><div class="heat-good">27.60</div><div class="heat-info">18%</div><div class="heat-info">PO wait</div><div class="heat-info">Hold</div>
+<div class="route">B 608 BHL</div><div class="route">Mokolodi → Broadhurst</div><div class="heat-warn">28%</div><div class="heat-warn">24.80</div><div class="heat-warn">19%</div><div class="heat-good">Complete</div><div class="heat-warn">Watch</div>
+</div>
+</div>
+<div class="dashboard-panel expense-breakdown-panel expense-tight">
+<h3>Expense Breakdown</h3>
+<div class="panel-sub">May operating cost composition.</div>
+<div class="expense-donut-wrap">
+<div class="expense-donut-ring" data-value="44%" style="--pct:44;--ring:var(--orange)"></div>
+<div class="expense-donut-copy">
+<strong>Fuel remains the main cost driver.</strong>
+<span>Fuel BWP 27,250 · tyres BWP 18,400 · workshop BWP 13,600 · subcontractors BWP 9,800.</span>
+<div class="expense-breakdown-list">
+<div><i class="dot fuel"></i>Fuel 44%</div>
+<div><i class="dot maint"></i>Tyres &amp; workshop 32%</div>
+<div><i class="dot admin"></i>Subcontractors &amp; permits 24%</div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="dashboard-panel business-metrics-card business-metrics-full section">
+<h3>Key Business Metrics Trend</h3>
+<div class="panel-sub">Monthly movement in billing, receipts, transport costs and gross profit across the last 12 months.</div>
+<svg class="business-line-chart" preserveaspectratio="none" viewbox="0 0 1100 440">
+<line class="axis" x1="58" x2="1065" y1="382" y2="382"></line>
+<line class="axis" x1="58" x2="58" y1="55" y2="382"></line>
+<g>
+<line class="gridline" x1="58" x2="1065" y1="300" y2="300"></line>
+<line class="gridline" x1="58" x2="1065" y1="218" y2="218"></line>
+<line class="gridline" x1="58" x2="1065" y1="137" y2="137"></line>
+<line class="gridline" x1="58" x2="1065" y1="55" y2="55"></line>
+</g>
+<text x="12" y="386">0</text>
+<text x="12" y="304">50k</text>
+<text x="12" y="222">100k</text>
+<text x="12" y="141">150k</text>
+<text x="12" y="59">200k</text>
+<polyline class="line billed" points="58,145 150,160 241,171 333,186 424,199 516,209 607,222 699,230 790,238 882,246 973,254 1065,264"></polyline>
+<polyline class="line receipts" points="58,192 150,201 241,212 333,222 424,230 516,238 607,251 699,258 790,264 882,271 973,277 1065,284"></polyline>
+<polyline class="line cost" points="58,230 150,238 241,243 333,251 424,259 516,264 607,271 699,276 790,282 882,287 973,290 1065,297"></polyline>
+<polyline class="line margin" points="58,307 150,312 241,317 333,322 424,325 516,328 607,333 699,336 790,338 882,341 973,344 1065,348"></polyline>
+<g class="months"><text x="45" y="410">May</text><text x="137" y="410">Apr</text><text x="228" y="410">Mar</text><text x="320" y="410">Feb</text><text x="411" y="410">Jan</text><text x="503" y="410">Dec</text><text x="594" y="410">Nov</text><text x="686" y="410">Oct</text><text x="777" y="410">Sep</text><text x="869" y="410">Aug</text><text x="960" y="410">Jul</text><text x="1052" y="410">Jun</text></g>
+</svg>
+<div class="business-line-legend"><span><i class="billed"></i>Billing</span><span><i class="receipts"></i>Receipts</span><span><i class="cost"></i>Transport cost</span><span><i class="margin"></i>Gross profit</span></div>
+</div>
+<div class="finance-drill-grid section"><div class="finance-drill-card"><div class="small">Cash Reserve Check</div><div class="big">BWP 118,600</div><div class="note">Approx. 1.9 months operating cover at current burn.</div></div><div class="finance-drill-card"><div class="small">AR Follow-up Priority</div><div class="big">BWP 31,950</div><div class="note">Accounts older than 30 days.</div></div><div class="finance-drill-card"><div class="small">Owner Decision Today</div><div class="big">Reprice 2</div><div class="note">Low-margin routes before new dispatch.</div></div></div>
+</section>
+<section class="page" data-page="financial-transactions" data-crumb="Financials · post transactions, update ledgers and keep Google Sheets export clean" data-title="Journal Entry" id="page-financial-transactions">
+<div class="transaction-workspace section"><div class="form-card" data-panel="post-journal"><h3>Post Journal Entry</h3><div class="form-grid"><div class="form-group"><label>Date</label><input name="Date" class="form-input" type="date" value="2026-05-18"/></div><div class="form-group"><label>Transaction Type</label><select class="form-select"><option>Customer invoice</option><option>Customer receipt</option><option>Fuel expense</option><option>Supplier invoice</option><option>Diesel advance credit</option><option>Subcontractor cost</option></select></div><div class="form-group"><label>Reference</label><input name="Source_Doc" class="form-input" value="INV-2026-0042"/></div><div class="form-group"><label>Amount (BWP)</label><input class="form-input" value="5,547.00"/></div><div class="form-group full"><label>Description</label><input class="form-input" value="Invoice raised from completed delivery notes DN-0523 to DN-0524"/></div></div><div class="transaction-actions"><button class="btn-primary" type="button">Post Transaction</button><button class="btn-secondary" type="button">Export to Google Sheets</button><button class="btn-ghost" type="button">Clear</button></div></div><div class="panel ledger-preview-panel"><h3>Ledger Preview</h3><div class="panel-sub">Accrual accounting: revenue recognised when invoice is raised.</div><div class="t-account-preview"><div class="t-account-box"><h4>Debit</h4><div class="t-account-row"><span>Accounts Receivable</span><strong>BWP 5,547.00</strong></div></div><div class="t-account-box"><h4>Credit</h4><div class="t-account-row"><span>Haulage Revenue</span><strong>BWP 5,547.00</strong></div><div class="t-account-row"><span>VAT Output</span><strong>BWP 0.00</strong></div></div></div><div class="ledger-preview-controls"><div class="form-group"><label>Account shown in T-account</label><select class="form-select"><option>Accounts Receivable</option><option>Haulage Revenue</option><option>Cash at Bank</option><option>Fuel Expense</option><option>Supplier Payables</option><option>VAT Output</option></select></div><div class="ledger-balance-chip"><div class="small">Selected account balance</div><div class="big">BWP 83,950 DR</div></div></div><h4 class="ledger-output-title">Ledger Output Queue</h4><div class="ledger-output-queue"><div class="ledger-output-card"><div><strong>General Ledger</strong><span>May 2026 · all posted transactions</span></div><button class="btn-ghost" type="button">Generate</button></div><div class="ledger-output-card"><div><strong>AR Ledger</strong><span>Customer balances, receipts and open invoices</span></div><button class="btn-ghost" type="button">Generate</button></div><div class="ledger-output-card"><div><strong>Cashbook Export</strong><span>Bank, cash and mobile-money movement</span></div><button class="btn-ghost" type="button">Generate</button></div><div class="ledger-output-card urgent"><div><strong>Unposted Txns</strong><span>6 need account mapping before ledger posting</span></div><button class="btn-ghost" type="button">Review</button></div></div></div></div>
+<div class="panel section" data-panel="recent-transactions"><h3>Recent Posted Transactions</h3><table class="data-table"><tr><th scope="col">Date</th><th scope="col">Reference</th><th scope="col">Type</th><th scope="col">Customer / Supplier</th><th scope="col">Debit</th><th scope="col">Credit</th><th scope="col">Amount</th></tr><tr><td>18/05</td><td>INV-0042</td><td>Customer invoice</td><td>Kgale Civil Works</td><td>Accounts Receivable</td><td>Haulage Revenue</td><td>BWP 5,547</td></tr><tr><td>18/05</td><td>RCPT-0064</td><td>Customer receipt</td><td>Kgale Civil Works</td><td>Bank</td><td>Accounts Receivable</td><td>BWP 18,500</td></tr><tr><td>17/05</td><td>FUEL-88431</td><td>Fuel expense</td><td>Gaborone Diesel Depot</td><td>Fuel Expense</td><td>Bank</td><td>BWP 1,240</td></tr></table></div>
+</section>
+<section class="page" data-page="financial-pl" data-crumb="Financials · Income Statement" data-title="P&amp;L Statement" id="page-financial-pl">
+<div class="financial-summary"><div class="kpi-card" data-tile="revenue"><div class="kpi-label">Revenue</div><div class="kpi-value">BWP 144,800</div><div class="kpi-sub">Invoices raised MTD</div></div><div class="kpi-card yellow" data-tile="transport-cost"><div class="kpi-label">Transport Cost</div><div class="kpi-value">BWP 99,050</div><div class="kpi-sub">Fuel, tyres, workshop, subcontractors</div></div><div class="kpi-card green" data-tile="gross-profit"><div class="kpi-label">Gross Profit</div><div class="kpi-value">BWP 45,750</div><div class="kpi-sub">31.6% gross margin</div></div><div class="kpi-card blue"><div class="kpi-label">Net Profit</div><div class="kpi-value">BWP 28,900</div><div class="kpi-sub">After admin overheads</div></div></div>
+<div class="panel pnl-full-panel section" data-panel="pl-statement"><h3>Management Profit &amp; Loss</h3><div class="panel-sub">Monthly management P&amp;L by financial year, with YTD totals for transport-margin decisions.</div><div class="table-scroll"><table class="data-table financial-table pnl-wide-table"><tr><th scope="col">Line Item</th><th scope="col">July</th><th scope="col">August</th><th scope="col">September</th><th scope="col">October</th><th scope="col">November</th><th scope="col">December</th><th scope="col">January</th><th scope="col">February</th><th scope="col">March</th><th scope="col">April</th><th scope="col">May</th><th scope="col">June</th><th scope="col">YTD</th></tr><tr class="section-row"><td colspan="14">Revenue</td></tr><tr><td>Aggregate haulage</td><td>BWP 61,200</td><td>BWP 64,400</td><td>BWP 68,850</td><td>BWP 72,100</td><td>BWP 75,750</td><td>BWP 70,400</td><td>BWP 66,800</td><td>BWP 71,150</td><td>BWP 76,500</td><td>BWP 82,400</td><td>BWP 91,200</td><td>BWP 94,800</td><td>BWP 895,550</td></tr><tr><td>Rubble removal</td><td>BWP 12,600</td><td>BWP 9,800</td><td>BWP 14,450</td><td>BWP 13,700</td><td>BWP 16,200</td><td>BWP 11,850</td><td>BWP 10,900</td><td>BWP 13,400</td><td>BWP 15,200</td><td>BWP 16,900</td><td>BWP 18,700</td><td>BWP 20,500</td><td>BWP 174,200</td></tr><tr><td>Aggregate supply</td><td>BWP 24,800</td><td>BWP 26,800</td><td>BWP 30,100</td><td>BWP 32,450</td><td>BWP 28,500</td><td>BWP 31,100</td><td>BWP 29,600</td><td>BWP 31,800</td><td>BWP 33,900</td><td>BWP 34,900</td><td>BWP 38,100</td><td>BWP 40,600</td><td>BWP 382,650</td></tr><tr class="total-row"><td>Total Revenue</td><td>BWP 98,600</td><td>BWP 101,000</td><td>BWP 113,400</td><td>BWP 118,250</td><td>BWP 120,450</td><td>BWP 113,350</td><td>BWP 107,300</td><td>BWP 116,350</td><td>BWP 125,600</td><td>BWP 134,200</td><td>BWP 148,000</td><td>BWP 155,900</td><td>BWP 1,452,400</td></tr><tr class="section-row"><td colspan="14">Direct Transport Costs</td></tr><tr><td>Fuel</td><td>BWP 18,300</td><td>BWP 19,400</td><td>BWP 20,650</td><td>BWP 22,100</td><td>BWP 23,650</td><td>BWP 21,800</td><td>BWP 20,300</td><td>BWP 21,750</td><td>BWP 24,100</td><td>BWP 26,200</td><td>BWP 27,250</td><td>BWP 28,600</td><td>BWP 274,100</td></tr><tr><td>Tyres</td><td>BWP 7,200</td><td>BWP 8,200</td><td>BWP 9,400</td><td>BWP 11,800</td><td>BWP 6,100</td><td>BWP 7,600</td><td>BWP 8,900</td><td>BWP 10,200</td><td>BWP 12,400</td><td>BWP 14,200</td><td>BWP 18,400</td><td>BWP 11,200</td><td>BWP 125,600</td></tr><tr><td>Workshop and spares</td><td>BWP 8,900</td><td>BWP 7,600</td><td>BWP 9,800</td><td>BWP 10,400</td><td>BWP 11,250</td><td>BWP 9,600</td><td>BWP 8,700</td><td>BWP 10,900</td><td>BWP 11,800</td><td>BWP 12,700</td><td>BWP 13,600</td><td>BWP 14,500</td><td>BWP 129,750</td></tr><tr><td>Subcontracted haulage</td><td>BWP 16,500</td><td>BWP 17,400</td><td>BWP 18,850</td><td>BWP 19,600</td><td>BWP 21,400</td><td>BWP 18,300</td><td>BWP 17,500</td><td>BWP 20,100</td><td>BWP 22,600</td><td>BWP 24,800</td><td>BWP 26,300</td><td>BWP 27,900</td><td>BWP 251,250</td></tr><tr><td>Driver allowances and permits</td><td>BWP 8,200</td><td>BWP 8,700</td><td>BWP 9,300</td><td>BWP 9,600</td><td>BWP 10,400</td><td>BWP 9,800</td><td>BWP 9,100</td><td>BWP 9,600</td><td>BWP 10,700</td><td>BWP 11,900</td><td>BWP 13,500</td><td>BWP 14,200</td><td>BWP 125,000</td></tr><tr class="total-row"><td>Total Direct Transport Costs</td><td>BWP 59,100</td><td>BWP 61,300</td><td>BWP 68,000</td><td>BWP 73,500</td><td>BWP 72,800</td><td>BWP 67,100</td><td>BWP 64,500</td><td>BWP 72,550</td><td>BWP 81,600</td><td>BWP 89,800</td><td>BWP 99,050</td><td>BWP 96,400</td><td>BWP 905,700</td></tr><tr class="total-row"><td>Gross Profit</td><td>BWP 39,500</td><td>BWP 39,700</td><td>BWP 45,400</td><td>BWP 44,750</td><td>BWP 47,650</td><td>BWP 46,250</td><td>BWP 42,800</td><td>BWP 43,800</td><td>BWP 44,000</td><td>BWP 44,400</td><td>BWP 48,950</td><td>BWP 59,500</td><td>BWP 546,700</td></tr><tr><td>Admin overheads</td><td>BWP 9,200</td><td>BWP 9,800</td><td>BWP 10,100</td><td>BWP 10,800</td><td>BWP 11,300</td><td>BWP 10,400</td><td>BWP 9,900</td><td>BWP 10,500</td><td>BWP 11,600</td><td>BWP 12,800</td><td>BWP 16,850</td><td>BWP 14,200</td><td>BWP 137,450</td></tr><tr class="total-row"><td>Net Profit</td><td>BWP 30,300</td><td>BWP 29,900</td><td>BWP 35,300</td><td>BWP 33,950</td><td>BWP 36,350</td><td>BWP 35,850</td><td>BWP 32,900</td><td>BWP 33,300</td><td>BWP 32,400</td><td>BWP 31,600</td><td>BWP 32,100</td><td>BWP 45,300</td><td>BWP 409,250</td></tr><tr class="total-row"><td>Gross Margin %</td><td>40.1%</td><td>39.3%</td><td>40.0%</td><td>37.8%</td><td>39.6%</td><td>40.8%</td><td>39.9%</td><td>37.6%</td><td>35.0%</td><td>33.1%</td><td>33.1%</td><td>38.2%</td><td>37.6%</td></tr></table></div></div></div></div>
+</section>
+<section class="page" data-page="financial-cashflow" data-crumb="Financials · Statement of Cash Flows" data-title="Cash Flow" id="page-financial-cashflow">
+<div class="financial-summary"><div class="kpi-card green"><div class="kpi-label">Opening Cash</div><div class="kpi-value">BWP 83,250</div><div class="kpi-sub">01/05/2026</div></div><div class="kpi-card"><div class="kpi-label">Cash In</div><div class="kpi-value">BWP 92,400</div><div class="kpi-sub">Customer receipts collected</div></div><div class="kpi-card yellow"><div class="kpi-label">Cash Out</div><div class="kpi-value">BWP 57,050</div><div class="kpi-sub">Fuel, tyres, payroll, suppliers</div></div><div class="kpi-card blue"><div class="kpi-label">Closing Cash</div><div class="kpi-value">BWP 118,600</div><div class="kpi-sub">18/05/2026</div></div></div>
+<div class="dashboard-panel section cashflow-full-panel"><h3>Cash Movement</h3><div class="panel-sub">Monthly cash inflows and outflows across the last 12 months, used to protect fuel, supplier and workshop liquidity.</div><div class="grouped-chart cashflow-annual-chart"><div class="month-bars"><div class="bars"><span class="cash-in" style="height:82%"></span><span class="cash-out" style="height:58%"></span></div><div class="month-label">May</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:74%"></span><span class="cash-out" style="height:55%"></span></div><div class="month-label">Apr</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:68%"></span><span class="cash-out" style="height:50%"></span></div><div class="month-label">Mar</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:56%"></span><span class="cash-out" style="height:46%"></span></div><div class="month-label">Feb</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:52%"></span><span class="cash-out" style="height:44%"></span></div><div class="month-label">Jan</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:48%"></span><span class="cash-out" style="height:40%"></span></div><div class="month-label">Dec</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:46%"></span><span class="cash-out" style="height:39%"></span></div><div class="month-label">Nov</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:50%"></span><span class="cash-out" style="height:42%"></span></div><div class="month-label">Oct</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:54%"></span><span class="cash-out" style="height:45%"></span></div><div class="month-label">Sep</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:49%"></span><span class="cash-out" style="height:43%"></span></div><div class="month-label">Aug</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:51%"></span><span class="cash-out" style="height:41%"></span></div><div class="month-label">Jul</div></div><div class="month-bars"><div class="bars"><span class="cash-in" style="height:44%"></span><span class="cash-out" style="height:37%"></span></div><div class="month-label">Jun</div></div></div><div class="chart-legend"><span><i class="legend-dot green"></i>Cash in</span><span><i class="legend-dot yellow"></i>Cash out</span></div></div>
+<div class="panel section cashflow-statement-panel" data-panel="cashflow"><h3>Statement of Cash Flows</h3><div class="panel-sub">Management cash-flow view for the truck division. Demo values only, structured for Google Sheets/database export.</div><div class="table-scroll"><table class="data-table financial-table cashflow-statement-table"><tr><th scope="col">Cash Flow Line Item</th><th scope="col">May</th><th scope="col">April</th><th scope="col">March</th><th scope="col">February</th><th scope="col">January</th><th scope="col">December</th><th scope="col">YTD</th></tr><tr class="section-row"><td colspan="8">Operating Activities</td></tr><tr><td>Customer receipts</td><td>BWP 92,400</td><td>BWP 86,700</td><td>BWP 79,800</td><td>BWP 66,400</td><td>BWP 62,900</td><td>BWP 58,300</td><td>BWP 446,500</td></tr><tr><td>Fuel and lubricants paid</td><td>(BWP 22,850)</td><td>(BWP 21,600)</td><td>(BWP 19,400)</td><td>(BWP 17,900)</td><td>(BWP 16,750)</td><td>(BWP 15,200)</td><td>(BWP 113,700)</td></tr><tr><td>Tyres, spares and workshop paid</td><td>(BWP 14,900)</td><td>(BWP 12,600)</td><td>(BWP 10,850)</td><td>(BWP 9,400)</td><td>(BWP 8,950)</td><td>(BWP 7,800)</td><td>(BWP 64,500)</td></tr><tr><td>Subcontracted haulage paid</td><td>(BWP 9,600)</td><td>(BWP 8,900)</td><td>(BWP 8,100)</td><td>(BWP 7,250)</td><td>(BWP 6,800)</td><td>(BWP 6,200)</td><td>(BWP 46,850)</td></tr><tr><td>Driver wages, allowances and permits</td><td>(BWP 9,700)</td><td>(BWP 9,200)</td><td>(BWP 8,400)</td><td>(BWP 7,850)</td><td>(BWP 7,100)</td><td>(BWP 6,950)</td><td>(BWP 49,200)</td></tr><tr class="total-row"><td>Net Cash from Operating Activities</td><td>BWP 35,350</td><td>BWP 34,400</td><td>BWP 33,050</td><td>BWP 24,000</td><td>BWP 23,300</td><td>BWP 22,150</td><td>BWP 172,250</td></tr><tr class="section-row"><td colspan="8">Investing and Fleet Activities</td></tr><tr><td>Workshop equipment and tools</td><td>(BWP 2,850)</td><td>(BWP 1,600)</td><td>(BWP 2,400)</td><td>(BWP 1,250)</td><td>(BWP 1,100)</td><td>(BWP 900)</td><td>(BWP 10,100)</td></tr><tr><td>Truck deposit / fleet additions</td><td>BWP 0</td><td>(BWP 12,500)</td><td>BWP 0</td><td>BWP 0</td><td>BWP 0</td><td>BWP 0</td><td>(BWP 12,500)</td></tr><tr class="total-row"><td>Net Cash after Fleet Activities</td><td>BWP 32,500</td><td>BWP 20,300</td><td>BWP 30,650</td><td>BWP 22,750</td><td>BWP 22,200</td><td>BWP 21,250</td><td>BWP 149,650</td></tr><tr class="section-row"><td colspan="8">Financing Activities</td></tr><tr><td>Vehicle finance repayments</td><td>(BWP 7,150)</td><td>(BWP 7,150)</td><td>(BWP 7,150)</td><td>(BWP 7,150)</td><td>(BWP 7,150)</td><td>(BWP 7,150)</td><td>(BWP 42,900)</td></tr><tr><td>Owner drawings / capital movement</td><td>BWP 0</td><td>(BWP 5,000)</td><td>BWP 0</td><td>BWP 0</td><td>BWP 0</td><td>BWP 0</td><td>(BWP 5,000)</td></tr><tr class="total-row"><td>Net Increase in Cash</td><td>BWP 25,350</td><td>BWP 8,150</td><td>BWP 23,500</td><td>BWP 15,600</td><td>BWP 15,050</td><td>BWP 14,100</td><td>BWP 101,750</td></tr><tr><td>Opening cash balance</td><td>BWP 93,250</td><td>BWP 85,100</td><td>BWP 61,600</td><td>BWP 46,000</td><td>BWP 30,950</td><td>BWP 16,850</td><td>BWP 16,850</td></tr><tr class="total-row"><td>Closing cash balance</td><td>BWP 118,600</td><td>BWP 93,250</td><td>BWP 85,100</td><td>BWP 61,600</td><td>BWP 46,000</td><td>BWP 30,950</td><td>BWP 118,600</td></tr></table></div></div>
+</section>
+<section class="page" data-page="financial-balance" data-crumb="Financials · Financial Position" data-title="Balance Sheet" id="page-financial-balance">
+<div class="financial-layout section"><div class="panel"><h3>Assets</h3><table class="data-table financial-table"><tr class="section-row"><td colspan="2">Current Assets</td></tr><tr><td>Cash at bank</td><td>BWP 118,600</td></tr><tr><td>Accounts receivable</td><td>BWP 83,950</td></tr><tr><td>Fuel deposits / advances</td><td>BWP 7,200</td></tr><tr class="total-row"><td>Total Current Assets</td><td>BWP 209,750</td></tr><tr class="section-row"><td colspan="2">Non-current Assets</td></tr><tr><td>Truck fleet at carrying value</td><td>BWP 1,240,000</td></tr><tr><td>Workshop equipment</td><td>BWP 74,500</td></tr><tr class="total-row"><td>Total Assets</td><td>BWP 1,524,250</td></tr></table></div><div class="panel"><h3>Liabilities &amp; Equity</h3><table class="data-table financial-table"><tr class="section-row"><td colspan="2">Current Liabilities</td></tr><tr><td>Supplier payables</td><td>BWP 54,800</td></tr><tr><td>Accrued fuel and tyre costs</td><td>BWP 21,450</td></tr><tr class="total-row"><td>Total Current Liabilities</td><td>BWP 76,250</td></tr><tr class="section-row"><td colspan="2">Long-term Funding</td></tr><tr><td>Vehicle finance</td><td>BWP 580,000</td></tr><tr class="section-row"><td colspan="2">Equity</td></tr><tr><td>Owner capital and retained earnings</td><td>BWP 868,000</td></tr><tr class="total-row"><td>Total Liabilities &amp; Equity</td><td>BWP 1,524,250</td></tr></table></div></div>
+</section>
+<section class="page" data-page="financial-trial" data-crumb="Financials · Annual Trial Balance" data-title="Trial Balance" id="page-financial-trial">
+<div class="panel section"><h3>Trial Balance</h3><div class="panel-sub">Demo values only. Structured for Google Sheets/database export.</div><table class="data-table financial-table"><tr><th scope="col">Account</th><th scope="col">Debit</th><th scope="col">Credit</th></tr><tr><td>Cash at bank</td><td>BWP 118,600</td><td></td></tr><tr><td>Accounts receivable</td><td>BWP 83,950</td><td></td></tr><tr><td>Truck fleet</td><td>BWP 1,240,000</td><td></td></tr><tr><td>Workshop equipment</td><td>BWP 74,500</td><td></td></tr><tr><td>Fuel expense</td><td>BWP 27,250</td><td></td></tr><tr><td>Tyres and workshop</td><td>BWP 32,000</td><td></td></tr><tr><td>Supplier payables</td><td></td><td>BWP 54,800</td></tr><tr><td>Vehicle finance</td><td></td><td>BWP 580,000</td></tr><tr><td>Owner capital</td><td></td><td>BWP 752,700</td></tr><tr><td>Haulage revenue</td><td></td><td>BWP 144,800</td></tr><tr class="total-row"><td>Total</td><td>BWP 1,576,300</td><td>BWP 1,576,300</td></tr></table></div>
+</section>
+</main>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+function showPage(pageId, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const page = document.getElementById('page-' + pageId);
+  if(page){
+    page.classList.add('active');
+    document.getElementById('page-title').textContent = page.dataset.title || 'TMS Operations';
+    document.getElementById('page-breadcrumb').textContent = page.dataset.crumb || 'Truck Division · Operations, documents, fuel and billing';
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+  if(el) el.classList.add('active');
+  // Auto-close drawer on mobile after navigation
+  if(window.innerWidth <= 980){ closeSidebar(); }
+}
+
+/* ============ DARK MODE ============ */
+(function(){
+  const saved = localStorage.getItem('translend-theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = saved || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem('translend-theme', next); }catch(e){}
+}
+
+/* ============ MOBILE DRAWER ============ */
+function toggleSidebar(){
+  const sb = document.querySelector('.sidebar');
+  const sc = document.querySelector('.sidebar-scrim');
+  sb.classList.toggle('open');
+  sc.classList.toggle('open');
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.querySelector('.sidebar-scrim').classList.remove('open');
+}
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeSidebar();
+});
+</script>
+
+
+<!-- Translend live Google Sheets API config + adapter. Edit translend_config.js only. -->
+</div><!--/#translend-app-->
+<script>
+/* ---------- Translend v19 preview bootstrapper (offline demo) ---------- */
+(function(){
+  // Reveal the dashboard (it ships hidden in production until auth resolves)
+  var app = document.getElementById('translend-app');
+  if (app) app.hidden = false;
+  var signin = document.getElementById('translend-signin');
+  if (signin) signin.style.display = 'none';
+
+  // Indicate this is a static preview (no live data)
+  document.body.dataset.liveData = 'connected';
+  document.body.dataset.preview   = 'v19';
+
+  // Topbar status chip → "Mockup · static"
+  document.addEventListener('DOMContentLoaded', function(){
+    var stamp = document.getElementById('translend-sync-stamp');
+    if (stamp) stamp.textContent = 'v19 PREVIEW · static demo data';
+
+    // Fill the auth chip with a stub user
+    document.querySelectorAll('[data-auth-chip]').forEach(function(n){
+      n.innerHTML = '';
+      var avatar = document.createElement('div'); avatar.className = 'user-avatar'; avatar.textContent = 'OP';
+      var info   = document.createElement('div'); info.className = 'user-info';
+      info.innerHTML = '<div class="name">Owner Preview</div><div class="role">Owner · Mockup</div>';
+      n.appendChild(avatar); n.appendChild(info);
+    });
+
+    // Wire the sidebar manually (the showPage() handler still lives inline).
+    if (typeof showPage !== 'function') {
+      window.showPage = function(routeId){
+        document.querySelectorAll('section[data-page]').forEach(function(s){
+          s.hidden = (s.dataset.page !== routeId);
+          s.style.display = (s.dataset.page === routeId) ? '' : 'none';
+        });
+        document.querySelectorAll('.nav-item[data-route]').forEach(function(a){
+          var active = a.dataset.route === routeId;
+          a.classList.toggle('active', active);
+          a.classList.toggle('is-active', active);
+          a.setAttribute('aria-current', active ? 'page' : 'false');
+        });
+        var active = document.querySelector('section[data-page="'+routeId+'"]');
+        if (active) {
+          var t = document.querySelector('[data-page-title], #page-title');
+          var b = document.querySelector('[data-breadcrumb], #page-breadcrumb');
+          if (t && active.dataset.title) t.textContent = active.dataset.title;
+          if (b && active.dataset.crumb) b.textContent = active.dataset.crumb;
+          if (history.replaceState) history.replaceState({route:routeId}, '', '#'+routeId);
+        }
+      };
+    }
+    // Default route from hash or first section
+    var initial = (location.hash || '#truck-ops').slice(1);
+    showPage(initial);
+
+    // Bind nav items
+    document.querySelectorAll('.nav-item[data-route], .nav-item[onclick*="showPage"]').forEach(function(a){
+      a.addEventListener('click', function(e){
+        var route = a.dataset.route;
+        if (!route) { var m = (a.getAttribute('onclick')||'').match(/showPage\('([^']+)'\)/); route = m && m[1]; }
+        if (route) { e.preventDefault(); showPage(route); }
+      });
+    });
+
+    // Add a small ribbon to the topbar so the viewer knows this is the preview
+    var topbar = document.querySelector('header.topbar .topbar-right');
+    if (topbar) {
+      var ribbon = document.createElement('span');
+      ribbon.textContent = 'v19 PREVIEW';
+      ribbon.style.cssText = 'background:var(--orange);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.1em;padding:5px 9px;border-radius:999px;';
+      topbar.insertBefore(ribbon, topbar.firstChild);
+    }
+  });
+})();
+</script>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
