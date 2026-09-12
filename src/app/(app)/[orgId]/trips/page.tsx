@@ -8,15 +8,14 @@ import type { Trip, TripStatus, Job, Truck, Driver, BaseRecord } from "@/types/c
 import { Timestamp } from "firebase/firestore";
 
 const STATUS_STYLE: Record<TripStatus, string> = {
-  planned: "bg-slate-800 text-slate-400",
-  en_route_pickup: "bg-sky-950/50 text-sky-300",
-  loading: "bg-sky-950/50 text-sky-300",
-  in_transit: "bg-emerald-950/50 text-emerald-300",
-  unloading: "bg-sky-950/50 text-sky-300",
-  completed: "bg-emerald-950/50 text-emerald-300",
-  exception: "bg-red-950/50 text-red-300",
+  planned: "gray",
+  en_route_pickup: "blue",
+  loading: "blue",
+  in_transit: "green",
+  unloading: "blue",
+  completed: "green",
+  exception: "red",
 };
-
 const STATUS_FLOW: TripStatus[] = ["planned", "en_route_pickup", "loading", "in_transit", "unloading", "completed"];
 
 export default function TripsPage() {
@@ -31,12 +30,7 @@ export default function TripsPage() {
 
   useEffect(() => {
     if (!activeOrg) return;
-    const unsub = tripsRepo.subscribe(
-      activeOrg.id,
-      { environment: "LIVE", orderByField: "createdAt", orderDirection: "desc" },
-      setTrips,
-      (err) => setError(err.message)
-    );
+    const unsub = tripsRepo.subscribe(activeOrg.id, { environment: "LIVE", orderByField: "createdAt", orderDirection: "desc" }, setTrips, (err) => setError(err.message));
     return () => unsub();
   }, [activeOrg]);
 
@@ -68,91 +62,42 @@ export default function TripsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-50">Trips</h1>
-          <p className="mt-1 text-sm text-slate-400">Dispatch jobs to a truck and driver, then track progress.</p>
-        </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          disabled={dispatchableJobs.length === 0 || trucks.length === 0 || drivers.length === 0}
-          title={dispatchableJobs.length === 0 ? "No confirmed jobs to dispatch" : trucks.length === 0 ? "No available trucks" : drivers.length === 0 ? "No available drivers" : undefined}
-          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-        >
-          + Dispatch trip
-        </button>
+      <header className="page-header">
+        <div><h1 className="page-title">Trips</h1><p className="page-subtitle">Dispatch jobs to a truck and driver, then track progress.</p></div>
+        <button onClick={() => setShowCreate(true)} disabled={dispatchableJobs.length === 0 || trucks.length === 0 || drivers.length === 0} className="btn-primary">+ Dispatch trip</button>
       </header>
 
-      {error && <div className="rounded-md border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">{error}</div>}
+      {error && <div className="notice" style={{ borderColor: "#F3C3C3", background: "var(--red-100)", color: "#902323" }}>{error}</div>}
 
-      {trips === null ? (
-        <Skeleton />
-      ) : trips.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
-          <p className="text-sm font-medium text-slate-200">No trips yet.</p>
-          <p className="mt-1 text-sm text-slate-500">Dispatch a confirmed job to a truck and driver to create one.</p>
-        </div>
+      {trips === null ? <Skeleton /> : trips.length === 0 ? (
+        <div className="empty-state"><p style={{ fontSize: 14, fontWeight: 700 }}>No trips yet.</p><p style={{ marginTop: 5, color: "var(--ink-3)", fontSize: 12 }}>Dispatch a confirmed job to a truck and driver to create one.</p></div>
       ) : (
-        <div className="space-y-3">
-          {trips.map((t) => {
-            const idx = STATUS_FLOW.indexOf(t.status);
-            const canAdvance = t.status !== "exception" && idx >= 0 && idx < STATUS_FLOW.length - 1;
-            return (
-              <div key={t.id} className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-medium text-slate-100">
-                    {t.jobNumber} · {t.truckRegistration} · {t.driverName}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">{t.currentLocation ?? "No location update yet"}</p>
+        <section className="panel">
+          <div className="section-header"><div><h2 className="section-title">Trip register</h2><p className="section-sub">Live dispatch and movement state.</p></div><span className="badge teal">{trips.length} records</span></div>
+          <div className="list">
+            {trips.map((t) => {
+              const idx = STATUS_FLOW.indexOf(t.status);
+              const canAdvance = t.status !== "exception" && idx >= 0 && idx < STATUS_FLOW.length - 1;
+              return (
+                <div key={t.id} className="list-row" style={{ alignItems: "center" }}>
+                  <div><strong>{t.jobNumber} · {t.truckRegistration} · {t.driverName}</strong><span className="muted">{t.currentLocation ?? "No location update yet"}</span></div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <span className={`badge ${STATUS_STYLE[t.status]}`}>{t.status.replace(/_/g, " ")}</span>
+                    {canAdvance && <button onClick={() => advance(t)} className="btn-ghost" style={{ padding: "6px 10px", fontSize: 11 }}>Advance →</button>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLE[t.status]}`}>
-                    {t.status.replace(/_/g, " ")}
-                  </span>
-                  {canAdvance && (
-                    <button
-                      onClick={() => advance(t)}
-                      className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
-                    >
-                      Advance →
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </section>
       )}
 
-      {showCreate && (
-        <DispatchDialog
-          orgId={activeOrg.id}
-          jobs={dispatchableJobs}
-          trucks={trucks}
-          drivers={drivers}
-          onClose={() => setShowCreate(false)}
-          onCreated={() => setShowCreate(false)}
-        />
-      )}
+      {showCreate && <DispatchDialog orgId={activeOrg.id} jobs={dispatchableJobs} trucks={trucks} drivers={drivers} onClose={() => setShowCreate(false)} onCreated={() => setShowCreate(false)} />}
     </div>
   );
 }
 
-function DispatchDialog({
-  orgId,
-  jobs,
-  trucks,
-  drivers,
-  onClose,
-  onCreated,
-}: {
-  orgId: string;
-  jobs: Job[];
-  trucks: Truck[];
-  drivers: Driver[];
-  onClose: () => void;
-  onCreated: () => void;
-}) {
+function DispatchDialog({ orgId, jobs, trucks, drivers, onClose, onCreated }: { orgId: string; jobs: Job[]; trucks: Truck[]; drivers: Driver[]; onClose: () => void; onCreated: () => void }) {
   const { user } = useAuth();
   const [jobId, setJobId] = useState(jobs[0]?.id ?? "");
   const [truckId, setTruckId] = useState(trucks[0]?.id ?? "");
@@ -166,101 +111,40 @@ function DispatchDialog({
     const job = jobs.find((j) => j.id === jobId);
     const truck = trucks.find((t) => t.id === truckId);
     const driver = drivers.find((d) => d.id === driverId);
-    if (!job || !truck || !driver) {
-      setError("Select a job, truck, and driver.");
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
+    if (!job || !truck || !driver) { setError("Select a job, truck, and driver."); return; }
+    setSubmitting(true); setError(null);
     try {
       const payload: Omit<Trip, keyof BaseRecord> = {
-        jobId: job.id,
-        jobNumber: job.jobNumber,
-        truckId: truck.id,
-        truckRegistration: truck.registrationNumber,
-        driverId: driver.id,
-        driverName: driver.fullName,
-        status: "planned",
-        plannedStart: job.requestedPickupDate,
-        plannedEnd: job.requestedDeliveryDate,
-        actualStart: null,
-        actualEnd: null,
-        currentLocation: job.origin,
-        lastCheckpointAt: Timestamp.now(),
+        jobId: job.id, jobNumber: job.jobNumber, truckId: truck.id, truckRegistration: truck.registrationNumber, driverId: driver.id, driverName: driver.fullName, status: "planned", plannedStart: job.requestedPickupDate, plannedEnd: job.requestedDeliveryDate, actualStart: null, actualEnd: null, currentLocation: job.origin, lastCheckpointAt: Timestamp.now(),
       };
       await tripsRepo.create(orgId, user.uid, payload, "LIVE");
       await jobsRepo.update(orgId, user.uid, job.id, { status: "dispatched" });
       await trucksRepo.update(orgId, user.uid, truck.id, { status: "on_trip", assignedDriverId: driver.id });
       await driversRepo.update(orgId, user.uid, driver.id, { status: "on_trip", assignedTruckId: truck.id });
       onCreated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to dispatch trip.");
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to dispatch trip."); } finally { setSubmitting(false); }
   };
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-50">Dispatch trip</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">
-            ✕
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <SelectField label="Job" value={jobId} onChange={setJobId} options={jobs.map((j) => ({ value: j.id, label: `${j.jobNumber} — ${j.customerName}` }))} />
-          <SelectField label="Truck" value={truckId} onChange={setTruckId} options={trucks.map((t) => ({ value: t.id, label: t.registrationNumber }))} />
-          <SelectField label="Driver" value={driverId} onChange={setDriverId} options={drivers.map((d) => ({ value: d.id, label: d.fullName }))} />
-
-          {error && <div className="rounded-md border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-300">{error}</div>}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">
-              Cancel
-            </button>
-            <button type="submit" disabled={submitting} className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-60">
-              {submitting ? "Dispatching…" : "Dispatch"}
-            </button>
-          </div>
+      <div className="form-card" style={{ width: "100%", maxWidth: 560, boxShadow: "var(--shadow-lg)" }}>
+        <div className="section-header"><div><h2 className="section-title">Dispatch trip</h2><p className="section-sub">Assign a confirmed job to a truck and driver.</p></div><button onClick={onClose} className="btn-ghost">✕</button></div>
+        <form onSubmit={handleSubmit}>
+          <SelectField label="Job" value={jobId} onChange={setJobId} options={jobs.map(j => ({ value: j.id, label: `${j.jobNumber} — ${j.customerName}` }))} />
+          <SelectField label="Truck" value={truckId} onChange={setTruckId} options={trucks.map(t => ({ value: t.id, label: t.registrationNumber }))} />
+          <SelectField label="Driver" value={driverId} onChange={setDriverId} options={drivers.map(d => ({ value: d.id, label: d.fullName }))} />
+          {error && <div className="notice" style={{ borderColor: "#F3C3C3", background: "var(--red-100)", color: "#902323" }}>{error}</div>}
+          <div className="form-actions" style={{ justifyContent: "flex-end" }}><button type="button" onClick={onClose} className="btn-ghost">Cancel</button><button type="submit" disabled={submitting} className="btn-primary">{submitting ? "Dispatching…" : "Dispatch trip"}</button></div>
         </form>
       </div>
     </div>
   );
 }
 
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-slate-400">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="input">
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
+function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  return <label className="form-group"><span className="field-label">{label}</span><select className="form-select" value={value} onChange={e => onChange(e.target.value)}>{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
 }
 
 function Skeleton() {
-  return (
-    <div className="space-y-2">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-16 animate-pulse rounded-lg bg-slate-900" />
-      ))}
-    </div>
-  );
+  return <div className="panel"><div className="list">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="list-row" style={{ minHeight: 62 }} />)}</div></div>;
 }
