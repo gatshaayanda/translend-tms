@@ -165,11 +165,11 @@ function ExceptionList({
                 <input
                   className="input"
                   placeholder="Resolution notes (optional)"
-                  defaultValue={exception.resolutionNotes}
+                  defaultValue={exception.resolutionNotes ?? ""}
                   disabled={busy}
                   onBlur={(event) => {
                     const value = event.target.value.trim();
-                    if (value !== exception.resolutionNotes) void onUpdate(exception, { resolutionNotes: value });
+                    if (value !== (exception.resolutionNotes ?? "")) void onUpdate(exception, { resolutionNotes: value });
                   }}
                 />
                 <button
