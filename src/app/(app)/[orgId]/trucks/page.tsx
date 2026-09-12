@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { deliveryNotesRepo, trucksRepo, tripsRepo } from "@/lib/firebase/modules";
@@ -28,6 +29,7 @@ const tripLabel = (status: Trip["status"]) => {
 const dateText = (value: Trip["plannedStart"]) => value.toDate().toLocaleDateString("en-BW", { day: "2-digit", month: "short", year: "numeric" });
 
 export default function TrucksPage() {
+  const router = useRouter();
   const { activeOrg } = useWorkspace();
   const [trucks, setTrucks] = useState<Truck[] | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -41,8 +43,8 @@ export default function TrucksPage() {
     if (!activeOrg) return;
     const orgId = activeOrg.id;
     const unsubTrucks = trucksRepo.subscribe(orgId, { environment: "LIVE", orderByField: "registrationNumber" }, setTrucks, (err) => setError(err.message));
-    const unsubTrips = tripsRepo.subscribe(orgId, { environment: "LIVE", orderByField: "plannedStart" }, setTrips, (err) => setError(err.message));
-    const unsubNotes = deliveryNotesRepo.subscribe(orgId, { environment: "LIVE", orderByField: "noteDateTime" }, setDeliveryNotes, (err) => setError(err.message));
+    const unsubTrips = tripsRepo.subscribe(orgId, { environment: "LIVE" }, setTrips, (err) => setError(err.message));
+    const unsubNotes = deliveryNotesRepo.subscribe(orgId, { environment: "LIVE" }, setDeliveryNotes, (err) => setError(err.message));
     return () => { unsubTrucks(); unsubTrips(); unsubNotes(); };
   }, [activeOrg]);
 
@@ -122,7 +124,7 @@ export default function TrucksPage() {
           <div className="flex gap-2"><select className="form-input" value={selectedTruckId} onChange={e => setSelectedTruckId(e.target.value)} style={{ minWidth: 150 }}><option value="all">All trucks</option>{trucks?.map(t => <option key={t.id} value={t.id}>{t.registrationNumber}</option>)}</select><input className="form-input" type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} /></div>
         </div>
         {visibleTrips.length ? <div className="list">{visibleTrips.slice(0, 12).map(trip => <div className="list-row" key={trip.id}>
-          <div style={{ minWidth: 0 }}><div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><strong>{trip.jobNumber || trip.id.slice(0, 10)}</strong><span className={`badge ${trip.status === "exception" ? "red" : trip.status === "completed" ? "green" : "blue"}`}>{tripLabel(trip.status)}</span></div><div className="muted">{trip.truckRegistration} · {trip.currentLocation || "Location not recorded"} · planned {dateText(trip.plannedStart)}</div></div><div className="flex gap-2"><button className="btn-secondary" type="button">Pre-fill Fuel Log</button><button className="btn-secondary" type="button">Pre-fill Delivery Note</button><button className="btn-ghost" type="button">Open Trip Sheet</button></div>
+          <div style={{ minWidth: 0 }}><div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}><strong>{trip.jobNumber || trip.id.slice(0, 10)}</strong><span className={`badge ${trip.status === "exception" ? "red" : trip.status === "completed" ? "green" : "blue"}`}>{tripLabel(trip.status)}</span></div><div className="muted">{trip.truckRegistration} · {trip.currentLocation || "Location not recorded"} · planned {dateText(trip.plannedStart)}</div></div><div className="flex gap-2"><button className="btn-secondary" type="button" onClick={() => router.push(`/fuel-workshop?truckId=${encodeURIComponent(trip.truckId)}&tripId=${encodeURIComponent(trip.id)}`)}>Pre-fill Fuel Log</button><button className="btn-secondary" type="button" onClick={() => router.push(`/deliveries?tripId=${encodeURIComponent(trip.id)}`)}>Pre-fill Delivery Note</button><button className="btn-ghost" type="button" onClick={() => router.push(`/trips?tripId=${encodeURIComponent(trip.id)}`)}>Open Trip Sheet</button></div>
         </div>)}</div> : <DatabaseNotice title="No matching trip records" body="Try another truck/date, or add trips through the existing Trips workflow." />}
       </section>
 
