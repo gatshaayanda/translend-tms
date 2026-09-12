@@ -140,28 +140,28 @@ Visual changes must not silently remove functionality. A page is not considered 
 The current native implementation has already received substantial v19 visual adaptation in:
 
 - AppShell/global visual system
-- root typography
 - Customers
 - Control Tower
 - Fleet
 - Trips
 - Delivery workflow/mobile UX
 
-These are current implementation facts, not permission to assume they are perfect. Inspect the actual current code before modifying them.
+The current v19 frontend pass also adds native route/surface coverage for:
 
-The original HTML contains additional product surfaces, including examples such as:
-
-- Delivery Notes & POs
 - Fuel & Workshop
 - Invoicing & Statements
 - Performance Dashboard
-- Customer/Supplier POs
-- Maintenance Work Orders
-- Daily Inspection Tracking
-- Tyre Cost Control
-- Fuel Exceptions
+- Journal Entry
+- P&L Statement
+- Cash Flow
+- Balance Sheet
+- Trial Balance
 
-Do not claim these are implemented simply because they exist in the HTML. Inspect the native application and identify genuine gaps first.
+These new finance/workshop surfaces intentionally derive from the existing operational engine where possible. They do **not** invent persisted accounting, fuel, work-order or ledger records that do not yet exist in Firestore.
+
+The original HTML contains additional product concepts inside these surfaces, including Customer/Supplier POs, Maintenance Work Orders, Daily Inspection Tracking, Tyre Cost Control and Fuel Exceptions. They remain visual/product specifications until the corresponding real domain repositories exist.
+
+Do not claim a surface is fully implemented simply because its UI exists. Distinguish clearly between live operational data, presentation-ready UI, and future persisted domain work.
 
 ---
 
@@ -192,6 +192,7 @@ Delivery behavior remains real and persisted. Do not replace it with static HTML
 - Do not deploy to an unrelated Vercel project.
 - If CI/build evidence is unavailable, state that explicitly.
 - Inspect the commit/ref being deployed before treating deployment status as evidence for the current code.
+- The connected Vercel account currently exposes `adminhub-global` rather than a confirmed `translend-tms` Vercel project. Do not deploy Translend there merely because it is the available project.
 
 ---
 
