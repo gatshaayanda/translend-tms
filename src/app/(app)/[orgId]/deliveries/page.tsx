@@ -5,6 +5,7 @@ import { Timestamp } from "firebase/firestore";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { deliveriesRepo, deliveryNotesRepo, tripsRepo } from "@/lib/firebase/modules";
+import { DeliveryEvidencePanel } from "@/components/deliveries/DeliveryEvidencePanel";
 import type {
   Delivery,
   DeliveryAcknowledgementRole,
@@ -407,6 +408,13 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
     }
   };
 
+  const handleEvidenceSaved = async (updatedNote: DeliveryNote) => {
+    setDraft(updatedNote);
+    const updatedDelivery = userId ? await deliveriesRepo.getById(orgId, updatedNote.deliveryId) : deliveryDraft;
+    setDeliveryDraft(updatedDelivery);
+    onSaved(updatedNote, updatedDelivery);
+  };
+
   return (
     <Modal title={`Delivery Note · ${draft.noteReference}`} onClose={onClose} wide>
       <div className="max-h-[75vh] space-y-5 overflow-y-auto pr-1">
@@ -447,6 +455,13 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
             })}
           </div>
         </section>
+
+        <DeliveryEvidencePanel
+          orgId={orgId}
+          note={draft}
+          onSaved={handleEvidenceSaved}
+          onError={onError}
+        />
 
         <Field label="Notes"><textarea className="input" rows={3} value={draft.notes} onChange={(e) => update("notes", e.target.value)} /></Field>
       </div>
