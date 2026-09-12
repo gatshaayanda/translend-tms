@@ -30,16 +30,18 @@ export default function TripsPage() {
 
   useEffect(() => {
     if (!activeOrg) return;
-    const unsub = tripsRepo.subscribe(activeOrg.id, { environment: "LIVE", orderByField: "createdAt", orderDirection: "desc" }, setTrips, (err) => setError(err.message));
+    const orgId = activeOrg.id;
+    const unsub = tripsRepo.subscribe(orgId, { environment: "LIVE", orderByField: "createdAt", orderDirection: "desc" }, setTrips, (err) => setError(err.message));
     return () => unsub();
   }, [activeOrg]);
 
   useEffect(() => {
     if (!activeOrg) return;
+    const orgId = activeOrg.id;
     Promise.all([
-      jobsRepo.list(activeOrg.id, { environment: "LIVE" }),
-      trucksRepo.list(activeOrg.id, { environment: "LIVE" }),
-      driversRepo.list(activeOrg.id, { environment: "LIVE" }),
+      jobsRepo.list(orgId, { environment: "LIVE" }),
+      trucksRepo.list(orgId, { environment: "LIVE" }),
+      driversRepo.list(orgId, { environment: "LIVE" }),
     ]).then(([jobs, trucksList, driversList]) => {
       setDispatchableJobs(jobs.filter((j) => j.status === "confirmed" || j.status === "dispatched"));
       setTrucks(trucksList.filter((t) => t.status === "available"));
@@ -49,13 +51,14 @@ export default function TripsPage() {
 
   const advance = async (trip: Trip) => {
     if (!activeOrg || !user) return;
+    const orgId = activeOrg.id;
     const idx = STATUS_FLOW.indexOf(trip.status);
     const next = STATUS_FLOW[idx + 1];
     if (!next) return;
     const patch: Partial<Trip> = { status: next };
     if (next === "in_transit" && !trip.actualStart) patch.actualStart = Timestamp.now();
     if (next === "completed") patch.actualEnd = Timestamp.now();
-    await tripsRepo.update(activeOrg.id, user.uid, trip.id, patch);
+    await tripsRepo.update(orgId, user.uid, trip.id, patch);
   };
 
   if (!activeOrg) return null;
