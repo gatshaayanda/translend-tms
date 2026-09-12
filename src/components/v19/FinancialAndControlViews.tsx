@@ -15,8 +15,6 @@ type ViewKind =
   | "balance"
   | "trial";
 
-const money = (value: number) => `BWP ${value.toLocaleString("en-BW", { maximumFractionDigits: 0 })}`;
-
 function useOperationalData() {
   const { activeOrg } = useWorkspace();
   const [trucks, setTrucks] = useState<Truck[]>([]);
@@ -27,9 +25,10 @@ function useOperationalData() {
     if (!activeOrg) return;
     const orgId = activeOrg.id;
     const env: { environment: RecordEnvironment } = { environment: "LIVE" };
+    // Keep these new v19 surfaces within indexes already present in the authoritative repo.
     const unsubTrucks = trucksRepo.subscribe(orgId, { ...env, orderByField: "registrationNumber" }, setTrucks);
-    const unsubTrips = tripsRepo.subscribe(orgId, { ...env, orderByField: "plannedStart" }, setTrips);
-    const unsubNotes = deliveryNotesRepo.subscribe(orgId, { ...env, orderByField: "noteDateTime" }, setDeliveryNotes);
+    const unsubTrips = tripsRepo.subscribe(orgId, env, setTrips);
+    const unsubNotes = deliveryNotesRepo.subscribe(orgId, env, setDeliveryNotes);
     return () => {
       unsubTrucks();
       unsubTrips();
@@ -92,7 +91,7 @@ function renderView(kind: ViewKind, { trucks, trips, deliveryNotes }: ReturnType
     case "cashflow":
       return <StatementView title="Cash Flow" subtitle="Management cash-flow view for customer receipts, operating costs and fleet liquidity." />;
     case "balance":
-      return <StatementView title="Balance Sheet" subtitle="Financial position view for cash, receivables, fleet assets, payables and equity." />;
+      return <StatementView title="Balance Sheet" subtitle="Financial position view for customer balances, fleet assets, payables and equity." />;
     case "trial":
       return <StatementView title="Trial Balance" subtitle="Accounting control view prepared for future ledger integration." />;
   }
