@@ -2,181 +2,60 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // =========================================================
-    // HELPERS
-    // =========================================================
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
+    function isSignedIn() { return request.auth != null; }
 
     function isOrgMember(orgId) {
       return isSignedIn()
-        && exists(
-          /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)
-        )
-        && get(
-          /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)
-        ).data.status == 'active';
+        && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.status == 'active';
     }
 
     function memberRole(orgId) {
-      return get(
-        /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)
-      ).data.role;
+      return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
     }
 
     function canManageMembers(orgId) {
-      return isOrgMember(orgId)
-        && memberRole(orgId) in [
-          'owner',
-          'operations_manager'
-        ];
+      return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager'];
     }
 
     function canEditOperations(orgId) {
-      return isOrgMember(orgId)
-        && memberRole(orgId) in [
-          'owner',
-          'operations_manager',
-          'dispatcher',
-          'fleet_manager'
-        ];
+      return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager'];
     }
 
     function canEditFinance(orgId) {
-      return isOrgMember(orgId)
-        && memberRole(orgId) in [
-          'owner',
-          'finance'
-        ];
+      return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'finance'];
     }
 
     function isOwner(orgId) {
-      return isOrgMember(orgId)
-        && memberRole(orgId) == 'owner';
+      return isOrgMember(orgId) && memberRole(orgId) == 'owner';
     }
-
-
-    // =========================================================
-    // USER PROFILE
-    // =========================================================
 
     match /users/{uid} {
-      allow read, write: if isSignedIn()
-        && request.auth.uid == uid;
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
-
-
-    // =========================================================
-    // MEMBERSHIP DISCOVERY
-    // =========================================================
-    //
-    // The application discovers memberships with a collection
-    // group query before it knows the organization ID.
-    //
-    // Only the authenticated user's own active membership
-    // documents may be discovered.
-    //
 
     match /{path=**}/members/{memberUid} {
-      allow read: if isSignedIn()
-        && resource.data.uid == request.auth.uid
-        && resource.data.status == 'active';
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'active';
     }
 
-
-    // =========================================================
-    // ORGANIZATION
-    // =========================================================
-
     match /organizations/{orgId} {
-
-      // Active members can read their organization.
       allow read: if isOrgMember(orgId);
-
-      // A signed-in user can create a new organization for
-      // themself as the initial owner.
-      allow create: if isSignedIn()
-        && request.resource.data.ownerUid == request.auth.uid;
-
-      // Only the current owner can change organization settings.
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow update: if isOwner(orgId);
-
       allow delete: if false;
 
-
-      // =======================================================
-      // MEMBERS
-      // =======================================================
-
       match /members/{memberUid} {
-
-        // Own active membership, or membership records for an
-        // organization the user already belongs to.
-        allow read: if isSignedIn()
-          && (
-            (
-              memberUid == request.auth.uid
-              && resource.data.uid == request.auth.uid
-              && resource.data.status == 'active'
-            )
-            ||
-            isOrgMember(orgId)
-          );
-
-        // Initial owner membership OR member management by
-        // Owner / Operations Manager.
-        allow create: if isSignedIn()
-          && (
-            (
-              memberUid == request.auth.uid
-              && request.resource.data.uid == request.auth.uid
-              && request.resource.data.orgId == orgId
-              && request.resource.data.role == 'owner'
-              && request.resource.data.status == 'active'
-            )
-            ||
-            canManageMembers(orgId)
-          );
-
-        // Owner / Operations Manager can update members.
-        //
-        // A user cannot change their own role/status to escalate
-        // their permissions.
-        allow update: if canManageMembers(orgId)
-          && (
-            memberUid != request.auth.uid
-            ||
-            (
-              resource.data.role == request.resource.data.role
-              && resource.data.status == request.resource.data.status
-            )
-          );
-
+        allow read: if isSignedIn() && ((memberUid == request.auth.uid && resource.data.uid == request.auth.uid && resource.data.status == 'active') || isOrgMember(orgId));
+        allow create: if isSignedIn() && ((memberUid == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.orgId == orgId && request.resource.data.role == 'owner' && request.resource.data.status == 'active') || canManageMembers(orgId));
+        allow update: if canManageMembers(orgId) && (memberUid != request.auth.uid || (resource.data.role == request.resource.data.role && resource.data.status == request.resource.data.status));
         allow delete: if false;
       }
-
-
-      // =======================================================
-      // CUSTOMERS
-      // =======================================================
 
       match /customers/{docId} {
         allow read: if isOrgMember(orgId);
-
-        allow create, update: if
-          canEditOperations(orgId)
-          || canEditFinance(orgId);
-
+        allow create, update: if canEditOperations(orgId) || canEditFinance(orgId);
         allow delete: if false;
       }
-
-
-      // =======================================================
-      // FLEET
-      // =======================================================
 
       match /trucks/{docId} {
         allow read: if isOrgMember(orgId);
@@ -189,11 +68,6 @@ service cloud.firestore {
         allow create, update: if canEditOperations(orgId);
         allow delete: if false;
       }
-
-
-      // =======================================================
-      // OPERATIONS
-      // =======================================================
 
       match /jobs/{docId} {
         allow read: if isOrgMember(orgId);
@@ -213,11 +87,6 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-
-      // =======================================================
-      // DELIVERY WORKFLOW
-      // =======================================================
-
       match /deliveryNotes/{docId} {
         allow read: if isOrgMember(orgId);
         allow create, update: if canEditOperations(orgId);
@@ -227,6 +96,40 @@ service cloud.firestore {
       match /deliveryExceptions/{docId} {
         allow read: if isOrgMember(orgId);
         allow create, update: if canEditOperations(orgId);
+        allow delete: if false;
+      }
+
+      // =======================================================
+      // WORKSHOP / FINANCE
+      // =======================================================
+
+      match /fuelLogs/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update: if canEditOperations(orgId);
+        allow delete: if false;
+      }
+
+      match /workOrders/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update: if canEditOperations(orgId);
+        allow delete: if false;
+      }
+
+      match /supplierPOs/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update: if canEditOperations(orgId);
+        allow delete: if false;
+      }
+
+      match /invoices/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update: if canEditFinance(orgId);
+        allow delete: if false;
+      }
+
+      match /journalEntries/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update: if canEditFinance(orgId);
         allow delete: if false;
       }
     }
