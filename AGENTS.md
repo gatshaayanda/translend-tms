@@ -2,108 +2,166 @@
 
 ## What this project is
 
-This repository is the authoritative rebuild of Translend TMS Truck Division v19.
-
-Translend TMS is an operational transport management system being rebuilt into a real working application.
+This repository is the authoritative rebuild of **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Engine: Next.js + React + Firebase Authentication + Firestore
-- Evidence transport: UploadThing
+- Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore is the business/source-of-truth layer.
+- UploadThing is the secure POD/evidence transport.
+- Firebase Storage must NOT be introduced for new POD/evidence uploads.
 
-Before making any change:
-
-1. Read this entire AGENTS.md.
-2. Inspect the actual current repository state.
-3. Check git status/recent commits.
-4. Inspect the existing implementation before replacing anything.
-5. Continue from the latest authoritative checkpoint.
-
-Do not use stale chat context, an older AdminHub/PurePress iteration, or an earlier patch as the source of truth.
+The project is a continuing application. Do not restart it, redesign its architecture, or fall back to an older implementation.
 
 ---
 
-## CURRENT DIRECTION — LOCKED
+## SOURCE OF TRUTH — LOCKED
 
-The original `translend_v19_preview.html` is the visual/product source of truth for the Translend v19 Truck Division interface. The supplied Figma file is the visual validation/reference layer for rendered layout, spacing, hierarchy and responsive behavior.
+`v19-authoritative` is authoritative.
 
-The target is **native Next.js/React reproduction of the HTML/Figma design**, not an iframe, raw HTML runtime, or separate static application.
+Before every implementation change:
 
-Architecture:
+1. Confirm the current branch.
+2. Inspect the current `HEAD` and recent commits.
+3. Inspect the actual current files and implementation.
+4. Identify the current data/repository/API flow.
+5. Adapt the current implementation.
 
-HTML/Figma design
-→ native React/Next.js UI components + CSS
-→ existing Firebase Auth + Firestore repositories
-→ existing UploadThing evidence transport
+Never use an older AdminHub, PurePress, Translend patch, or stale chat/code snapshot merely because it looks similar. Never revert to an older version unless the Product Owner explicitly instructs it.
 
-The application engine is already connected. The immediate priority is to finish the visual adaptation before expanding the database/domain model.
-
-### Design fidelity rules
-
-- Light-first Translend v19 SaaS UI.
-- Teal/orange brand palette.
-- Inter body typography and Poppins italic Translend wordmark.
-- 248px desktop sidebar, sticky translucent topbar, compact nav and responsive mobile drawer.
-- Rounded 8–16px cards/panels, restrained shadows, bordered tables, status badges and structured forms.
-- Reproduce the **inside-panel structures** from the HTML, not only the shell: KPI/metric cards, section headers, panels, list rows, forms, tables, notices, charts/metrics, delivery/POD panels, PO capture, document previews, invoice/statement previews and mobile stacking.
-- Do not turn the app into a generic dark Tailwind dashboard.
-- Do not copy the HTML wholesale into React. Refactor its design vocabulary into maintainable React components/CSS.
-- Preserve real Firestore/Auth/UploadThing behavior. Styling changes must not replace live data with demo records.
-- HTML demo values are visual/structural references only unless backed by existing repositories.
-- Do not redesign away from the HTML/Figma direction without an explicit product decision.
-
-### Design implementation sequence
-
-1. Lock global HTML-derived design tokens, typography, surfaces, cards, panels, forms, tables, badges and responsive behavior.
-2. Align AppShell/navigation/topbar.
-3. Refactor live Customers, Control Tower, Fleet, Trips, Jobs and Drivers surfaces into the HTML panel/card/form/table vocabulary.
-4. Align Delivery/POD UI without breaking its working Firebase/UploadThing workflow.
-5. Match HTML mobile behavior.
-6. Continue into remaining HTML-derived operational/financial surfaces.
-7. Only after the design is stable, deepen database/domain coverage for surfaces that need new persisted entities.
-
-A reviewer should immediately recognize the live app as the Translend v19 HTML product, not as a generic dashboard.
+Git/GitHub are the source of truth and checkpoints. The current repository state always outranks remembered context or an old patch.
 
 ---
 
-## Firebase / data architecture direction
+## VISUAL REFERENCE — v19 FACE
 
-Firebase Authentication + Firestore remain the engine.
+The original `translend_v19_preview.html` and the supplied Figma design are **visual/product references**, not the runtime application.
 
-- Keep records organization-scoped and repository-driven.
-- Use realtime listeners where operational pages need live updates; use normal reads where a snapshot is enough.
-- Use atomic Firestore transactions/batched writes when a business invariant requires several related records to change together.
-- Preserve the existing membership/security model.
-- Never broaden workspace access to fix a UI page.
-- Never deploy guessed/restored Firestore rules from memory.
-- Verify query shapes against rules; Firestore rules are not filters.
-- Never introduce Firebase Storage for POD/evidence uploads.
+Correct model:
 
-Firebase's current documentation confirms Firestore supports hierarchical documents/subcollections, realtime listeners, offline persistence, atomic transactions/batched writes, and path-based Security Rules. These capabilities should be used deliberately as the later data model is expanded rather than creating a second data layer.
+Original HTML / Figma
+→ visual/product specification
+→ native React / Next.js implementation
+→ existing Firebase/Auth/Firestore engine
+→ real Translend application
+
+Rules:
+
+- Rebuild the design natively in React/Next.js.
+- Do NOT iframe the HTML.
+- Do NOT serve the raw HTML as a separate application.
+- Do NOT paste the raw HTML wholesale into React.
+- Extract and reuse its design vocabulary, structures, responsive behavior and visual hierarchy through maintainable React components/CSS.
+- Match the actual HTML/Figma product direction rather than inventing a new visual system.
+- HTML demo values are visual/structural references only unless backed by real repositories/data.
+
+The intended visual language is the light Translend v19 SaaS interface: teal brand, orange accent, cream/light surfaces, 248px desktop sidebar, responsive mobile drawer, branded typography, structured cards/panels/tables/KPIs, live-data indicators and strong mobile behavior.
 
 ---
 
-## CURRENT AUTHORITATIVE CHECKPOINT
+## ENGINE PRESERVATION — NON-NEGOTIABLE
 
-Always verify against git because commits may advance beyond this list.
+The existing application engine must remain underneath the visual rebuild.
 
-Important history includes:
+Preserve:
 
-- `26936b7` Establish Translend v19 application
-- `24bed21` Update Next.js to patched 15.5.15
-- `ff313d4` Add UploadThing POD infrastructure and Firebase indexes
-- `5552c60` Merge authoritative project context and workflow
-- `8054f92` Update authoritative checkpoint and define Patch 2 delivery workflow
-- `fcadeaa275e32cf7b56fd266aa0d22c7a18c22ee` Implement Patch 2 delivery domain foundation
-- `a9e21b956aa7d61604811ce8bee631150cce18e3` Patch 2: add Delivery Note and Material Lines workflow
-- `20d9dd93582dfec40c894e0be3abf78d0cda1b9f` Patch 2: add delivery arrival departure and acknowledgements
-- `1e8b3da07d97e86f109a717512941eccb980301b` Persist UploadThing evidence metadata to delivery records
-- `c38871567ce84d9d1f6f3b5850f6496c48af151a` Make UploadThing evidence route self-contained
-- `2c185fbc5df650d7dadb262c587c53ce55c63eb7` Add authenticated Delivery evidence uploader
-- `1237ac87e135e872563921f8e4348941593fc1be` Add Delivery evidence capture panel
+- Firebase Authentication
+- workspace/organization and membership logic
+- Firestore repositories and security model
+- existing CRUD and business workflows
+- realtime listeners where already used
+- UploadThing POD/evidence transport
+- existing route/data contracts unless a deliberate product change requires otherwise
 
-The actual repository state is authoritative if newer commits exist.
+UI modernization must not destroy or bypass working backend behavior. Never replace live data with demo records just to make a page resemble the HTML.
+
+---
+
+## FIRESTORE SAFETY — SECURITY BOUNDARY
+
+Firestore rules are security boundaries, not UI configuration.
+
+- Never casually replace, weaken, or deploy Firestore Security Rules.
+- Never infer rules from memory or copy rules from another project/version.
+- Preserve the existing organization/workspace membership security model.
+- New collection rules must use the existing organization/security helpers and least-privilege patterns.
+- Verify query shapes against the actual rules; Firestore rules are not filters.
+- Do not broaden workspace access to fix a UI problem.
+- Do not blindly deploy rules.
+
+Any data-model expansion must first inspect the existing repositories, types, indexes and security rules.
+
+---
+
+## UPLOADTHING — PROTECTED
+
+UploadThing remains the POD/evidence transport.
+
+- Existing Delivery/POD evidence behavior is real and persisted.
+- Do not introduce Firebase Storage for new POD/evidence uploads.
+- Do not migrate evidence to another storage system as part of a visual pass.
+- Do not replace secure upload behavior with static HTML or fake URLs.
+
+---
+
+## TYPE SAFETY — ACTIVE ORG / ASYNC CLOSURES
+
+When using `activeOrg`, workspace, auth or other nullable context values inside async callbacks, effects, Promise chains or subscriptions:
+
+- Perform the null check first.
+- Capture a stable primitive ID/value after the check, e.g. `const orgId = activeOrg.id`.
+- Use the captured value inside the callback/async work.
+- Do not rely on TypeScript narrowing surviving across callback boundaries.
+- Run/build against the actual current source rather than assuming a page compiles.
+
+This rule exists because the recent Control Tower/Fleet/Trips work exposed the `activeOrg is possibly null` failure mode.
+
+---
+
+## REGRESSION PREVENTION
+
+Before changing any page or workflow:
+
+1. Inspect its current route/component.
+2. Inspect the repositories/API/data flow it uses.
+3. Identify existing CRUD, listeners, mutations and business invariants.
+4. Preserve those behaviors while adapting the UI.
+5. Check adjacent/shared components before introducing duplicates.
+6. Verify desktop and mobile behavior where practical.
+
+Never fix one page by copying an older implementation from another project/version.
+
+Visual changes must not silently remove functionality. A page is not considered complete merely because it visually resembles the HTML; its real data and workflow behavior must still work.
+
+---
+
+## CURRENT V19 DESIGN PASS
+
+The current native implementation has already received substantial v19 visual adaptation in:
+
+- AppShell/global visual system
+- root typography
+- Customers
+- Control Tower
+- Fleet
+- Trips
+- Delivery workflow/mobile UX
+
+These are current implementation facts, not permission to assume they are perfect. Inspect the actual current code before modifying them.
+
+The original HTML contains additional product surfaces, including examples such as:
+
+- Delivery Notes & POs
+- Fuel & Workshop
+- Invoicing & Statements
+- Performance Dashboard
+- Customer/Supplier POs
+- Maintenance Work Orders
+- Daily Inspection Tracking
+- Tyre Cost Control
+- Fuel Exceptions
+
+Do not claim these are implemented simply because they exist in the HTML. Inspect the native application and identify genuine gaps first.
 
 ---
 
@@ -122,42 +180,90 @@ Job
 → POD completeness
 → Invoice eligibility
 
-Delivery behavior remains real and persisted. Do not replace it with static HTML demo behavior during the design pass.
-
-UploadThing POD/evidence remains mandatory for evidence transport. Firebase Storage must not be introduced.
+Delivery behavior remains real and persisted. Do not replace it with static HTML demo behavior during visual work.
 
 ---
 
-## REQUIRED AI WORKFLOW
+## DEPLOYMENT DISCIPLINE
 
-START
-→ Read AGENTS.md
-→ Inspect current repository and branch
-→ Inspect recent commits
+- GitHub is the checkpoint/source of truth.
+- Every coherent fix should be committed and pushed to `v19-authoritative`.
+- Do not claim Vercel is green unless actual deployment/build evidence exists.
+- Do not deploy to an unrelated Vercel project.
+- If CI/build evidence is unavailable, state that explicitly.
+- Inspect the commit/ref being deployed before treating deployment status as evidence for the current code.
 
-DESIGN INSPECT
-→ Inspect `translend_v19_preview.html`
-→ Inspect Figma reference when available
-→ Inspect the actual React route/component
-→ Identify reusable design primitives
+---
 
-BUILD
-→ Implement the HTML/Figma visual language natively in Next.js
-→ Preserve existing data flow and repositories
-→ Prefer coherent page-level adaptations over endless cosmetic micro-patches
-→ Do not create parallel engines
+## REQUIRED WORKFLOW — DO NOT STOP AT ANALYSIS
 
-VERIFY
-→ Inspect diff
-→ Use the normal Vercel/CI verification path when available
-→ Fix actual errors
-→ Validate desktop/mobile behavior where possible
+### START
 
-CHECKPOINT
-→ Update AGENTS.md when the continuation point changes
-→ Commit meaningful work
-→ Push to `v19-authoritative`
-→ Report commit SHA and verification status
+Read `AGENTS.md`
+→ confirm `v19-authoritative`
+→ inspect current `HEAD`
+→ inspect recent commits
+→ inspect actual route/component/data implementation
+
+### DESIGN INSPECT
+
+Inspect `translend_v19_preview.html`
+→ inspect supplied Figma reference when available
+→ inspect the actual native React route/component
+→ map reference surfaces to existing/native surfaces
+→ identify reusable design primitives
+
+### BUILD
+
+Implement the missing v19 product/visual work natively in Next.js.
+
+- Prefer one coherent page-level implementation over endless cosmetic micro-patches.
+- Preserve repositories, auth, workspace boundaries and business workflows.
+- Do not create parallel engines.
+- Do not introduce Firebase Storage for POD/evidence.
+
+### VERIFY
+
+Inspect the diff.
+→ run the project's actual typecheck/build/test path when available
+→ fix root causes, not symptoms
+→ check affected desktop/mobile behavior where possible
+→ re-run verification after fixes
+
+If a build/type error appears and the safe root-cause fix is clear, fix it and continue. Do not stop merely because an error was discovered.
+
+### CHECKPOINT
+
+Update `AGENTS.md` when the continuation point or important workflow rule changes.
+→ commit coherent work
+→ push to `v19-authoritative`
+→ report the exact commit SHA
+→ report what was verified and what could not be verified
+
+---
+
+## WORKFLOW ROLES
+
+- **User / Product Owner:** final reviewer and product decision-maker.
+- **ChatGPT:** Technical Navigator / implementation controller; maintains continuity, verifies source-of-truth decisions and directs the next safe implementation step.
+- **Claude:** hands-on coding/implementation agent.
+- **VS Code / Git Bash:** local inspection, terminal execution, file review and human control layer.
+- **Git / GitHub:** source of truth and checkpoints.
+
+Do not repeatedly ask for approval for obvious next safe steps. Continue with inspect → implement → verify → commit → push → report.
+
+---
+
+## EXECUTION STYLE
+
+- Prefer one coherent implementation over endless cosmetic micro-patches.
+- Inspect before editing.
+- Implement against the latest authoritative source.
+- Fix actual root causes when verification fails.
+- Preserve working behavior while improving the v19 face.
+- Never restart the architecture.
+- Never silently substitute an older system/version.
+- Never claim work is complete based only on the reference HTML.
 
 ---
 
@@ -168,15 +274,17 @@ Do NOT:
 - rebuild authentication
 - replace Firebase/Firestore
 - replace UploadThing
+- introduce Firebase Storage for new POD/evidence uploads
 - casually change Firestore Security Rules
 - iframe or serve the HTML as the application
 - discard working CRUD or Delivery workflows
 - replace live data with fixtures
-- restart from an older AdminHub/PurePress iteration
+- restart from an older AdminHub/PurePress/Translend iteration
+- invent a new architecture
 - make dark mode the default product direction
 
 ---
 
 ## MOST IMPORTANT RULE
 
-This is a continuing application. **HTML/Figma is the visual north star. Firebase/Firestore/UploadThing are the engine.** Continue forward from the authoritative repository; do not restart the product.
+**This is a continuing application. The v19 HTML/Figma is the FACE. Firebase/Auth/Firestore/UploadThing are the ENGINE. Continue forward from the authoritative repository. Never restart from an older system.**
