@@ -244,10 +244,10 @@ export default function DeliveriesPage() {
       </section>
 
       {tripTarget && <ConfirmDialog trip={tripTarget} busy={creatingDelivery} onClose={() => setTripTarget(null)} onConfirm={() => createDeliveryAndNote(tripTarget)} />}
-      {noteTarget && (
+      {noteTarget && user && (
         <DeliveryNoteDialog
           orgId={activeOrg.id}
-          userId={user?.uid ?? null}
+          userId={user.uid}
           note={noteTarget}
           delivery={deliveries?.find((item) => item.id === noteTarget.deliveryId) ?? null}
           onClose={() => setNoteTarget(null)}
@@ -277,7 +277,7 @@ function ConfirmDialog({ trip, busy, onClose, onConfirm }: { trip: Trip; busy: b
 
 function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, onError }: {
   orgId: string;
-  userId: string | null;
+  userId: string;
   note: DeliveryNote;
   delivery: Delivery | null;
   onClose: () => void;
@@ -306,7 +306,7 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
   const removeLine = (lineId: string) => setDraft((current) => ({ ...current, materialLines: current.materialLines.filter((line) => line.id !== lineId) }));
 
   const persistDelivery = async (patch: Partial<Delivery>) => {
-    if (!userId || !deliveryDraft) return null;
+    if (!deliveryDraft) return null;
     await deliveriesRepo.update(orgId, userId, deliveryDraft.id, patch);
     const updated = await deliveriesRepo.getById(orgId, deliveryDraft.id);
     if (!updated) throw new Error("Delivery was updated but could not be reloaded.");
@@ -315,7 +315,7 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
   };
 
   const markArrival = async () => {
-    if (!userId || !deliveryDraft || deliveryDraft.arrivalAt) return;
+    if (!deliveryDraft || deliveryDraft.arrivalAt) return;
     setSaving(true);
     try {
       const now = Timestamp.now();
@@ -333,12 +333,7 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
   };
 
   const markDeparture = async () => {
-    if (!userId || !deliveryDraft) return;
-    if (!deliveryDraft.arrivalAt) {
-      onError("Departure cannot be recorded before arrival.");
-      return;
-    }
-    if (deliveryDraft.departureAt) return;
+    if (!deliveryDraft || deliveryDraft.departureAt || !deliveryDraft.arrivalAt) return;
     setSaving(true);
     try {
       const now = Timestamp.now();
@@ -356,23 +351,18 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
   };
 
   const acknowledge = async (role: DeliveryAcknowledgementRole) => {
-    if (!userId || !deliveryDraft) return;
     const name = ackNames[role].trim();
-    if (!name) {
-      onError(`Enter the ${role} name before recording acknowledgement.`);
-      return;
-    }
-    if (draft.acknowledgements.some((ack) => ack.role === role)) return;
+    if (!name || draft.acknowledgements.some((ack) => ack.role === role)) return;
     setSaving(true);
     try {
-      const acknowledgement = { role, name, uid: userId, acknowledgedAt: Timestamp.now() };
+      const acknowledgement = { role, name, acknowledgedAt: Timestamp.now(), acknowledgedBy: userId };
       const acknowledgements = [...draft.acknowledgements, acknowledgement];
-      const updated = await persistDelivery({ acknowledgements });
-      await deliveryNotesRepo.update(orgId, userId, draft.id, { acknowledgements });
+      await deliveryNotesRepo.update(orgId, userId, draft.id, { acknowledgements, receivedByName: role === "receiver" ? name : draft.receivedByName, receivedByRole: role === "receiver" ? role : draft.receivedByRole });
+      if (deliveryDraft) await persistDelivery({ acknowledgements, receivedByName: role === "receiver" ? name : deliveryDraft.receivedByName });
       const updatedNote = await deliveryNotesRepo.getById(orgId, draft.id);
       if (!updatedNote) throw new Error("Acknowledgement was saved but the Delivery Note could not be reloaded.");
       setDraft(updatedNote);
-      onSaved(updatedNote, updated);
+      onSaved(updatedNote, deliveryDraft);
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to record acknowledgement.");
     } finally {
@@ -381,40 +371,39 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
   };
 
   const save = async () => {
-    if (!userId) return onError("You must be signed in to save a Delivery Note.");
-    if (!draft.noteReference.trim()) return onError("Delivery Note reference is required.");
-    if (draft.materialLines.some((line) => !line.description.trim() || !line.unit.trim() || line.quantity < 0)) return onError("Each material line needs a description, unit, and valid quantity.");
+    const invalid = draft.materialLines.some((line) => !line.description.trim() || !line.unit.trim() || !Number.isFinite(line.quantity) || line.quantity < 0);
+    if (invalid) {
+      onError("Each material line needs a description, quantity and unit before it can be saved.");
+      return;
+    }
     setSaving(true);
     try {
       await deliveryNotesRepo.update(orgId, userId, draft.id, {
-        noteReference: draft.noteReference.trim(),
-        suppliedTo: draft.suppliedTo.trim(),
-        customerName: draft.customerName.trim(),
-        deliveryLocation: draft.deliveryLocation.trim(),
-        orderReference: draft.orderReference?.trim() || null,
-        podReference: draft.podReference?.trim() || null,
-        loadingPoint: draft.loadingPoint?.trim() || null,
-        receivedByName: draft.receivedByName.trim(),
-        receivedByRole: draft.receivedByRole?.trim() || null,
-        notes: draft.notes.trim(),
+        noteReference: draft.noteReference,
+        customerName: draft.customerName,
+        suppliedTo: draft.suppliedTo,
+        deliveryLocation: draft.deliveryLocation,
+        orderReference: draft.orderReference,
+        podReference: draft.podReference,
+        loadingPoint: draft.loadingPoint,
+        receivedByName: draft.receivedByName,
+        notes: draft.notes,
         materialLines: draft.materialLines,
       });
-      const updated = await deliveryNotesRepo.getById(orgId, draft.id);
-      if (!updated) throw new Error("Delivery Note was saved but could not be reloaded.");
-      setDraft(updated);
-      onSaved(updated, deliveryDraft);
+      const updatedNote = await deliveryNotesRepo.getById(orgId, draft.id);
+      if (!updatedNote) throw new Error("Delivery Note was saved but could not be reloaded.");
+      setDraft(updatedNote);
+      onSaved(updatedNote, deliveryDraft);
     } catch (err) {
-      onError(err instanceof Error ? err.message : "Failed to save Delivery Note.");
+      onError(err instanceof Error ? err.message : "Failed to save the Delivery Note.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEvidenceSaved = async (updatedNote: DeliveryNote) => {
-    setDraft(updatedNote);
-    const updatedDelivery = userId ? await deliveriesRepo.getById(orgId, updatedNote.deliveryId) : deliveryDraft;
-    setDeliveryDraft(updatedDelivery);
-    onSaved(updatedNote, updatedDelivery);
+  const handleEvidenceSaved = (updated: DeliveryNote) => {
+    setDraft(updated);
+    onSaved(updated, deliveryDraft);
   };
 
   const handleExceptionSaved = (updatedNote: DeliveryNote, updatedDelivery: Delivery | null) => {
@@ -508,18 +497,17 @@ function Milestone({ label, value, actionLabel, onAction, done, disabled }: { la
 }
 
 function formatTimestamp(value: Timestamp | null) {
-  if (!value) return "—";
   return value.toDate().toLocaleString();
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="block"><span className="mb-1 block text-xs font-medium text-slate-400">{label}</span>{children}</label>;
-}
-
-function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
-  return <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-4 py-6"><div className={`w-full rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-2xl ${wide ? "max-w-4xl" : "max-w-lg"}`}><div className="mb-4 flex items-center justify-between"><h2 className="text-base font-semibold text-slate-50">{title}</h2><button onClick={onClose} className="text-slate-500 hover:text-slate-300" aria-label="Close">✕</button></div>{children}</div></div>;
+  return <label className="block"><span className="mb-1 block text-xs font-medium text-slate-500">{label}</span>{children}</label>;
 }
 
 function Skeleton() {
-  return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-md bg-slate-900" />)}</div>;
+  return <div className="space-y-2">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-12 animate-pulse rounded-lg border border-slate-800 bg-slate-900/60" />)}</div>;
+}
+
+function Modal({ title, children, onClose, wide = false }: { title: string; children: ReactNode; onClose: () => void; wide?: boolean }) {
+  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true"><div className={`w-full ${wide ? "max-w-5xl" : "max-w-lg"} rounded-t-2xl border border-slate-800 bg-slate-950 p-4 shadow-2xl sm:rounded-xl sm:p-6`}><div className="mb-4 flex items-center justify-between gap-3"><h2 className="text-base font-semibold text-slate-100">{title}</h2><button onClick={onClose} className="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-800 hover:text-slate-200" aria-label="Close">×</button></div>{children}</div></div>;
 }
