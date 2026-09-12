@@ -6,6 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Branch: `v19-authoritative`
+- Current checkpoint: `97d27ee835c5e3315cd821c0a793c11091390746`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence transport.
@@ -116,14 +117,27 @@ The native v19 UI for those areas is therefore a presentation-ready product surf
 
 When those domains are eventually added, first inspect and update types, repositories, indexes and Firestore rules together. Do not casually expand security rules.
 
-## Firestore safety
+## Firestore safety and current rules checkpoint
 
 Firestore rules are security boundaries, not UI configuration.
 
-- Preserve organization/workspace membership security.
-- Do not weaken rules to fix a UI/query problem.
-- Verify query shapes against the actual rules and indexes.
-- Any new domain must have types + repository + security rules + indexes + UI workflow considered as one change.
+The current app changes did **not** introduce a new persisted business collection. The existing rules already cover the live domains: organizations/members, customers, trucks, drivers, jobs, trips, deliveries, delivery notes and delivery exceptions.
+
+However, the repository's previous membership-discovery/member-management rules were weaker than the intended v19 security model. The current checkpoint `97d27ee835c5e3315cd821c0a793c11091390746` brings `firestore.rules` into the hardened form used for this v19 pass:
+
+- collection-group membership discovery is limited to the authenticated user's own active membership;
+- initial owner membership creation validates uid, orgId, owner role and active status;
+- users cannot self-escalate their own member role/status;
+- organization updates remain owner-only;
+- operational writes remain limited to the operations roles;
+- finance writes remain limited to owner/finance roles;
+- deletes remain disabled for business records.
+
+Do not weaken these rules to fix a UI/query problem. Verify query shapes against the actual rules and indexes.
+
+`firebase.json` continues to deploy `firestore.rules` and `firestore.indexes.json`. The current indexes include the membership collection-group query and the live operational list queries; the Fleet action pass deliberately removed unnecessary trip/delivery-note ordering dependencies.
+
+Any genuinely new persisted domain must have types + repository + security rules + indexes + UI workflow considered as one change.
 
 ## UploadThing
 
@@ -138,9 +152,77 @@ For `activeOrg`, auth or other nullable context inside effects/async callbacks:
 - use the captured value inside callbacks;
 - do not rely on nullable narrowing surviving across async boundaries.
 
+## QA test matrix
+
+QA should test the application by functional category, not by page appearance alone.
+
+### A. Access / workspace
+
+1. Sign in with a valid user.
+2. Confirm the correct workspace loads.
+3. Confirm organization membership discovery works.
+4. Confirm a non-member cannot read another organization's records.
+5. Confirm member role/status changes do not allow self-escalation.
+
+### B. Core CRUD
+
+1. Customers — create/read/update.
+2. Trucks — create/read/update.
+3. Drivers — create/read/update.
+4. Jobs — create/read/update.
+5. Trips — create/read/update.
+6. Confirm hard-delete actions are not exposed as successful operations.
+
+### C. Delivery execution
+
+1. Create/inspect a Job.
+2. Create/inspect its Trip.
+3. Create/inspect Delivery.
+4. Create/inspect Delivery Note.
+5. Add/edit material lines.
+6. Record arrival and departure.
+7. Record acknowledgement.
+8. Upload POD/evidence through UploadThing.
+9. Create/inspect a delivery exception.
+10. Confirm POD completeness and invoice eligibility states update from real records.
+
+### D. Fleet / reference actions
+
+1. Open Fleet & Live Map.
+2. Confirm live truck/trip/POD data renders from Firestore.
+3. Use Trip Lookup filters.
+4. Click **Pre-fill Fuel Log** and confirm the native Fuel & Workshop route receives trip/truck context.
+5. Click **Pre-fill Delivery Note** and confirm the Deliveries route receives trip context.
+6. Click **Open Trip Sheet** and confirm the Trips route opens the selected trip.
+7. Confirm unsupported GPS, loaded/empty KM and profitability fields are clearly marked as database-not-configured rather than fabricated.
+
+### E. Presentation-only surfaces
+
+Open Fuel & Workshop, Invoicing & Statements, Performance Dashboard, Journal, P&L, Cash Flow, Balance Sheet and Trial Balance.
+
+Confirm each surface is usable as a truthful product surface and does not pretend that a missing finance/workshop ledger was persisted. Any unsupported write must be clearly unavailable/configuration-state rather than a fake save.
+
+### F. Security / regression
+
+1. Test operations-role write access.
+2. Test finance-role write access.
+3. Test viewer/driver read-only boundaries.
+4. Confirm cross-org reads/writes fail.
+5. Confirm delivery evidence still uses UploadThing.
+6. Confirm no new Firebase Storage POD/evidence path was introduced.
+
+### G. Deployment / runtime
+
+1. Build/typecheck/lint where available.
+2. Verify the exact commit deployed.
+3. Verify Vercel status from GitHub.
+4. Open the deployed runtime.
+5. Test authenticated navigation and at least one real CRUD mutation end-to-end.
+6. Re-test the affected workflow after deployment.
+
 ## Verification
 
-A complete pass means:
+A complete engineering pass means:
 
 `source → typecheck/build → deployment → runtime route → auth/workspace → live repository data → mutation/CRUD → responsive UI`
 
@@ -148,7 +230,7 @@ Do not call a Vercel deployment green without actual status evidence.
 
 The project has `build`, `start` and `lint` scripts. Run the actual available verification path when possible and fix root causes rather than stopping at the first error.
 
-## Current checkpoint
+## Current checkpoints
 
 The finance JSX build error was fixed in:
 
@@ -158,13 +240,17 @@ The Fleet rebuild checkpoint was:
 
 `ba530f6318bc002d3bd386d925a9eb42be4f8644`
 
-The latest Fleet action-wiring checkpoint is:
+The Fleet action-wiring checkpoint was:
 
 `e322774e9bfa1b5122a0c9bb0643a77a01cd7425`
 
 That commit removes unnecessary trip/delivery-note ordering requirements and wires the three Fleet Trip Lookup actions to the existing native workflows.
 
-At the time of this checkpoint, Vercel for `e322774e9bfa1b5122a0c9bb0643a77a01cd7425` was still reporting **pending/deploying**. Do not call it green until the GitHub Vercel status becomes `success`.
+The current security/documentation checkpoint is:
+
+`97d27ee835c5e3315cd821c0a793c11091390746`
+
+It hardens the existing Firestore membership rules and records the QA matrix above. It does not create a new business domain.
 
 ## Deployment discipline
 
