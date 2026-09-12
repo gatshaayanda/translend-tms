@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This is the **current execution brief** for Patch 2 — Real Delivery Workflow.
+This is the current execution brief for Patch 2 — Real Delivery Workflow.
 It supersedes stale execution assumptions in earlier local Patch 2 planning artifacts.
-Those artifacts remain useful as product/specification reference, but they are **not repository truth**.
+Those artifacts remain useful as product/specification reference, but they are not repository truth.
 
 The execution agent is operating inside the actual Translend TMS repository. The repository, `AGENTS.md`, current Git state, and actual source are authoritative.
 
@@ -19,7 +19,7 @@ Before editing:
 5. Search the repository for all current POD/evidence upload paths and Delivery-related models/usages.
 6. Confirm the working tree and current checkpoint before changing anything.
 
-Do **not** clone another repository. Do **not** initialise another Git repository. Do **not** rebuild the application from a planning document.
+Do not clone another repository, initialise another Git repository, or rebuild the application from a planning document.
 
 ## Current authoritative architecture
 
@@ -31,7 +31,7 @@ Do **not** clone another repository. Do **not** initialise another Git repositor
 - Business records are organization-scoped under `/organizations/{orgId}/...`.
 - Records use LIVE/DEMO/SEED/FIXTURE environment separation.
 - Existing repository pattern provides typed CRUD, environment filtering, soft delete, and audit fields.
-- Preserve existing auth, workspace, shell, repository, and CRUD architecture unless the inspected code proves a real defect requiring a scoped change.
+- Preserve existing auth, workspace, shell, repository, and CRUD architecture unless inspected code proves a real defect requiring a scoped change.
 
 ## Patch 2 target
 
@@ -41,181 +41,124 @@ Implement and connect the real operational chain:
 
 This must be persisted operational state, not disconnected UI state.
 
-## Required implementation
+## Current implementation checkpoint
 
-### 1. Delivery model
+The repository now contains the main Patch 2 delivery workflow:
 
-Extend the existing `Delivery` model/document rather than replacing it.
+- Delivery Note and structured material lines
+- persisted arrival/departure with ordering and acting-user timestamps
+- driver/foreman/receiver acknowledgement records
+- authenticated UploadThing evidence capture
+- evidence metadata persisted to Delivery and Delivery Note
+- structured DeliveryException creation and resolution
+- POD completeness derivation
+- invoice-readiness derivation
+- controlled Delivery completion
+- mobile-friendly Deliveries workflow UI
 
-Preserve compatibility with existing Delivery records that do not contain new fields.
+The current authoritative repository checkpoint is `ac3985d7` (nullable delivery
+exception resolution-notes build fix), following `7c4665f`.
 
-The resulting delivery must be able to represent:
+## LIVE VERIFICATION BLOCKER — RESOLVE BEFORE NEW PRODUCT WORK
 
-- jobId
-- tripId
-- delivery status
-- delivery timing
-- delivery note relationship
-- acknowledgement state
-- evidence/POD references
-- exception state
-- POD completeness
-- invoice readiness
+A real Vercel deployment reached the Deliveries page but displayed:
 
-Use the repository's existing audit/environment conventions.
+`Missing or insufficient permissions.`
 
-### 2. Delivery Note
+The same page displayed literal Firestore rules text beginning with:
 
-Add a first-class organization-scoped `DeliveryNote` model/repository using the existing repository architecture.
+`rules_version = '2'; service cloud.firestore { ...`
 
-It must support:
+inside the Delivery Note area.
 
-- Delivery Note number/reference
-- date/time
-- Job/Trip/Delivery relationships
-- supplied-to/customer context
-- vehicle registration
-- delivery location
-- driver
-- order/POD reference where applicable
-- loading point
-- received-by details
-- notes
-- structured material lines
-- arrival/departure
-- driver/foreman/receiver acknowledgement data
-- POD/evidence references
-- exception references/state
+This must be treated as a live integration/data/security discrepancy until
+proven otherwise. Do not assume whether it is rules drift, stored bad data, or
+application rendering without inspecting the actual source/data path.
 
-Do not reduce multiple materials to one free-text field.
+The repository's authoritative `firestore.rules` currently contains explicit
+org-scoped rules for `deliveryNotes` and `deliveryExceptions`. The intended
+security model must be preserved.
 
-### 3. Material lines
+### Required debugging order
 
-Represent delivery material lines structurally, preferably within the Delivery Note document unless inspection of the existing architecture gives a stronger reason for a subcollection.
+1. Inspect the actual live Delivery documents.
+2. Inspect the actual live Delivery Note documents, especially `noteReference`
+   and all fields used by the Delivery history table.
+3. Determine whether the literal rules text exists in a stored Firestore field
+   or is rendered/injected by application code.
+4. Determine which Firestore read returns `permission-denied` — `trips`,
+   `deliveryNotes`, or another query.
+5. Compare the live Firebase rules deployment with the authoritative
+   `firestore.rules`.
+6. If the repository rules are correct, deploy those rules through the normal
+   Firebase workflow rather than weakening them.
+7. Re-test the Deliveries page with a real authenticated workspace user.
+8. Verify cross-organization reads remain blocked.
 
-Each line must support at least:
-
-- material/description
-- quantity
-- unit where applicable
-- notes where applicable
-
-The UI must allow adding, editing and removing lines before completion.
-
-### 4. Arrival / departure
-
-Implement explicit persisted arrival and departure actions.
-
-Rules:
-
-- Arrival records timestamp and acting user.
-- Departure cannot be recorded before arrival.
-- Departure records timestamp and acting user.
-- Repeated clicks must not corrupt timestamps/state.
-- Use Firestore timestamps and existing audit conventions.
-
-### 5. Acknowledgements
-
-Support driver/foreman/receiver acknowledgement state and names/details appropriate to the existing model.
-
-Do not invent a full digital-signature platform in Patch 2.
-
-If signature/evidence files already have a safe route, connect them to the delivery/POD record rather than creating another transport system.
-
-### 6. Evidence/POD — CRITICAL
-
-The existing UploadThing infrastructure is the authoritative file transport.
-
-Use the existing authenticated UploadThing route and organization membership authorization.
-
-The expected flow is:
-
-**authenticated active org member → UploadThing → file reference/metadata → organization-scoped Firestore evidence/POD state**
+### Prohibited shortcuts
 
 Do NOT:
 
-- import or call a Firebase Storage upload helper for new POD work
-- create a public Storage URL workaround
-- weaken authentication/authorization
-- store operational POD state only in a file URL
+- weaken Firestore rules to make the page load
+- remove authentication or membership checks
+- delete live documents to hide malformed data
+- hard-code around `permission-denied`
+- assume the rules text is corrupted data before inspecting the actual document
+- introduce Firebase Storage
+- replace Firestore
+- start workspace invitation UX before this blocker is resolved
 
-Search for and remove/replace the actual legacy Delivery upload path where Patch 2 requires it.
+## Build verification note
 
-If the existing UploadThing route requires a small security/type correction to support the real Delivery flow, make that correction within Patch 2.
+The Vercel build from `7c4665f` exposed a TypeScript nullability error in
+`DeliveryExceptionPanel.tsx` where nullable `resolutionNotes` was supplied to
+an input `defaultValue`. The minimal fallback fix was committed as `ac3985d7`.
+No dependency/audit remediation is part of this fix.
 
-### 7. Exceptions
+## Required implementation principles
 
-Add a structured `DeliveryException` model/repository using existing org-scoped patterns.
+### Delivery model
 
-At minimum support:
+Extend the existing Delivery model rather than replacing it. Preserve old
+Delivery records that lack newer optional fields.
 
-- type/category
-- description
-- reported by/at
-- status
-- evidence references where applicable
-- resolution/notes where appropriate
+### Delivery Note
 
-Support shortage, damage, quantity discrepancy, wrong material, refused delivery, site issue, vehicle issue and other.
+Use the first-class organization-scoped `DeliveryNote` repository and preserve
+Job/Trip/Delivery relationships. Material lines remain structured data.
 
-### 8. POD completeness and invoice readiness
+### Arrival / departure
 
-Implement explicit persisted/computed states that make the operational result obvious.
+Arrival records timestamp and acting user. Departure cannot be recorded before
+arrival and records timestamp and acting user. Repeated actions must not corrupt
+state.
 
-POD completeness should account for the requirements actually established by the inspected delivery workflow, including required acknowledgement/evidence state where applicable.
+### Acknowledgements
 
-`invoiceReady` must be derived from real delivery/POD/business state, not manually toggled without validation.
+Support driver/foreman/receiver acknowledgement state without building a full
+signature platform in Patch 2.
 
-Do not build the full invoicing system in Patch 2.
+### Evidence/POD
 
-### 9. Job / Trip linkage
+Use the authenticated UploadThing route. Persist evidence metadata and POD
+state in Firestore. Do not create a parallel Firebase Storage path.
 
-Preserve and strengthen the existing Job → Trip → Delivery relationship.
+### Exceptions
 
-Do not duplicate Job or Trip entities.
+Use structured categories and resolution state. Open exceptions must affect
+POD completeness and invoice readiness according to the established workflow.
 
-Use existing IDs and denormalized display fields only where the repository already uses that convention.
+### POD completeness / invoice readiness
 
-### 10. UI
+These states must derive from actual persisted Delivery/POD/business state.
+They must not be arbitrary UI toggles.
 
-Extend the existing Deliveries experience rather than replacing the application shell.
+### Security / data integrity
 
-The user should be able to understand and operate:
+Maintain organization isolation, role-aware writes, LIVE/DEMO/SEED/FIXTURE
+separation, soft-delete/audit conventions, and the existing repository pattern.
 
-- current delivery status
-- Job/Trip context
-- Delivery Note
-- material lines
-- arrival/departure
-- acknowledgements
-- evidence/POD
-- exceptions
-- completeness
-- invoice readiness
-
-Provide coherent loading, empty and error states.
-
-Keep the scope operational and mobile-friendly, but do not turn Patch 2 into the complete Dispatch/Driver experience planned for Patch 5.
-
-### 11. Security / data integrity
-
-Update Firestore rules/indexes only as required by the implemented collections/queries.
-
-Maintain organization isolation and role-aware writes.
-
-Do not weaken rules to make tests pass.
-
-Maintain LIVE/DEMO/SEED/FIXTURE separation.
-
-Maintain soft-delete/audit conventions.
-
-### 12. PDF
-
-Patch 2 may connect Delivery Note/POD document output only if a small existing document-generation path is already present and doing so is genuinely required by the inspected workflow.
-
-Do not let PDF architecture consume the patch. Full branded document generation belongs to Patch 3.
-
-## Explicit non-goals
+## Patch 2 non-goals
 
 Do NOT:
 
@@ -223,55 +166,66 @@ Do NOT:
 - rebuild workspace access
 - replace the shell
 - redesign the entire app
-- rebuild Fleet unless a real dependency blocks Delivery
+- rebuild Fleet without a real dependency
 - build the complete invoicing/payment system
 - build unrelated analytics
 - introduce Firebase Storage POD uploads
 - replace Firestore
 - introduce a competing repository architecture
-- perform a broad migration/backfill of old data without necessity and explicit approval
-- implement Patch 3/4/5 features prematurely
+- perform broad data migration/backfill without necessity and approval
+- implement Patch 3/4/5 prematurely
+- build workspace invitation UX before the live Delivery blocker is fixed
 
-## Verification gate
+## Verification gate after blocker resolution
 
-Before checkpoint:
+Run/confirm as appropriate:
 
-1. Inspect the complete diff.
-2. Run `npm run lint`.
-3. Run `npx tsc --noEmit` if available/appropriate.
-4. Run `npm run build`.
-5. Verify the actual Delivery workflow locally where possible.
-6. Verify at least:
-   - create Delivery Note
-   - two or more material lines
-   - edit/remove material line
-   - arrival then departure
-   - blocked departure before arrival
-   - acknowledgement state
-   - UploadThing evidence upload using authenticated org context
-   - POD/completeness transition
-   - exception creation
-   - invoiceReady logic
-   - existing Delivery records still render
-   - cross-organization access remains blocked by rules
+1. Inspect complete diff.
+2. `npm run lint`.
+3. `npx tsc --noEmit` if appropriate.
+4. `npm run build`.
+5. Real authenticated Delivery workflow.
+6. Create Delivery Note.
+7. Create two or more material lines.
+8. Edit/remove a material line.
+9. Confirm departure is blocked before arrival.
+10. Record arrival and departure.
+11. Record acknowledgement.
+12. Upload evidence through authenticated UploadThing.
+13. Create and resolve an exception.
+14. Confirm POD completeness and invoice readiness transitions.
+15. Complete the Delivery.
+16. Confirm existing Delivery records still render.
+17. Confirm cross-organization access remains blocked.
 
-Do not claim a real UploadThing browser flow works if it was not actually exercised or otherwise verified.
+Do not claim the browser UploadThing flow is verified unless it was actually
+exercised or otherwise concretely verified.
+
+## Next product unit after Patch 2 verification
+
+Workspace membership UX should then be implemented as a separate controlled
+unit:
+
+- one account may belong to multiple workspaces internally
+- one primary/current workspace for simple V1 UX
+- owner/authorized manager can invite by email and assign a role
+- invited users can see and accept pending invitations after signing in with
+  the invited email
+- one-workspace users enter directly
+- multi-workspace users get a simple workspace chooser
+- pending invitations are visible without requiring a complex dashboard
+
+Do not impose a hard one-workspace-per-account database limitation.
 
 ## CHECKPOINT
 
-After verification:
+After the live blocker is resolved and Patch 2 is genuinely verified:
 
-- update `AGENTS.md` with the actual completed Patch 2 state, discovered constraints, exact architecture decisions, verification performed, and next patch = Patch 3 only if Patch 2 is genuinely complete.
-- commit the implementation as one coherent Patch 2 checkpoint (small supporting commits are acceptable only when necessary).
-- push to `v19-authoritative` using normal Git flow.
-- report:
-  - commit SHA
-  - files changed
-  - verification commands/results
-  - what was actually tested
-  - any remaining limitation
-  - exact next continuation point
+- update `AGENTS.md` with the actual completed state and next continuation point
+- commit coherent work to `v19-authoritative`
+- report commit SHA, files changed, verification results, real tests performed,
+  remaining limitations, and exact next continuation point
 
 ## Final rule
 
-**Inspect reality first. Implement only what this repository actually needs. Do not let the old planning artifact drag the codebase backward.**
+**Inspect reality first. Implement only what this repository actually needs. Do not let old planning artifacts drag the codebase backward.**
