@@ -6,10 +6,9 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Branch: `v19-authoritative`
-- Current checkpoint: `97d27ee835c5e3315cd821c0a793c11091390746`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
-- UploadThing = POD/evidence transport.
+- UploadThing = POD/evidence and finance receipt transport.
 - Do not introduce Firebase Storage for new POD/evidence uploads.
 - Do not replace Firebase with Supabase or another backend.
 - Do not restart the architecture or use an older AdminHub/PurePress/Translend generation.
@@ -43,14 +42,14 @@ Rules:
 
 - If real data exists, wire it.
 - If a workflow already exists, expose/preserve it.
-- If the reference expects data the engine does not have, use **Database still being configured** rather than fake live values.
-- If the reference concept belongs to another route, wire to that native route.
+- If a reference expects a domain that genuinely does not exist, do not fake live data.
+- When a missing domain is now required to make a product action real, add it coherently as **types + repository + security rules + indexes/query shape + UI workflow**.
 - Never create fixtures merely to make a screen look complete.
 - Never iframe or serve the raw HTML as the application.
 
 ## Current v19 product state
 
-The native application now covers the major v19 surfaces:
+The native application covers:
 
 - Operations Hub / Control Tower
 - Fleet & Live Map
@@ -67,9 +66,9 @@ The native application now covers the major v19 surfaces:
 - Balance Sheet
 - Trial Balance
 
-The existing operational engine is real for the persisted domains. The delivery chain remains:
+The real operational chain is:
 
-`Job → Trip → Delivery → Delivery Note → Material lines → Arrival → Departure → Acknowledgement → Evidence → Exceptions → POD completeness → Invoice eligibility`
+`Job → Trip → Delivery → Delivery Note → Material lines → Arrival → Departure → Acknowledgement → Evidence → Exceptions → POD completeness → Invoice → Journal`
 
 Existing CRUD/repositories/listeners/security/workspace behavior must remain intact.
 
@@ -79,150 +78,52 @@ Every reference button/control must be classified before implementation:
 
 1. **Navigation/action already supported by the engine** → wire it to the real native route/workflow.
 2. **Existing data operation** → connect it to the existing repository/mutation and preserve security/workspace boundaries.
-3. **Reference-only domain not yet persisted** → keep the designed surface, but clearly mark it as **Database still being configured**. Never pretend a save/post/upload happened.
+3. **Reference-only domain not yet persisted** → keep the designed surface, but clearly mark it as **Database still being configured** rather than inventing a write.
 4. **Action belongs to another route** → pass the relevant context into that route where the receiving workflow supports it.
+5. **A previously missing domain is now required for a genuine product action** → implement the smallest coherent persisted domain rather than leaving an inert button.
 
-A button that only looks clickable is not considered complete. Conversely, an unavailable finance/workshop operation must not be faked simply to make the HTML appear functional.
+A button that only looks clickable is not complete.
 
 ### Fleet action checkpoint
 
-The Fleet trip actions are now wired from the real Trip Lookup records:
+The Fleet trip actions are wired from real Trip Lookup records:
 
 - **Pre-fill Fuel Log** → `/fuel-workshop` with `truckId` and `tripId` context.
 - **Pre-fill Delivery Note** → `/deliveries` with `tripId` context.
 - **Open Trip Sheet** → `/trips` with `tripId` context.
 
-These are native application routes, not HTML links or parallel engines.
+### Finance/workshop action checkpoint
 
-The Fleet page also retains live truck/trip/POD data, truck CRUD, fleet status, exception review and honest unavailable-data states for GPS, loaded/empty KM and finance-derived profitability.
+The previously inert v19 finance/workshop controls are now backed by persisted domains:
 
-## Finance / workshop boundary
+- **Raise invoice** → creates an `invoices` record and its Accounts Receivable / Haulage Revenue journal entry from a completed POD.
+- **Log fuel / Save Fuel Log** → creates a `fuelLogs` record and Fuel Expense journal entry.
+- **Attach Receipt** → UploadThing `financeReceipt` upload updates the fuel log; no Firebase Storage is introduced.
+- **Create Work Order** → creates a `workOrders` record.
+- **Create Supplier PO** → creates a `supplierPOs` record.
+- **Post Transaction** → creates a `journalEntries` record.
+- **Export** → exports the live journal to CSV rather than pretending to have a Google Sheets integration.
+- **P&L / Cash Flow / Balance Sheet / Trial Balance** → derive displayed figures from persisted LIVE journal entries rather than demo figures.
 
-The current Firestore engine does **not** contain dedicated persisted domains for:
+Finance/workshop collections are organization-scoped and role-protected in Firestore. Operational fuel/workshop/PO writes use operations roles; invoice and journal writes use owner/finance roles.
 
-- fuel transactions
-- maintenance work orders
-- supplier/customer PO ledgers
-- inspections
-- tyre cost control
-- finance journal entries
-- invoices/receivables/payables
-- P&L ledger
-- cash flow ledger
-- balance sheet ledger
-- trial balance ledger
-- route revenue/cost/margin accounting
-
-The native v19 UI for those areas is therefore a presentation-ready product surface derived from the real operational data where possible. It must not write invented financial records.
-
-When those domains are eventually added, first inspect and update types, repositories, indexes and Firestore rules together. Do not casually expand security rules.
-
-## Firestore safety and current rules checkpoint
+## Firestore safety
 
 Firestore rules are security boundaries, not UI configuration.
 
-The current app changes did **not** introduce a new persisted business collection. The existing rules already cover the live domains: organizations/members, customers, trucks, drivers, jobs, trips, deliveries, delivery notes and delivery exceptions.
-
-However, the repository's previous membership-discovery/member-management rules were weaker than the intended v19 security model. The current checkpoint `97d27ee835c5e3315cd821c0a793c11091390746` brings `firestore.rules` into the hardened form used for this v19 pass:
-
-- collection-group membership discovery is limited to the authenticated user's own active membership;
-- initial owner membership creation validates uid, orgId, owner role and active status;
-- users cannot self-escalate their own member role/status;
-- organization updates remain owner-only;
-- operational writes remain limited to the operations roles;
-- finance writes remain limited to owner/finance roles;
-- deletes remain disabled for business records.
-
-Do not weaken these rules to fix a UI/query problem. Verify query shapes against the actual rules and indexes.
-
-`firebase.json` continues to deploy `firestore.rules` and `firestore.indexes.json`. The current indexes include the membership collection-group query and the live operational list queries; the Fleet action pass deliberately removed unnecessary trip/delivery-note ordering dependencies.
-
-Any genuinely new persisted domain must have types + repository + security rules + indexes + UI workflow considered as one change.
+- Preserve organization/workspace membership security.
+- Do not weaken rules to fix a UI/query problem.
+- Verify query shapes against the actual rules and indexes.
+- Any new domain must have types + repository + security rules + indexes/query shape + UI workflow considered as one change.
+- New finance/workshop collections currently use the generic environment/deletedAt query shape without additional ordering indexes.
 
 ## UploadThing
 
-UploadThing remains the secure POD/evidence transport. Do not migrate existing evidence to Firebase Storage or another storage system during UI work.
-
-## Type safety
-
-For `activeOrg`, auth or other nullable context inside effects/async callbacks:
-
-- check first;
-- capture a stable primitive such as `const orgId = activeOrg.id`;
-- use the captured value inside callbacks;
-- do not rely on nullable narrowing surviving across async boundaries.
-
-## QA test matrix
-
-QA should test the application by functional category, not by page appearance alone.
-
-### A. Access / workspace
-
-1. Sign in with a valid user.
-2. Confirm the correct workspace loads.
-3. Confirm organization membership discovery works.
-4. Confirm a non-member cannot read another organization's records.
-5. Confirm member role/status changes do not allow self-escalation.
-
-### B. Core CRUD
-
-1. Customers — create/read/update.
-2. Trucks — create/read/update.
-3. Drivers — create/read/update.
-4. Jobs — create/read/update.
-5. Trips — create/read/update.
-6. Confirm hard-delete actions are not exposed as successful operations.
-
-### C. Delivery execution
-
-1. Create/inspect a Job.
-2. Create/inspect its Trip.
-3. Create/inspect Delivery.
-4. Create/inspect Delivery Note.
-5. Add/edit material lines.
-6. Record arrival and departure.
-7. Record acknowledgement.
-8. Upload POD/evidence through UploadThing.
-9. Create/inspect a delivery exception.
-10. Confirm POD completeness and invoice eligibility states update from real records.
-
-### D. Fleet / reference actions
-
-1. Open Fleet & Live Map.
-2. Confirm live truck/trip/POD data renders from Firestore.
-3. Use Trip Lookup filters.
-4. Click **Pre-fill Fuel Log** and confirm the native Fuel & Workshop route receives trip/truck context.
-5. Click **Pre-fill Delivery Note** and confirm the Deliveries route receives trip context.
-6. Click **Open Trip Sheet** and confirm the Trips route opens the selected trip.
-7. Confirm unsupported GPS, loaded/empty KM and profitability fields are clearly marked as database-not-configured rather than fabricated.
-
-### E. Presentation-only surfaces
-
-Open Fuel & Workshop, Invoicing & Statements, Performance Dashboard, Journal, P&L, Cash Flow, Balance Sheet and Trial Balance.
-
-Confirm each surface is usable as a truthful product surface and does not pretend that a missing finance/workshop ledger was persisted. Any unsupported write must be clearly unavailable/configuration-state rather than a fake save.
-
-### F. Security / regression
-
-1. Test operations-role write access.
-2. Test finance-role write access.
-3. Test viewer/driver read-only boundaries.
-4. Confirm cross-org reads/writes fail.
-5. Confirm delivery evidence still uses UploadThing.
-6. Confirm no new Firebase Storage POD/evidence path was introduced.
-
-### G. Deployment / runtime
-
-1. Build/typecheck/lint where available.
-2. Verify the exact commit deployed.
-3. Verify Vercel status from GitHub.
-4. Open the deployed runtime.
-5. Test authenticated navigation and at least one real CRUD mutation end-to-end.
-6. Re-test the affected workflow after deployment.
+UploadThing remains the secure transport for POD/evidence and finance receipts. Do not migrate existing evidence or receipts to Firebase Storage.
 
 ## Verification
 
-A complete engineering pass means:
+A complete pass means:
 
 `source → typecheck/build → deployment → runtime route → auth/workspace → live repository data → mutation/CRUD → responsive UI`
 
@@ -232,33 +133,16 @@ The project has `build`, `start` and `lint` scripts. Run the actual available ve
 
 ## Current checkpoints
 
-The finance JSX build error was fixed in:
+- Finance JSX build error fixed: `bca354f9710322c3b365da921eb55692cdee1e02`
+- Fleet rebuild: `ba530f6318bc002d3bd386d925a9eb42be4f8644`
+- Fleet action wiring: `e322774e9bfa1b5122a0c9bb0643a77a01cd7425`
+- Firestore security hardening: `97d27ee835c5e3315cd821c0a793c11091390746`
+- Finance/workshop domain types + repositories: `b264590b4818079339f40c3000684d123f8bdf64`
+- Finance/workshop Firestore rules: `b5f19ef86a59dccbee4bf7ad662c80d4f77a86d3`
+- UploadThing finance receipt support: `6e52abc8b97c45b2fb58c48a9c2bf796aad0d0fd`
+- Finance/workshop UI action implementation: `9fbd8216ef4060ef8677ae5261bc7d7ce8a6b9b7`
 
-`bca354f9710322c3b365da921eb55692cdee1e02`
-
-The Fleet rebuild checkpoint was:
-
-`ba530f6318bc002d3bd386d925a9eb42be4f8644`
-
-The Fleet action-wiring checkpoint was:
-
-`e322774e9bfa1b5122a0c9bb0643a77a01cd7425`
-
-That commit removes unnecessary trip/delivery-note ordering requirements and wires the three Fleet Trip Lookup actions to the existing native workflows.
-
-The current security/documentation checkpoint is:
-
-`97d27ee835c5e3315cd821c0a793c11091390746`
-
-It hardens the existing Firestore membership rules and records the QA matrix above. It does not create a new business domain.
-
-## Deployment discipline
-
-- Commit coherent work to `v19-authoritative`.
-- Push every meaningful checkpoint.
-- Verify the exact commit being deployed.
-- Do not confuse this Translend Vercel deployment with `adminhub-global` or another project.
-- If deployment evidence is unavailable, say so.
+The latest application code checkpoint above was submitted to Vercel. Verify the exact SHA before calling deployment green.
 
 ## Required workflow
 
@@ -272,7 +156,7 @@ It hardens the existing Firestore membership rules and records the QA matrix abo
 
 ### BUILD
 
-`preserve engine → adapt FACE natively → wire real data → expose existing workflows → honest unavailable states`
+`preserve engine → adapt FACE natively → wire real data → expose existing workflows → add a coherent domain only when a real product action requires it`
 
 ### VERIFY
 
@@ -299,11 +183,10 @@ Do NOT:
 - rebuild authentication;
 - replace Firebase/Firestore;
 - replace UploadThing;
-- introduce Firebase Storage for new POD/evidence uploads;
+- introduce Firebase Storage for new POD/evidence or receipt uploads;
 - weaken Firestore rules casually;
 - use old AdminHub/PurePress/Translend versions because they look similar;
 - discard working CRUD/delivery workflows;
 - create a raw HTML/iframe application;
 - fabricate live business data;
-- claim a presentation-only finance/workshop surface is a persisted domain;
 - stop at analysis when a safe implementation/verification step can be completed.
