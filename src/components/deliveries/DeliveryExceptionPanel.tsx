@@ -110,7 +110,7 @@ export function DeliveryExceptionPanel({
         {(note.exceptionIds ?? []).length === 0 ? (
           <p className="text-xs text-slate-600">No exceptions recorded.</p>
         ) : (
-          <ExceptionList orgId={orgId} ids={note.exceptionIds ?? []} busy={busy} onUpdate={updateException} />
+          <ExceptionList orgId={orgId} userId={userId} ids={note.exceptionIds ?? []} busy={busy} onUpdate={updateException} />
         )}
       </div>
     </section>
@@ -119,11 +119,13 @@ export function DeliveryExceptionPanel({
 
 function ExceptionList({
   orgId,
+  userId,
   ids,
   busy,
   onUpdate,
 }: {
   orgId: string;
+  userId: string | null;
   ids: string[];
   busy: boolean;
   onUpdate: (exception: DeliveryException, patch: Partial<DeliveryException>) => Promise<void>;
@@ -171,7 +173,7 @@ function ExceptionList({
                   }}
                 />
                 <button
-                  onClick={() => void onUpdate(exception, { status: "resolved", resolvedBy: null, resolvedAt: Timestamp.now() })}
+                  onClick={() => void onUpdate(exception, { status: "resolved", resolvedBy: userId, resolvedAt: Timestamp.now() })}
                   disabled={busy}
                   className="rounded-md border border-emerald-900/50 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-950/30 disabled:opacity-50"
                 >
