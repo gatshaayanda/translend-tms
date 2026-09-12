@@ -1,12 +1,20 @@
 import { createUploadthing } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 import type { FileRouter } from "uploadthing/next";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { z } from "zod";
 
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import type { OrgRole } from "@/types/core";
 import { ROLE_PERMISSIONS } from "@/types/core";
 
 const f = createUploadthing();
+
+const evidenceInput = z.object({
+  deliveryId: z.string().min(1),
+  deliveryNoteId: z.string().min(1),
+  kind: z.enum(["pod", "photo", "document", "other"]),
+});
 
 async function authenticateRequest(request: Request) {
   const authorization = request.headers.get("authorization");
@@ -28,14 +36,8 @@ async function authenticateRequest(request: Request) {
   }
 }
 
-async function verifyOrganizationMembership(
-  orgId: string,
-  uid: string,
-): Promise<OrgRole> {
-  const membershipRef = adminDb.doc(
-    `organizations/${orgId}/members/${uid}`,
-  );
-
+async function verifyOrganizationMembership(orgId: string, uid: string): Promise<OrgRole> {
+  const membershipRef = adminDb.doc(`organizations/${orgId}/members/${uid}`);
   const membershipSnap = await membershipRef.get();
 
   if (!membershipSnap.exists) {
@@ -54,8 +56,6 @@ async function verifyOrganizationMembership(
     throw new UploadThingError("Invalid organization membership");
   }
 
-  // POD/evidence upload is an operational write. Keep the server-side
-  // gate aligned with the same permission matrix used by Firestore.
   if (!ROLE_PERMISSIONS[role].editOperations) {
     throw new UploadThingError("Insufficient organization permissions");
   }
@@ -74,9 +74,9 @@ export const ourFileRouter = {
       maxFileCount: 1,
     },
   })
-    .middleware(async ({ req }) => {
+    .input(evidenceInput)
+    .middleware(async ({ req, input }) => {
       const user = await authenticateRequest(req);
-
       const orgId = new URL(req.url).searchParams.get("orgId");
 
       if (!orgId) {
@@ -84,20 +84,69 @@ export const ourFileRouter = {
       }
 
       const role = await verifyOrganizationMembership(orgId, user.uid);
+      const [deliverySnap, noteSnap] = await Promise.all([
+        adminDb.doc(`organizations/${orgId}/deliveries/${input.deliveryId}`).get(),
+        adminDb.doc(`organizations/${orgId}/deliveryNotes/${input.deliveryNoteId}`).get(),
+      ]);
+
+      if (!deliverySnap.exists || !noteSnap.exists) {
+        throw new UploadThingError("Delivery record not found");
+      }
+
+      const delivery = deliverySnap.data();
+      const note = noteSnap.data();
+
+      if (delivery?.deliveryNoteId !== input.deliveryNoteId || note?.deliveryId !== input.deliveryId) {
+        throw new UploadThingError("Delivery and Delivery Note do not match");
+      }
 
       return {
         uid: user.uid,
         orgId,
         role,
+        deliveryId: input.deliveryId,
+        deliveryNoteId: input.deliveryNoteId,
+        kind: input.kind,
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
+      const uploadedAt = Timestamp.now();
+      const evidence = {
+        id: file.key,
+        key: file.key,
+        url: file.ufsUrl,
+        kind: metadata.kind,
+        uploadedBy: metadata.uid,
+        uploadedAt,
+      };
+
+      const deliveryRef = adminDb.doc(`organizations/${metadata.orgId}/deliveries/${metadata.deliveryId}`);
+      const noteRef = adminDb.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`);
+
+      await Promise.all([
+        deliveryRef.update({
+          evidenceRefs: FieldValue.arrayUnion(evidence),
+          podState: "incomplete",
+          updatedAt: uploadedAt,
+          updatedBy: metadata.uid,
+        }),
+        noteRef.update({
+          evidenceRefs: FieldValue.arrayUnion(evidence),
+          podState: "incomplete",
+          updatedAt: uploadedAt,
+          updatedBy: metadata.uid,
+        }),
+      ]);
+
       return {
         uploadedBy: metadata.uid,
         organizationId: metadata.orgId,
         role: metadata.role,
+        deliveryId: metadata.deliveryId,
+        deliveryNoteId: metadata.deliveryNoteId,
         url: file.ufsUrl,
         key: file.key,
+        kind: metadata.kind,
       };
     }),
 } satisfies FileRouter;
