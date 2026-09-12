@@ -355,7 +355,7 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
     if (!name || draft.acknowledgements.some((ack) => ack.role === role)) return;
     setSaving(true);
     try {
-      const acknowledgement = { role, name, acknowledgedAt: Timestamp.now(), acknowledgedBy: userId };
+      const acknowledgement = { uid: userId, role, name, acknowledgedAt: Timestamp.now(), acknowledgedBy: userId };
       const acknowledgements = [...draft.acknowledgements, acknowledgement];
       await deliveryNotesRepo.update(orgId, userId, draft.id, { acknowledgements, receivedByName: role === "receiver" ? name : draft.receivedByName, receivedByRole: role === "receiver" ? role : draft.receivedByRole });
       if (deliveryDraft) await persistDelivery({ acknowledgements, receivedByName: role === "receiver" ? name : deliveryDraft.receivedByName });
@@ -497,6 +497,7 @@ function Milestone({ label, value, actionLabel, onAction, done, disabled }: { la
 }
 
 function formatTimestamp(value: Timestamp | null) {
+  if (!value) return "Not recorded";
   return value.toDate().toLocaleString();
 }
 
