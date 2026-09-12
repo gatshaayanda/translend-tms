@@ -14,7 +14,7 @@ This project is intentionally different from the user's other web products. Do n
 
 - GitHub: `https://github.com/gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Latest known checkpoint before this document revision: `24bed21`
+- Current authoritative checkpoint at this document revision: `5552c60`
 - Local authoritative working project remains the existing Windows rebuild workspace. Do not move or restructure it.
 - Do not initialise another Git repository.
 - Do not restart the application from scratch.
@@ -27,7 +27,8 @@ Stack:
 - Tailwind
 - Firebase Authentication
 - Firebase Firestore
-- Firebase Storage
+- Firebase Storage (legacy/reference only; do not use as a new POD upload path unless explicitly re-authorized after inspection)
+- UploadThing for secure POD/evidence file transport
 - Vercel
 - PWA direction
 
@@ -155,17 +156,17 @@ Known discrepancy:
 
 Do not blindly recreate indexes. Determine actual state first and make infrastructure reproducible.
 
-### 7.2 Firebase Storage / POD upload
+### 7.2 POD evidence transport
 
-There is a real deployed runtime CORS failure when uploading POD files from the Vercel application.
+The previous Firebase Storage path had a deployed runtime/CORS failure. Do not spend the next patch rebuilding or bypassing that path.
 
-Investigate actual Storage bucket, Firebase client configuration, Storage helper, Storage rules, authenticated user state, active organization membership, deployed origin, and bucket CORS configuration.
+Current infrastructure checkpoint `ff313d4` added UploadThing route/core infrastructure and Firebase Admin support. The authoritative evidence architecture is now:
 
-Required result:
+**Authenticated active workspace member → organization/membership authorization → UploadThing evidence transport → organization-scoped Firestore evidence metadata/reference → retrievable authorized POD evidence**
 
-**Authenticated active workspace member → secure organization-scoped POD upload → stored evidence → retrievable POD reference**
+Firebase Firestore remains the business/source-of-truth database. UploadThing transports/stores evidence files; it does not replace operational records.
 
-Do not make Storage public merely to bypass the problem.
+Do not make Firebase Storage public. Do not create a parallel Storage upload flow. Inspect and complete the existing UploadThing integration during Delivery/POD work.
 
 ### 7.3 Vercel Analytics
 
@@ -234,7 +235,7 @@ Conceptually:
 
 POD evidence may initially be photos, PDFs/documents, and signed delivery-note files. Digital signature capture can be added later.
 
-The immediate priority remains fixing the existing secure Firebase Storage upload.
+The immediate priority is completing and verifying the existing UploadThing-backed secure evidence flow inside the real Delivery/POD workflow.
 
 ---
 
@@ -569,7 +570,7 @@ Accessibility should be treated as a quality gate, not a last-minute polish pass
 
 ### Not yet complete
 
-- POD upload reliability
+- POD evidence flow completion/reliability using the committed UploadThing architecture
 - complete edit/delete UI
 - rules warning cleanup
 - analytics integration
@@ -609,22 +610,28 @@ Unless inspection reveals a dependency/blocker, use this order:
 
 1. Inspect actual repository/infrastructure state.
 2. Resolve Firestore index discrepancy.
-3. Fix Firebase Storage/POD upload.
+3. Verify the committed UploadThing POD infrastructure is correctly wired to the authenticated organization model.
 4. Integrate/verify Vercel Analytics.
 5. Complete edit/delete lifecycle.
 6. Clean Firestore rules warnings.
 7. End-to-end verify current operational spine.
 8. Checkpoint.
 
-### Phase B — Real delivery workflow
+### Phase B — Real delivery workflow (NEXT BUILD PACKAGE / PATCH 2)
 
-9. Upgrade Delivery into a first-class Delivery Note workflow.
-10. Add structured material/delivery lines.
-11. Add acknowledgement/signature/evidence handling.
-12. Add structured exceptions.
-13. Make POD reliable and obvious.
-14. Add branded Delivery Note/POD PDF generation.
-15. Checkpoint.
+9. Inspect the existing Delivery UI, delivery types, repository, organization model, and committed UploadThing infrastructure before changing architecture.
+10. Upgrade Delivery into a first-class Delivery Note workflow while preserving existing live records and organization isolation.
+11. Add structured material/delivery lines with quantity/unit fields; no single free-text substitute.
+12. Add Delivery Note identity and operational fields: number, date/time, supplied-to, vehicle registration, location, order/POD reference, loading point, arrival and departure.
+13. Add acknowledgement fields: driver name/signature state, foreman/receiver name, receiver signature state, receiver contact, and clear completion status. Do not block this package on advanced drawn-signature capture if the current architecture does not already support it.
+14. Wire photos/PDF/doc evidence through the existing UploadThing infrastructure, with Firestore metadata linked to organization → delivery → delivery note/evidence.
+15. Add structured exceptions: shortage, damage, quantity discrepancy, wrong material, refused delivery, site issue, vehicle issue, other; include description/status/evidence references.
+16. Compute and display POD completeness and invoice eligibility from actual delivery state; do not use decorative/manual-only status flags.
+17. Add a branded Delivery Note/POD print/PDF-ready output only if it can be completed from application source-of-truth data in this package without inventing a parallel document model.
+18. Verify the full path: Job → Trip → Delivery → Delivery Note → lines → arrival/departure → acknowledgement → evidence → exceptions → POD completeness → invoice eligibility.
+19. Run build/lint/type checks and runtime verification, inspect the diff, then checkpoint and push.
+
+**Patch 2 non-goals:** invoicing UI, rate cards, fleet expansion, telematics, a new auth model, Firebase Storage upload revival, or unrelated architecture rewrites.
 
 ### Phase C — Commercial workflow
 
