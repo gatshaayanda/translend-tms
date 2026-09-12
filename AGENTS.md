@@ -4,118 +4,116 @@
 
 This repository is the authoritative rebuild of Translend TMS Truck Division v19.
 
-Translend TMS is not a generic demo dashboard. It is an operational transport
-management system being rebuilt into a real working application.
+Translend TMS is an operational transport management system being rebuilt into a real working application.
 
-The primary repository and working branch are:
-
-- Repository: gatshaayanda/translend-tms
-- Authoritative branch: v19-authoritative
+- Repository: `gatshaayanda/translend-tms`
+- Authoritative branch: `v19-authoritative`
+- Engine: Next.js + React + Firebase Authentication + Firestore
+- Evidence transport: UploadThing
+- Firestore is the business/source-of-truth layer.
 
 Before making any change:
 
-1. Read this entire AGENTS.md file.
+1. Read this entire AGENTS.md.
 2. Inspect the actual current repository state.
-3. Check git status and recent commits.
-4. Inspect the existing implementation before proposing replacements.
-5. Continue from the latest committed checkpoint.
+3. Check git status/recent commits.
+4. Inspect the existing implementation before replacing anything.
+5. Continue from the latest authoritative checkpoint.
 
-DO NOT assume an earlier chat, prompt, patch, or memory is more authoritative
-than the current repository and this file.
-
----
-
-## Why this document exists
-
-Multiple AI agents and chats may work on this project.
-
-The project has previously lost time because an AI:
-
-- used an older AdminHub iteration instead of the latest authoritative system
-- assumed architecture without inspecting the repository
-- rebuilt working areas unnecessarily
-- confused planned work with completed work
-- expanded a patch beyond its assigned scope
-- gave instructions based on stale chat context
-
-Therefore this document provides persistent project context and the current
-continuation point.
-
-Any AI joining this project must be able to understand:
-
-- what Translend is
-- what architecture already exists
-- what has already been completed
-- what must not be changed
-- what the current patch is
-- what to do next
+Do not use stale chat context, an older AdminHub/PurePress iteration, or an earlier patch as the source of truth.
 
 ---
 
-## Current project story
+## CURRENT DIRECTION — LOCKED
 
-The original Translend rebuild was created using an incorrect/outdated base
-iteration. This caused integration problems and unnecessary patching.
+The original `translend_v19_preview.html` is the visual/product source of truth for the Translend v19 Truck Division interface. The supplied Figma file is the visual validation/reference layer for rendered layout, spacing, hierarchy and responsive behavior.
 
-The application was subsequently brought forward and connected to the current
-authoritative system.
+The target is **native Next.js/React reproduction of the HTML/Figma design**, not an iframe, raw HTML runtime, or separate static application.
 
-Core workspace and application wiring now exists and CRUD functionality is
-working in key areas.
+Architecture:
 
-The project is now moving from infrastructure and shell wiring into real
-operational workflows.
+HTML/Figma design
+→ native React/Next.js UI components + CSS
+→ existing Firebase Auth + Firestore repositories
+→ existing UploadThing evidence transport
 
-The latest completed infrastructure checkpoint added:
+The application engine is already connected. The immediate priority is to finish the visual adaptation before expanding the database/domain model.
 
-- UploadThing POD infrastructure
-- UploadThing API routes
-- Firebase Admin support where required
-- Firestore indexes
-- supporting package configuration
+### Design fidelity rules
 
-Firestore remains the business data source of truth.
+- Light-first Translend v19 SaaS UI.
+- Teal/orange brand palette.
+- Inter body typography and Poppins italic Translend wordmark.
+- 248px desktop sidebar, sticky translucent topbar, compact nav and responsive mobile drawer.
+- Rounded 8–16px cards/panels, restrained shadows, bordered tables, status badges and structured forms.
+- Reproduce the **inside-panel structures** from the HTML, not only the shell: KPI/metric cards, section headers, panels, list rows, forms, tables, notices, charts/metrics, delivery/POD panels, PO capture, document previews, invoice/statement previews and mobile stacking.
+- Do not turn the app into a generic dark Tailwind dashboard.
+- Do not copy the HTML wholesale into React. Refactor its design vocabulary into maintainable React components/CSS.
+- Preserve real Firestore/Auth/UploadThing behavior. Styling changes must not replace live data with demo records.
+- HTML demo values are visual/structural references only unless backed by existing repositories.
+- Do not redesign away from the HTML/Figma direction without an explicit product decision.
 
-Do not introduce Firebase Storage as a parallel or replacement upload path.
+### Design implementation sequence
 
----
+1. Lock global HTML-derived design tokens, typography, surfaces, cards, panels, forms, tables, badges and responsive behavior.
+2. Align AppShell/navigation/topbar.
+3. Refactor live Customers, Control Tower, Fleet, Trips, Jobs and Drivers surfaces into the HTML panel/card/form/table vocabulary.
+4. Align Delivery/POD UI without breaking its working Firebase/UploadThing workflow.
+5. Match HTML mobile behavior.
+6. Continue into remaining HTML-derived operational/financial surfaces.
+7. Only after the design is stable, deepen database/domain coverage for surfaces that need new persisted entities.
 
-## Current authoritative Git checkpoint
-
-Always verify this against git before working.
-
-Recent project history includes:
-
-- 26936b7 Establish Translend v19 application
-- 24bed21 Update Next.js to patched 15.5.15
-- ff313d4 Add UploadThing POD infrastructure and Firebase indexes
-- 5552c60 Merge authoritative project context and workflow
-- 8054f92 Update authoritative checkpoint and define Patch 2 delivery workflow
-- fcadeaa275e32cf7b56fd266aa0d22c7a18c22ee Implement Patch 2 delivery domain foundation
-- a9e21b956aa7d61604811ce8bee631150cce18e3 Patch 2: add Delivery Note and Material Lines workflow
-- 20d9dd93582dfec40c894e0be3abf78d0cda1b9f Patch 2: add delivery arrival departure and acknowledgements
-- 560189c48a4150090297d010a7fea25f560de218 Update authoritative Patch 2 delivery checkpoint
-- 1e8b3da07d97e86f109a717512941eccb980301b Patch 2: persist UploadThing evidence metadata to delivery records
-- c38871567ce84d9d1f6f3b5850f6496c48af151a Patch 2: make UploadThing evidence route self-contained
-- 2c185fbc5df650d7dadb262c587c53ce55c63eb7 Patch 2: add authenticated Delivery evidence uploader
-- 1237ac87e135e872563921f8e4348941593fc1be Patch 2: add Delivery evidence capture panel
-
-The actual repository state is authoritative if commits have advanced beyond
-this list.
+A reviewer should immediately recognize the live app as the Translend v19 HTML product, not as a generic dashboard.
 
 ---
 
-# CURRENT CONTINUATION POINT
+## Firebase / data architecture direction
 
-## PATCH 2 — REAL DELIVERY WORKFLOW — IN PROGRESS
+Firebase Authentication + Firestore remain the engine.
 
-Target workflow:
+- Keep records organization-scoped and repository-driven.
+- Use realtime listeners where operational pages need live updates; use normal reads where a snapshot is enough.
+- Use atomic Firestore transactions/batched writes when a business invariant requires several related records to change together.
+- Preserve the existing membership/security model.
+- Never broaden workspace access to fix a UI page.
+- Never deploy guessed/restored Firestore rules from memory.
+- Verify query shapes against rules; Firestore rules are not filters.
+- Never introduce Firebase Storage for POD/evidence uploads.
+
+Firebase's current documentation confirms Firestore supports hierarchical documents/subcollections, realtime listeners, offline persistence, atomic transactions/batched writes, and path-based Security Rules. These capabilities should be used deliberately as the later data model is expanded rather than creating a second data layer.
+
+---
+
+## CURRENT AUTHORITATIVE CHECKPOINT
+
+Always verify against git because commits may advance beyond this list.
+
+Important history includes:
+
+- `26936b7` Establish Translend v19 application
+- `24bed21` Update Next.js to patched 15.5.15
+- `ff313d4` Add UploadThing POD infrastructure and Firebase indexes
+- `5552c60` Merge authoritative project context and workflow
+- `8054f92` Update authoritative checkpoint and define Patch 2 delivery workflow
+- `fcadeaa275e32cf7b56fd266aa0d22c7a18c22ee` Implement Patch 2 delivery domain foundation
+- `a9e21b956aa7d61604811ce8bee631150cce18e3` Patch 2: add Delivery Note and Material Lines workflow
+- `20d9dd93582dfec40c894e0be3abf78d0cda1b9f` Patch 2: add delivery arrival departure and acknowledgements
+- `1e8b3da07d97e86f109a717512941eccb980301b` Persist UploadThing evidence metadata to delivery records
+- `c38871567ce84d9d1f6f3b5850f6496c48af151a` Make UploadThing evidence route self-contained
+- `2c185fbc5df650d7dadb262c587c53ce55c63eb7` Add authenticated Delivery evidence uploader
+- `1237ac87e135e872563921f8e4348941593fc1be` Add Delivery evidence capture panel
+
+The actual repository state is authoritative if newer commits exist.
+
+---
+
+## DELIVERY WORKFLOW — PROTECTED
 
 Job
 → Trip
 → Delivery
 → Delivery Note
-→ Structured material lines
+→ Material lines
 → Arrival
 → Departure
 → Acknowledgement
@@ -124,149 +122,61 @@ Job
 → POD completeness
 → Invoice eligibility
 
-### Completed Patch 2 units
+Delivery behavior remains real and persisted. Do not replace it with static HTML demo behavior during the design pass.
 
-The delivery domain foundation is implemented and committed.
-
-Delivery now has optional persisted operational fields for:
-
-- Delivery Note relationship
-- arrivalAt / arrivalBy
-- departureAt / departureBy
-- acknowledgements
-- evidence references
-- exception references
-- POD state
-
-First-class org-scoped repositories now exist for:
-
-- deliveryNotes
-- deliveryExceptions
-
-The UploadThing POD/evidence route now:
-
-- requires a Firebase ID token
-- verifies active organization membership
-- enforces the operational permission matrix
-- validates Delivery + Delivery Note relationship before upload
-- accepts image/PDF evidence up to 8MB
-- persists evidence metadata to both Delivery and Delivery Note
-- keeps Firestore as the business source of truth
-- never uses Firebase Storage
-
-An authenticated client uploader and reusable Delivery Evidence panel now exist.
-The remaining immediate integration task is to place the evidence panel into the
-Delivery Note dialog so the existing workflow exposes it directly to users.
-
-The Deliveries page now supports:
-
-- creating a Delivery and first Delivery Note from an eligible Trip
-- editing Delivery Note operational details
-- adding, editing, and removing structured material lines
-- persisted arrival with acting user and timestamp
-- persisted departure with acting user and timestamp
-- departure blocked until arrival exists
-- repeated arrival/departure clicks are ignored once recorded
-- driver, foreman, and receiver acknowledgement records
-- acknowledgement role/name/timestamp/acting UID persistence
-- live Delivery history and mobile-friendly workflow dialogs
-
-### Current next units
-
-Continue Patch 2 in this order:
-
-1. Integrate the evidence panel into the Delivery Note workflow
-2. POD completeness state driven by real delivery/evidence/acknowledgement state
-3. Delivery exceptions and resolution workflow
-4. Invoice readiness derived from real delivery/POD/business state
-5. Final Delivery workflow integration and cleanup
-6. Small existing PDF path only if appropriate
-7. Final Patch 2 verification and authoritative documentation checkpoint
-
-Do not move to Patch 3 until Patch 2 is complete.
+UploadThing POD/evidence remains mandatory for evidence transport. Firebase Storage must not be introduced.
 
 ---
 
-## Patch 2 success criteria
+## REQUIRED AI WORKFLOW
 
-A real user should be able to follow the operational chain and the system
-should maintain the relationship between records.
+START
+→ Read AGENTS.md
+→ Inspect current repository and branch
+→ Inspect recent commits
 
-The implementation must support:
+DESIGN INSPECT
+→ Inspect `translend_v19_preview.html`
+→ Inspect Figma reference when available
+→ Inspect the actual React route/component
+→ Identify reusable design primitives
 
-- organization isolation
-- existing live records
-- structured delivery state
-- delivery timing
-- acknowledgement
-- evidence/POD records
-- exception handling
-- completeness state
-- invoice eligibility state
+BUILD
+→ Implement the HTML/Figma visual language natively in Next.js
+→ Preserve existing data flow and repositories
+→ Prefer coherent page-level adaptations over endless cosmetic micro-patches
+→ Do not create parallel engines
 
-Do not fake the workflow with disconnected UI state.
+VERIFY
+→ Inspect diff
+→ Use the normal Vercel/CI verification path when available
+→ Fix actual errors
+→ Validate desktop/mobile behavior where possible
 
-Persist operational state through the existing data architecture.
+CHECKPOINT
+→ Update AGENTS.md when the continuation point changes
+→ Commit meaningful work
+→ Push to `v19-authoritative`
+→ Report commit SHA and verification status
 
 ---
 
-## Explicit non-goals for Patch 2
+## EXPLICIT NON-GOALS
 
 Do NOT:
 
 - rebuild authentication
-- rebuild workspace access
-- replace the shell
-- redesign the entire application
-- rebuild Fleet unless required by an actual workflow dependency
-- build a complete invoicing system
-- build unrelated analytics
-- introduce Firebase Storage uploads
-- replace Firestore as the business data source
-- rewrite working CRUD systems without a demonstrated defect
-- expand beyond the delivery workflow
+- replace Firebase/Firestore
+- replace UploadThing
+- casually change Firestore Security Rules
+- iframe or serve the HTML as the application
+- discard working CRUD or Delivery workflows
+- replace live data with fixtures
+- restart from an older AdminHub/PurePress iteration
+- make dark mode the default product direction
 
 ---
 
-## Required AI workflow
+## MOST IMPORTANT RULE
 
-Every build package follows:
-
-START
-→ Read AGENTS.md
-→ Inspect repository
-→ Check git status
-→ Check recent commits
-→ Identify current state
-
-INSPECT
-→ Read relevant existing files
-→ Trace data flow
-→ Identify dependencies
-→ Identify what already works
-
-BUILD
-→ Make the smallest coherent implementation
-→ Preserve architecture
-→ Avoid unrelated rewrites
-
-VERIFY
-→ Inspect diff
-→ Run lint
-→ Type checks/build are expected to be run by the local implementation workflow
-→ Fix actual errors
-→ Verify runtime behaviour where possible
-
-CHECKPOINT
-→ Update AGENTS.md if the continuation point changed
-→ Commit meaningful work
-→ Push to v19-authoritative
-→ Report commit SHA and verification results
-
----
-
-## The most important rule
-
-DO NOT treat this project as a blank build.
-
-This is a continuing application.
+This is a continuing application. **HTML/Figma is the visual north star. Firebase/Firestore/UploadThing are the engine.** Continue forward from the authoritative repository; do not restart the product.
