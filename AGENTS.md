@@ -66,48 +66,42 @@ working in key areas.
 The project is now moving from infrastructure and shell wiring into real
 operational workflows.
 
-The latest completed infrastructure checkpoint added:
-
-- UploadThing POD infrastructure
-- UploadThing API routes
-- Firebase Admin support where required
-- Firestore indexes
-- supporting package configuration
-
 Firestore remains the business data source of truth.
-
-Do not introduce Firebase Storage as a parallel or replacement upload path.
+UploadThing is the authoritative POD/evidence file transport.
+Firebase Storage is legacy/reference only and MUST NOT be introduced as a new
+POD/evidence path.
 
 ---
 
 ## Current authoritative Git checkpoint
 
-Always verify this against git before working.
+Latest known authoritative checkpoint:
 
-Recent project history includes:
+- `7c4665f` — Patch 2: wire Delivery workflow completion status
+- `ac3985d7` — Fix nullable delivery exception resolution notes
 
-- 26936b7 Establish Translend v19 application
-- 24bed21 Update Next.js to patched 15.5.15
-- ff313d4 Add UploadThing POD infrastructure and Firebase indexes
-- 5552c60 Merge authoritative project context and workflow
-- 8054f92 Update authoritative checkpoint and define Patch 2 delivery workflow
-- fcadeaa275e32cf7b56fd266aa0d22c7a18c22ee Implement Patch 2 delivery domain foundation
-- a9e21b956aa7d61604811ce8bee631150cce18e3 Patch 2: add Delivery Note and Material Lines workflow
-- 20d9dd93582dfec40c894e0be3abf78d0cda1b9f Patch 2: add delivery arrival departure and acknowledgements
-- 560189c48a4150090297d010a7fea25f560de218 Update authoritative Patch 2 delivery checkpoint
-- 1e8b3da07d97e86f109a717512941eccb980301b Patch 2: persist UploadThing evidence metadata to delivery records
-- c38871567ce84d9d1f6f3b5850f6496c48af151a Patch 2: make UploadThing evidence route self-contained
-- 2c185fbc5df650d7dadb262c587c53ce55c63eb7 Patch 2: add authenticated Delivery evidence uploader
-- 1237ac87e135e872563921f8e4348941593fc1be Patch 2: add Delivery evidence capture panel
+The local working copy must be synchronized to `origin/v19-authoritative`
+before continuing. Never force-push over newer authoritative work.
 
-The actual repository state is authoritative if commits have advanced beyond
-this list.
+Recent Patch 2 work includes:
+
+- Delivery domain foundation
+- Delivery Note and structured Material Lines
+- arrival/departure persistence and ordering
+- acknowledgements
+- authenticated UploadThing evidence/POD integration
+- Delivery evidence UI
+- structured Delivery exceptions and resolution
+- deterministic POD/invoice-readiness workflow derivation
+- Delivery workflow completion integration
+
+The actual repository state is authoritative if commits advance beyond this list.
 
 ---
 
 # CURRENT CONTINUATION POINT
 
-## PATCH 2 — REAL DELIVERY WORKFLOW — IN PROGRESS
+## PATCH 2 — REAL DELIVERY WORKFLOW — LIVE INTEGRATION / VERIFICATION
 
 Target workflow:
 
@@ -124,11 +118,12 @@ Job
 → POD completeness
 → Invoice eligibility
 
-### Completed Patch 2 units
+### What is implemented
 
-The delivery domain foundation is implemented and committed.
+The current repository contains a real, persisted Delivery workflow rather than
+disconnected demo state.
 
-Delivery now has optional persisted operational fields for:
+Delivery supports optional persisted operational fields for:
 
 - Delivery Note relationship
 - arrivalAt / arrivalBy
@@ -138,27 +133,12 @@ Delivery now has optional persisted operational fields for:
 - exception references
 - POD state
 
-First-class org-scoped repositories now exist for:
+First-class org-scoped repositories exist for:
 
 - deliveryNotes
 - deliveryExceptions
 
-The UploadThing POD/evidence route now:
-
-- requires a Firebase ID token
-- verifies active organization membership
-- enforces the operational permission matrix
-- validates Delivery + Delivery Note relationship before upload
-- accepts image/PDF evidence up to 8MB
-- persists evidence metadata to both Delivery and Delivery Note
-- keeps Firestore as the business source of truth
-- never uses Firebase Storage
-
-An authenticated client uploader and reusable Delivery Evidence panel now exist.
-The remaining immediate integration task is to place the evidence panel into the
-Delivery Note dialog so the existing workflow exposes it directly to users.
-
-The Deliveries page now supports:
+The Deliveries page currently supports:
 
 - creating a Delivery and first Delivery Note from an eligible Trip
 - editing Delivery Note operational details
@@ -166,24 +146,102 @@ The Deliveries page now supports:
 - persisted arrival with acting user and timestamp
 - persisted departure with acting user and timestamp
 - departure blocked until arrival exists
-- repeated arrival/departure clicks are ignored once recorded
+- repeated arrival/departure clicks ignored once recorded
 - driver, foreman, and receiver acknowledgement records
-- acknowledgement role/name/timestamp/acting UID persistence
+- authenticated UploadThing evidence/POD capture
+- structured delivery exceptions
+- exception resolution with resolving user/time
+- POD completeness derivation
+- invoice readiness derivation
+- controlled Delivery completion
 - live Delivery history and mobile-friendly workflow dialogs
 
-### Current next units
+The UploadThing evidence route requires authenticated Firebase identity,
+active organization membership, operational edit permission, and matching
+Delivery/Delivery Note records before persisting evidence metadata to Firestore.
 
-Continue Patch 2 in this order:
+Firestore rules contain org-scoped rules for deliveries, deliveryNotes and
+deliveryExceptions and retain role-aware operational writes. Do NOT weaken
+these rules merely to make a UI test pass.
 
-1. Integrate the evidence panel into the Delivery Note workflow
-2. POD completeness state driven by real delivery/evidence/acknowledgement state
-3. Delivery exceptions and resolution workflow
-4. Invoice readiness derived from real delivery/POD/business state
-5. Final Delivery workflow integration and cleanup
-6. Small existing PDF path only if appropriate
-7. Final Patch 2 verification and authoritative documentation checkpoint
+### Current live verification issue — MUST RESOLVE BEFORE MOVING ON
 
-Do not move to Patch 3 until Patch 2 is complete.
+A real Vercel deployment reached the Deliveries page but displayed:
+
+`Missing or insufficient permissions.`
+
+At the same time, the Delivery Note column displayed unexpected literal
+Firestore rules text beginning with:
+
+`rules_version = '2'; service cloud.firestore { ...`
+
+This is an observed live integration/data/security discrepancy. It has NOT
+been diagnosed conclusively yet and MUST NOT be papered over with permissive
+rules or UI hiding.
+
+The authoritative `firestore.rules` in GitHub currently contains explicit
+org-scoped rules for `deliveryNotes` and `deliveryExceptions`. Therefore the
+next debugging task is to reconcile the live Firebase deployment/data with
+the repository source.
+
+Required investigation order:
+
+1. Inspect the actual Delivery documents in the live Firestore project.
+2. Inspect the actual Delivery Note documents in the live Firestore project,
+   especially `noteReference` and related display fields.
+3. Determine whether the literal rules text is stored in a Delivery Note field
+   or is being injected/rendered by application code.
+4. Determine exactly which Firestore read is returning `permission-denied`
+   (`trips`, `deliveryNotes`, or another query).
+5. Compare/deploy the intended `firestore.rules` to the Firebase project only
+   after confirming the repository rules are correct.
+6. Re-test the Deliveries page with the real authenticated workspace user.
+7. Preserve organization isolation throughout the fix.
+
+Do NOT:
+
+- weaken Firestore rules
+- replace Firestore with another data source
+- delete live records just to hide the issue
+- hard-code around the permission error
+- assume the rules text is corrupted data until the actual document is inspected
+- move on to workspace invitations until this live Delivery discrepancy is
+  understood and fixed
+
+### Build status
+
+The Vercel build at commit `7c4665f` exposed one TypeScript error in
+`DeliveryExceptionPanel.tsx`: nullable `resolutionNotes` was passed directly to
+an input `defaultValue`. The minimal fix was committed as `ac3985d7` using an
+empty-string fallback. Vercel should re-run from that checkpoint.
+
+Do not perform unrelated dependency/audit changes as part of this fix.
+
+---
+
+## Product/workflow next phase after Patch 2 verification
+
+Once the live Delivery workflow is verified end-to-end, the next product unit
+is workspace membership UX.
+
+Desired model:
+
+- An account may belong to one or more workspaces.
+- A user normally has one primary/current workspace for simple V1 UX.
+- Do NOT enforce a hard one-workspace-per-account database limitation.
+- A workspace owner/authorized manager can invite a user by email and assign a
+  role.
+- An invited user signs in with the invited email and can see/accept the pending
+  invitation.
+- After acceptance, the membership is created/activated and the user can enter
+  that workspace.
+- Users with one workspace should be taken directly into it.
+- Users with multiple memberships should have a simple workspace chooser.
+- Users with pending invitations should see those invitations before/alongside
+  workspace access.
+
+Workspace invitation UX is a later unit. Do not start it while the current live
+Delivery/security/data discrepancy remains unresolved.
 
 ---
 
@@ -225,6 +283,7 @@ Do NOT:
 - replace Firestore as the business data source
 - rewrite working CRUD systems without a demonstrated defect
 - expand beyond the delivery workflow
+- build workspace invitation UX before the live Delivery discrepancy is resolved
 
 ---
 
@@ -269,4 +328,5 @@ CHECKPOINT
 
 DO NOT treat this project as a blank build.
 
-This is a continuing application.
+This is a continuing application. Inspect reality first, preserve the latest
+authoritative architecture, and never regress to an older project iteration.
