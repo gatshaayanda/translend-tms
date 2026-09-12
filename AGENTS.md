@@ -4,106 +4,94 @@
 
 This repository is the authoritative rebuild of Translend TMS Truck Division v19.
 
-Translend TMS is not a generic demo dashboard. It is an operational transport
-management system being rebuilt into a real working application.
+- Repository: `gatshaayanda/translend-tms`
+- Authoritative branch: `v19-authoritative`
+- Firebase project: `translend-tms-dcd2a`
+- Production: `https://translend-tms.vercel.app/`
 
-The primary repository and working branch are:
+Translend is a real operational transport management system, not a generic demo dashboard.
 
-- Repository: gatshaayanda/translend-tms
-- Authoritative branch: v19-authoritative
+Firestore is the business/source of truth.
+UploadThing is the authoritative POD/evidence file transport.
+Firebase Storage is legacy/reference only and MUST NOT be introduced as a new POD/evidence path.
+
+## Mandatory continuation workflow
 
 Before making any change:
 
-1. Read this entire AGENTS.md file.
+1. Read this entire AGENTS.md.
 2. Inspect the actual current repository state.
-3. Check git status and recent commits.
+3. Check the current branch and recent commits.
 4. Inspect the existing implementation before proposing replacements.
-5. Continue from the latest committed checkpoint.
+5. Continue from the latest authoritative checkpoint.
 
-DO NOT assume an earlier chat, prompt, patch, or memory is more authoritative
-than the current repository and this file.
+Do NOT assume an older chat, prompt, patch, memory, AdminHub iteration, or local copy is more authoritative than the current repository.
 
----
+Every implementation package follows:
 
-## Why this document exists
+START → INSPECT → BUILD → VERIFY → CHECKPOINT
 
-Multiple AI agents and chats may work on this project.
+### START
+Read AGENTS.md, inspect the repo, branch and recent commits.
 
-The project has previously lost time because an AI:
+### INSPECT
+Trace the existing data flow and identify what already works before editing it.
 
-- used an older AdminHub iteration instead of the latest authoritative system
-- assumed architecture without inspecting the repository
-- rebuilt working areas unnecessarily
-- confused planned work with completed work
-- expanded a patch beyond its assigned scope
-- gave instructions based on stale chat context
+### BUILD
+Make the smallest coherent change. Preserve existing architecture and working CRUD.
 
-Therefore this document provides persistent project context and the current
-continuation point.
+### VERIFY
+Inspect the diff. Run lint/typecheck/build through the local implementation workflow. Fix actual errors rather than guessing.
 
-Any AI joining this project must be able to understand:
+### CHECKPOINT
+Update AGENTS.md when the continuation point changes, commit meaningful work, push to `v19-authoritative`, and report the commit SHA and verification status.
 
-- what Translend is
-- what architecture already exists
-- what has already been completed
-- what must not be changed
-- what the current patch is
-- what to do next
+## Critical Firebase / Firestore safety rule
 
----
+`firestore.rules` is production security infrastructure, not ordinary application code.
 
-## Current project story
+NEVER deploy Firestore rules casually, as a side effect of another feature, or merely because the repository contains a newer-looking rules file.
 
-The original Translend rebuild was created using an incorrect/outdated base
-iteration. This caused integration problems and unnecessary patching.
+Before any rules change:
 
-The application was subsequently brought forward and connected to the current
-authoritative system.
+1. Confirm that a rules change is actually required by the current task.
+2. Inspect the currently deployed Firebase rules/security model.
+3. Compare the intended change against the existing working rules.
+4. Preserve existing workspace/membership/organization isolation.
+5. Make the smallest scoped rules addition required.
+6. Do not use permissive rules to make a UI test pass.
+7. Do not replace the live ruleset with rules remembered from an old chat or earlier iteration.
+8. Do not invent a temporary rollback ruleset.
+9. Do not run `firebase deploy --only firestore:rules` unless the rules change itself is the current, verified task.
+10. After a rules deployment, immediately verify sign-in → membership discovery → workspace access → affected workflow.
 
-Core workspace and application wiring now exists and CRUD functionality is
-working in key areas.
+If a rules deployment breaks workspace access, STOP feature work and restore the known-good Firebase rules version through Firebase's rules/version history. Do not improvise a replacement ruleset.
 
-The project is now moving from infrastructure and shell wiring into real
-operational workflows.
+Delivery rules must extend the existing organization-scoped security model; they must not alter or weaken workspace membership security.
 
-Firestore remains the business data source of truth.
-UploadThing is the authoritative POD/evidence file transport.
-Firebase Storage is legacy/reference only and MUST NOT be introduced as a new
-POD/evidence path.
+## Current authoritative checkpoint
 
----
-
-## Current authoritative Git checkpoint
-
-Latest known authoritative checkpoint:
+Recent authoritative work includes:
 
 - `7c4665f` — Patch 2: wire Delivery workflow completion status
 - `ac3985d7` — Fix nullable delivery exception resolution notes
+- `bc1d23a9` — Fix Firestore delivery workflow rules while preserving membership/security rules
+- `870d1f8` — Fix existing Delivery → Create note action
+- `eb7e391` — Polish Delivery mobile UX and success feedback
 
-The local working copy must be synchronized to `origin/v19-authoritative`
-before continuing. Never force-push over newer authoritative work.
+The repository state is authoritative if commits advance beyond this list.
 
-Recent Patch 2 work includes:
+The local working copy must be synchronized to `origin/v19-authoritative` before continuing. Never force-push over newer authoritative work.
 
-- Delivery domain foundation
-- Delivery Note and structured Material Lines
-- arrival/departure persistence and ordering
-- acknowledgements
-- authenticated UploadThing evidence/POD integration
-- Delivery evidence UI
-- structured Delivery exceptions and resolution
-- deterministic POD/invoice-readiness workflow derivation
-- Delivery workflow completion integration
+## Current product/workflow state
 
-The actual repository state is authoritative if commits advance beyond this list.
+The application is moving from infrastructure/shell wiring into real operational workflows.
 
----
+Core workspace and application wiring exists. Key CRUD areas are working.
 
-# CURRENT CONTINUATION POINT
+### Delivery workflow
 
-## PATCH 2 — REAL DELIVERY WORKFLOW — LIVE INTEGRATION / VERIFICATION
-
-Target workflow:
+The intended operational chain is:
 
 Job
 → Trip
@@ -113,220 +101,143 @@ Job
 → Arrival
 → Departure
 → Acknowledgement
-→ Evidence
+→ Evidence/POD
 → Exceptions
 → POD completeness
 → Invoice eligibility
+→ Delivery completion
 
-### What is implemented
-
-The current repository contains a real, persisted Delivery workflow rather than
-disconnected demo state.
-
-Delivery supports optional persisted operational fields for:
+The current Delivery implementation supports persisted:
 
 - Delivery Note relationship
+- structured material lines
 - arrivalAt / arrivalBy
 - departureAt / departureBy
-- acknowledgements
-- evidence references
-- exception references
-- POD state
+- driver/foreman/receiver acknowledgements
+- UploadThing evidence references
+- exception references and resolution
+- derived POD state
+- derived invoice readiness
+- controlled delivery completion
 
-First-class org-scoped repositories exist for:
+Org-scoped repositories exist for `deliveryNotes` and `deliveryExceptions`.
 
-- deliveryNotes
-- deliveryExceptions
+The existing Delivery → Create note path must create the Delivery Note against the existing Delivery rather than creating a duplicate Delivery.
 
-The Deliveries page currently supports:
+## Current Delivery UX checkpoint
 
-- creating a Delivery and first Delivery Note from an eligible Trip
-- editing Delivery Note operational details
-- adding, editing, and removing structured material lines
-- persisted arrival with acting user and timestamp
-- persisted departure with acting user and timestamp
-- departure blocked until arrival exists
-- repeated arrival/departure clicks ignored once recorded
-- driver, foreman, and receiver acknowledgement records
-- authenticated UploadThing evidence/POD capture
-- structured delivery exceptions
-- exception resolution with resolving user/time
-- POD completeness derivation
-- invoice readiness derivation
-- controlled Delivery completion
-- live Delivery history and mobile-friendly workflow dialogs
+The Deliveries page has now been refined for the next verification pass:
 
-The UploadThing evidence route requires authenticated Firebase identity,
-active organization membership, operational edit permission, and matching
-Delivery/Delivery Note records before persisting evidence metadata to Firestore.
+- desktop delivery history remains a table
+- mobile delivery history becomes stacked operational cards instead of a horizontally scrolling table
+- delivery actions use touch-friendly minimum heights
+- the Delivery Note modal is scrollable and usable on short/mobile screens
+- material-line controls stack on narrow screens
+- acknowledgement controls stack on narrow screens
+- success/error toast feedback is shown for save/update/create workflow actions
+- validation errors remain visible and are also surfaced through feedback
+- arrival, departure, acknowledgement, evidence, exception and completion updates provide user feedback through the Delivery page callback path
 
-Firestore rules contain org-scoped rules for deliveries, deliveryNotes and
-deliveryExceptions and retain role-aware operational writes. Do NOT weaken
-these rules merely to make a UI test pass.
+This is UX refinement only. Do not redesign the underlying Delivery data model merely to change presentation.
 
-### Current live verification issue — MUST RESOLVE BEFORE MOVING ON
+### Important validation behavior
 
-A real Vercel deployment reached the Deliveries page but displayed:
+A newly created Delivery Note contains an intentionally empty material line. Saving before filling it correctly fails validation with a message requiring description, unit and valid quantity. This is validation, not a persistence failure.
 
-`Missing or insufficient permissions.`
+The UX must make validation obvious and success obvious; do not remove the validation merely to make the Save button appear to work.
 
-At the same time, the Delivery Note column displayed unexpected literal
-Firestore rules text beginning with:
+## Delivery evidence and security
 
-`rules_version = '2'; service cloud.firestore { ...`
+UploadThing evidence flow must remain authenticated and organization-scoped. It must verify Firebase identity, active organization membership, operational edit permission, and matching Delivery/Delivery Note records before persisting evidence metadata.
 
-This is an observed live integration/data/security discrepancy. It has NOT
-been diagnosed conclusively yet and MUST NOT be papered over with permissive
-rules or UI hiding.
+Do not introduce Firebase Storage as a new POD/evidence path.
 
-The authoritative `firestore.rules` in GitHub currently contains explicit
-org-scoped rules for `deliveryNotes` and `deliveryExceptions`. Therefore the
-next debugging task is to reconcile the live Firebase deployment/data with
-the repository source.
-
-Required investigation order:
-
-1. Inspect the actual Delivery documents in the live Firestore project.
-2. Inspect the actual Delivery Note documents in the live Firestore project,
-   especially `noteReference` and related display fields.
-3. Determine whether the literal rules text is stored in a Delivery Note field
-   or is being injected/rendered by application code.
-4. Determine exactly which Firestore read is returning `permission-denied`
-   (`trips`, `deliveryNotes`, or another query).
-5. Compare/deploy the intended `firestore.rules` to the Firebase project only
-   after confirming the repository rules are correct.
-6. Re-test the Deliveries page with the real authenticated workspace user.
-7. Preserve organization isolation throughout the fix.
-
-Do NOT:
-
-- weaken Firestore rules
-- replace Firestore with another data source
-- delete live records just to hide the issue
-- hard-code around the permission error
-- assume the rules text is corrupted data until the actual document is inspected
-- move on to workspace invitations until this live Delivery discrepancy is
-  understood and fixed
-
-### Build status
-
-The Vercel build at commit `7c4665f` exposed one TypeScript error in
-`DeliveryExceptionPanel.tsx`: nullable `resolutionNotes` was passed directly to
-an input `defaultValue`. The minimal fix was committed as `ac3985d7` using an
-empty-string fallback. Vercel should re-run from that checkpoint.
-
-Do not perform unrelated dependency/audit changes as part of this fix.
-
----
-
-## Product/workflow next phase after Patch 2 verification
-
-Once the live Delivery workflow is verified end-to-end, the next product unit
-is workspace membership UX.
-
-Desired model:
-
-- An account may belong to one or more workspaces.
-- A user normally has one primary/current workspace for simple V1 UX.
-- Do NOT enforce a hard one-workspace-per-account database limitation.
-- A workspace owner/authorized manager can invite a user by email and assign a
-  role.
-- An invited user signs in with the invited email and can see/accept the pending
-  invitation.
-- After acceptance, the membership is created/activated and the user can enter
-  that workspace.
-- Users with one workspace should be taken directly into it.
-- Users with multiple memberships should have a simple workspace chooser.
-- Users with pending invitations should see those invitations before/alongside
-  workspace access.
-
-Workspace invitation UX is a later unit. Do not start it while the current live
-Delivery/security/data discrepancy remains unresolved.
-
----
-
-## Patch 2 success criteria
-
-A real user should be able to follow the operational chain and the system
-should maintain the relationship between records.
-
-The implementation must support:
-
-- organization isolation
-- existing live records
-- structured delivery state
-- delivery timing
-- acknowledgement
-- evidence/POD records
-- exception handling
-- completeness state
-- invoice eligibility state
-
-Do not fake the workflow with disconnected UI state.
-
-Persist operational state through the existing data architecture.
-
----
-
-## Explicit non-goals for Patch 2
+## Explicit non-goals right now
 
 Do NOT:
 
 - rebuild authentication
 - rebuild workspace access
-- replace the shell
-- redesign the entire application
-- rebuild Fleet unless required by an actual workflow dependency
-- build a complete invoicing system
+- replace the application shell
+- revert to an older AdminHub iteration
+- weaken Firestore rules
+- delete live records to hide a defect
+- replace Firestore with another business data source
+- introduce Firebase Storage for POD/evidence
+- rewrite working CRUD without a demonstrated defect
+- build a complete invoicing system yet
 - build unrelated analytics
-- introduce Firebase Storage uploads
-- replace Firestore as the business data source
-- rewrite working CRUD systems without a demonstrated defect
-- expand beyond the delivery workflow
-- build workspace invitation UX before the live Delivery discrepancy is resolved
+- start workspace invitation UX while a concrete live Delivery/security defect is unresolved
+- add installation features yet
 
----
+### Installation timing
 
-## Required AI workflow
+Installation is a later operational phase. First make the Delivery chain reliable, responsive and understandable. Installation must not be allowed to destabilize the currently working Delivery/POD/exception workflow.
 
-Every build package follows:
+## Workspace model
 
-START
-→ Read AGENTS.md
-→ Inspect repository
-→ Check git status
-→ Check recent commits
-→ Identify current state
+An account may belong to one or more workspaces.
 
-INSPECT
-→ Read relevant existing files
-→ Trace data flow
-→ Identify dependencies
-→ Identify what already works
+V1 should normally present one primary/current workspace. Do NOT enforce a hard one-workspace-per-account database limitation.
 
-BUILD
-→ Make the smallest coherent implementation
-→ Preserve architecture
-→ Avoid unrelated rewrites
+Future membership UX may support invitations, acceptance, roles and a simple workspace chooser, but this is not the current Delivery task.
 
-VERIFY
-→ Inspect diff
-→ Run lint
-→ Type checks/build are expected to be run by the local implementation workflow
-→ Fix actual errors
-→ Verify runtime behaviour where possible
+## Product quality direction
 
-CHECKPOINT
-→ Update AGENTS.md if the continuation point changed
-→ Commit meaningful work
-→ Push to v19-authoritative
-→ Report commit SHA and verification results
+The shell and operational workflows should feel like one professional product on desktop and phone.
 
----
+Prioritize:
 
-## The most important rule
+- clear hierarchy
+- touch-friendly controls
+- readable cards on mobile
+- responsive forms
+- obvious loading states
+- obvious success/failure feedback
+- useful validation messages
+- preserved data relationships
+- no unnecessary scrolling caused by desktop-only tables on phones
+
+Use the existing product shell as the design source. Do not introduce a competing visual system.
+
+## Verification expectations
+
+For Delivery changes, verify the real authenticated flow where possible:
+
+1. workspace loads
+2. Deliveries loads
+3. existing Delivery is visible
+4. existing Delivery can open/create its Delivery Note
+5. Save validation behaves correctly
+6. successful Save visibly confirms success
+7. reload preserves saved data
+8. arrival persists
+9. departure remains locked until arrival and then persists
+10. acknowledgements persist
+11. evidence uses UploadThing and persists metadata
+12. exceptions persist and resolve correctly
+13. POD/invoice readiness derives from actual state
+14. completion remains controlled
+15. mobile layout is usable without relying on a horizontal desktop table
+
+If local typecheck/build is unavailable to the navigator, do not claim it was run. The local implementation workflow must perform it before final acceptance.
+
+## Recovery / debugging order
+
+When a live workflow fails:
+
+1. Identify the exact failing UI action.
+2. Inspect the actual application code path.
+3. Identify the exact repository/read/write involved.
+4. Check browser/runtime/build errors.
+5. Only then investigate Firestore rules if the evidence indicates a permission problem.
+6. Preserve the working workspace/authentication path.
+7. Never broaden permissions as a first response.
+
+Do not paper over a runtime or data defect by hiding errors in the UI.
+
+## Most important rule
 
 DO NOT treat this project as a blank build.
 
-This is a continuing application. Inspect reality first, preserve the latest
-authoritative architecture, and never regress to an older project iteration.
+Inspect reality first. Continue from the latest authoritative repository state. Preserve working architecture. Make scoped changes. Verify before moving on.
