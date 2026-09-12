@@ -12,17 +12,25 @@ interface NavItem {
   href: (orgId: string) => string;
   icon: string;
   section?: string;
+  badge?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { section: "Operations", label: "Operations Hub", href: (id) => `/${id}/control-tower`, icon: "◈" },
+  { section: "Truck Division", label: "Operations Hub", href: (id) => `/${id}/control-tower`, icon: "◈", badge: "TODAY" },
   { label: "Fleet & Live Map", href: (id) => `/${id}/trucks`, icon: "▣" },
-  { label: "Trips", href: (id) => `/${id}/trips`, icon: "➜" },
   { label: "Delivery Notes & POs", href: (id) => `/${id}/deliveries`, icon: "✓" },
+  { label: "Fuel & Workshop", href: (id) => `/${id}/fuel-workshop`, icon: "◒" },
+  { label: "Invoicing & Statements", href: (id) => `/${id}/invoicing`, icon: "▤" },
+  { label: "Performance Dashboard", href: (id) => `/${id}/performance`, icon: "▥" },
+  { section: "Financials", label: "Journal Entry", href: (id) => `/${id}/journal`, icon: "▦" },
+  { label: "P&L Statement", href: (id) => `/${id}/p-and-l`, icon: "⌁" },
+  { label: "Cash Flow", href: (id) => `/${id}/cash-flow`, icon: "◒" },
+  { label: "Balance Sheet", href: (id) => `/${id}/balance-sheet`, icon: "⚖" },
+  { label: "Trial Balance", href: (id) => `/${id}/trial-balance`, icon: "≡" },
   { section: "Management", label: "Customers", href: (id) => `/${id}/customers`, icon: "▤" },
   { label: "Jobs", href: (id) => `/${id}/jobs`, icon: "□" },
+  { label: "Trips", href: (id) => `/${id}/trips`, icon: "➜" },
   { label: "Drivers", href: (id) => `/${id}/drivers`, icon: "●" },
-  { section: "Control", label: "Fuel & Workshop", href: (id) => `/${id}/trucks`, icon: "◒" },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -50,7 +58,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="logo-icon" aria-hidden="true">›</div>
             <div className="logo-text">
               <span className="brand">translend</span>
-              <span className="sub">truck division · v19</span>
+              <span className="sub">any load · any road</span>
             </div>
           </div>
         </div>
@@ -66,10 +74,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   href={href}
                   onClick={() => setMobileOpen(false)}
                   className={`translend-nav-item ${active ? "active" : ""}`}
+                  aria-current={active ? "page" : undefined}
                 >
                   <span className="nav-icon">{item.icon}</span>
                   <span>{item.label}</span>
-                  {item.label === "Delivery Notes & POs" && <span className="nav-badge">LIVE</span>}
+                  {item.badge && <span className="nav-badge">{item.badge}</span>}
                 </Link>
               </div>
             );
@@ -119,6 +128,14 @@ function getPageLabel(pathname: string | null, orgId: string) {
     jobs: "Jobs",
     trips: "Trips",
     deliveries: "Delivery Notes & POs",
+    "fuel-workshop": "Fuel & Workshop",
+    invoicing: "Invoicing & Statements",
+    performance: "Performance Dashboard",
+    journal: "Journal Entry",
+    "p-and-l": "P&L Statement",
+    "cash-flow": "Cash Flow",
+    "balance-sheet": "Balance Sheet",
+    "trial-balance": "Trial Balance",
   };
   return labels[current ?? ""] ?? "Operations Hub";
 }
