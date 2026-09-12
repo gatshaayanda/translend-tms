@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { deliveriesRepo, deliveryNotesRepo, tripsRepo } from "@/lib/firebase/modules";
 import { DeliveryEvidencePanel } from "@/components/deliveries/DeliveryEvidencePanel";
 import { DeliveryExceptionPanel } from "@/components/deliveries/DeliveryExceptionPanel";
+import { DeliveryWorkflowStatus } from "@/components/deliveries/DeliveryWorkflowStatus";
 import type {
   Delivery,
   DeliveryAcknowledgementRole,
@@ -422,6 +423,12 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
     onSaved(updatedNote, updatedDelivery);
   };
 
+  const handleWorkflowSaved = (updatedNote: DeliveryNote, updatedDelivery: Delivery | null) => {
+    setDraft(updatedNote);
+    setDeliveryDraft(updatedDelivery);
+    onSaved(updatedNote, updatedDelivery);
+  };
+
   return (
     <Modal title={`Delivery Note · ${draft.noteReference}`} onClose={onClose} wide>
       <div className="max-h-[75vh] space-y-5 overflow-y-auto pr-1">
@@ -476,6 +483,15 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
           note={draft}
           delivery={deliveryDraft}
           onSaved={handleExceptionSaved}
+          onError={onError}
+        />
+
+        <DeliveryWorkflowStatus
+          orgId={orgId}
+          userId={userId}
+          note={draft}
+          delivery={deliveryDraft}
+          onSaved={handleWorkflowSaved}
           onError={onError}
         />
 
