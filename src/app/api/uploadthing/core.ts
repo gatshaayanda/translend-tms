@@ -11,6 +11,7 @@ import { ROLE_PERMISSIONS } from "@/types/core";
 const f = createUploadthing();
 
 const evidenceInput = z.object({
+  orgId: z.string().min(1),
   deliveryId: z.string().min(1),
   deliveryNoteId: z.string().min(1),
   kind: z.enum(["pod", "photo", "document", "other"]),
@@ -24,10 +25,7 @@ async function authenticateRequest(request: Request) {
   }
 
   const idToken = authorization.slice("Bearer ".length).trim();
-
-  if (!idToken) {
-    throw new UploadThingError("Unauthorized");
-  }
+  if (!idToken) throw new UploadThingError("Unauthorized");
 
   try {
     return await adminAuth.verifyIdToken(idToken);
@@ -37,25 +35,17 @@ async function authenticateRequest(request: Request) {
 }
 
 async function verifyOrganizationMembership(orgId: string, uid: string): Promise<OrgRole> {
-  const membershipRef = adminDb.doc(`organizations/${orgId}/members/${uid}`);
-  const membershipSnap = await membershipRef.get();
+  const membershipSnap = await adminDb.doc(`organizations/${orgId}/members/${uid}`).get();
 
-  if (!membershipSnap.exists) {
-    throw new UploadThingError("Organization membership not found");
-  }
+  if (!membershipSnap.exists) throw new UploadThingError("Organization membership not found");
 
   const membership = membershipSnap.data();
-
-  if (membership?.status !== "active") {
-    throw new UploadThingError("Organization membership is not active");
-  }
+  if (membership?.status !== "active") throw new UploadThingError("Organization membership is not active");
 
   const role = membership.role as OrgRole;
-
   if (!Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS, role)) {
     throw new UploadThingError("Invalid organization membership");
   }
-
   if (!ROLE_PERMISSIONS[role].editOperations) {
     throw new UploadThingError("Insufficient organization permissions");
   }
@@ -65,28 +55,17 @@ async function verifyOrganizationMembership(orgId: string, uid: string): Promise
 
 export const ourFileRouter = {
   podEvidence: f({
-    image: {
-      maxFileSize: "8MB",
-      maxFileCount: 1,
-    },
-    pdf: {
-      maxFileSize: "8MB",
-      maxFileCount: 1,
-    },
+    image: { maxFileSize: "8MB", maxFileCount: 1 },
+    pdf: { maxFileSize: "8MB", maxFileCount: 1 },
   })
     .input(evidenceInput)
     .middleware(async ({ req, input }) => {
       const user = await authenticateRequest(req);
-      const orgId = new URL(req.url).searchParams.get("orgId");
+      const role = await verifyOrganizationMembership(input.orgId, user.uid);
 
-      if (!orgId) {
-        throw new UploadThingError("Organization is required");
-      }
-
-      const role = await verifyOrganizationMembership(orgId, user.uid);
       const [deliverySnap, noteSnap] = await Promise.all([
-        adminDb.doc(`organizations/${orgId}/deliveries/${input.deliveryId}`).get(),
-        adminDb.doc(`organizations/${orgId}/deliveryNotes/${input.deliveryNoteId}`).get(),
+        adminDb.doc(`organizations/${input.orgId}/deliveries/${input.deliveryId}`).get(),
+        adminDb.doc(`organizations/${input.orgId}/deliveryNotes/${input.deliveryNoteId}`).get(),
       ]);
 
       if (!deliverySnap.exists || !noteSnap.exists) {
@@ -95,14 +74,13 @@ export const ourFileRouter = {
 
       const delivery = deliverySnap.data();
       const note = noteSnap.data();
-
       if (delivery?.deliveryNoteId !== input.deliveryNoteId || note?.deliveryId !== input.deliveryId) {
         throw new UploadThingError("Delivery and Delivery Note do not match");
       }
 
       return {
         uid: user.uid,
-        orgId,
+        orgId: input.orgId,
         role,
         deliveryId: input.deliveryId,
         deliveryNoteId: input.deliveryNoteId,
@@ -124,18 +102,8 @@ export const ourFileRouter = {
       const noteRef = adminDb.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`);
 
       await Promise.all([
-        deliveryRef.update({
-          evidenceRefs: FieldValue.arrayUnion(evidence),
-          podState: "incomplete",
-          updatedAt: uploadedAt,
-          updatedBy: metadata.uid,
-        }),
-        noteRef.update({
-          evidenceRefs: FieldValue.arrayUnion(evidence),
-          podState: "incomplete",
-          updatedAt: uploadedAt,
-          updatedBy: metadata.uid,
-        }),
+        deliveryRef.update({ evidenceRefs: FieldValue.arrayUnion(evidence), podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid }),
+        noteRef.update({ evidenceRefs: FieldValue.arrayUnion(evidence), podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid }),
       ]);
 
       return {
