@@ -1,76 +1,182 @@
 rules_version = '2';
 
-// =============================================================
-// Translend TMS · Firestore security rules
-// =============================================================
-// Enforces:
-//   - a user can only read/write their own /users/{uid} doc
-//   - org data is only readable/writable by active members of
-//     that org (checked via the org's /members/{uid} subdoc)
-//   - only Owner/Operations Manager can invite/edit members
-//   - business collections are member-read, and write-gated by
-//     role via editOperations/editFinance (mirrors ROLE_PERMISSIONS
-//     in src/types/core.ts — keep these in sync by hand)
-
-function isSignedIn() {
-  return request.auth != null;
-}
-
-function isOrgMember(orgId) {
-  return isSignedIn() &&
-    exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)) &&
-    get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.status == 'active';
-}
-
-function memberRole(orgId) {
-  return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
-}
-
-function canManageMembers(orgId) {
-  return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager'];
-}
-
-function canEditOperations(orgId) {
-  return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager'];
-}
-
-function canEditFinance(orgId) {
-  return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'finance'];
-}
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /users/{uid} {
-      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    // =========================================================
+    // HELPERS
+    // =========================================================
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Collection-group discovery: authenticated users may discover only their own membership documents.
-    // Required before the app knows which organization the user belongs to.
-    match /{path=**}/members/{memberUid} {
-      allow read: if isSignedIn() && memberUid == request.auth.uid;
+    function isOrgMember(orgId) {
+      return isSignedIn()
+        && exists(
+          /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)
+        ).data.status == 'active';
     }
+
+    function memberRole(orgId) {
+      return get(
+        /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)
+      ).data.role;
+    }
+
+    function canManageMembers(orgId) {
+      return isOrgMember(orgId)
+        && memberRole(orgId) in [
+          'owner',
+          'operations_manager'
+        ];
+    }
+
+    function canEditOperations(orgId) {
+      return isOrgMember(orgId)
+        && memberRole(orgId) in [
+          'owner',
+          'operations_manager',
+          'dispatcher',
+          'fleet_manager'
+        ];
+    }
+
+    function canEditFinance(orgId) {
+      return isOrgMember(orgId)
+        && memberRole(orgId) in [
+          'owner',
+          'finance'
+        ];
+    }
+
+    function isOwner(orgId) {
+      return isOrgMember(orgId)
+        && memberRole(orgId) == 'owner';
+    }
+
+
+    // =========================================================
+    // USER PROFILE
+    // =========================================================
+
+    match /users/{uid} {
+      allow read, write: if isSignedIn()
+        && request.auth.uid == uid;
+    }
+
+
+    // =========================================================
+    // MEMBERSHIP DISCOVERY
+    // =========================================================
+    //
+    // The application discovers memberships with a collection
+    // group query before it knows the organization ID.
+    //
+    // Only the authenticated user's own active membership
+    // documents may be discovered.
+    //
+
+    match /{path=**}/members/{memberUid} {
+      allow read: if isSignedIn()
+        && resource.data.uid == request.auth.uid
+        && resource.data.status == 'active';
+    }
+
+
+    // =========================================================
+    // ORGANIZATION
+    // =========================================================
 
     match /organizations/{orgId} {
+
+      // Active members can read their organization.
       allow read: if isOrgMember(orgId);
-      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isOrgMember(orgId) && memberRole(orgId) == 'owner';
+
+      // A signed-in user can create a new organization for
+      // themself as the initial owner.
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+
+      // Only the current owner can change organization settings.
+      allow update: if isOwner(orgId);
+
       allow delete: if false;
 
+
+      // =======================================================
+      // MEMBERS
+      // =======================================================
+
       match /members/{memberUid} {
-        allow read: if isOrgMember(orgId);
-        allow create: if isSignedIn() && (
-          (memberUid == request.auth.uid && request.resource.data.role == 'owner') ||
-          canManageMembers(orgId)
-        );
-        allow update, delete: if canManageMembers(orgId);
+
+        // Own active membership, or membership records for an
+        // organization the user already belongs to.
+        allow read: if isSignedIn()
+          && (
+            (
+              memberUid == request.auth.uid
+              && resource.data.uid == request.auth.uid
+              && resource.data.status == 'active'
+            )
+            ||
+            isOrgMember(orgId)
+          );
+
+        // Initial owner membership OR member management by
+        // Owner / Operations Manager.
+        allow create: if isSignedIn()
+          && (
+            (
+              memberUid == request.auth.uid
+              && request.resource.data.uid == request.auth.uid
+              && request.resource.data.orgId == orgId
+              && request.resource.data.role == 'owner'
+              && request.resource.data.status == 'active'
+            )
+            ||
+            canManageMembers(orgId)
+          );
+
+        // Owner / Operations Manager can update members.
+        //
+        // A user cannot change their own role/status to escalate
+        // their permissions.
+        allow update: if canManageMembers(orgId)
+          && (
+            memberUid != request.auth.uid
+            ||
+            (
+              resource.data.role == request.resource.data.role
+              && resource.data.status == request.resource.data.status
+            )
+          );
+
+        allow delete: if false;
       }
+
+
+      // =======================================================
+      // CUSTOMERS
+      // =======================================================
 
       match /customers/{docId} {
         allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId) || canEditFinance(orgId);
+
+        allow create, update: if
+          canEditOperations(orgId)
+          || canEditFinance(orgId);
+
         allow delete: if false;
       }
+
+
+      // =======================================================
+      // FLEET
+      // =======================================================
 
       match /trucks/{docId} {
         allow read: if isOrgMember(orgId);
@@ -83,6 +189,11 @@ service cloud.firestore {
         allow create, update: if canEditOperations(orgId);
         allow delete: if false;
       }
+
+
+      // =======================================================
+      // OPERATIONS
+      // =======================================================
 
       match /jobs/{docId} {
         allow read: if isOrgMember(orgId);
@@ -101,6 +212,11 @@ service cloud.firestore {
         allow create, update: if canEditOperations(orgId);
         allow delete: if false;
       }
+
+
+      // =======================================================
+      // DELIVERY WORKFLOW
+      // =======================================================
 
       match /deliveryNotes/{docId} {
         allow read: if isOrgMember(orgId);
