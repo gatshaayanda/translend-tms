@@ -1,8 +1,3 @@
-// =============================================================
-// Module repositories — thin, named wrappers around the generic
-// repository factory. One export per business collection.
-// =============================================================
-
 import { createRepository } from "./repository";
 import type {
   Customer,
@@ -15,6 +10,8 @@ import type {
   DeliveryException,
 } from "@/types/core";
 import type { FuelLog, WorkOrder, SupplierPO, Invoice, JournalEntry } from "@/types/finance";
+import type { TripMetrics } from "@/types/fleet";
+import type { MaintenanceSchedule, VehicleInspection, TyreRecord } from "@/types/workshop";
 
 export const customersRepo = createRepository<Customer>("customers");
 export const trucksRepo = createRepository<Truck>("trucks");
@@ -29,3 +26,7 @@ export const workOrdersRepo = createRepository<WorkOrder>("workOrders");
 export const supplierPOsRepo = createRepository<SupplierPO>("supplierPOs");
 export const invoicesRepo = createRepository<Invoice>("invoices");
 export const journalEntriesRepo = createRepository<JournalEntry>("journalEntries");
+export const tripMetricsRepo = createRepository<TripMetrics>("tripMetrics");
+export const maintenanceSchedulesRepo = createRepository<MaintenanceSchedule>("maintenanceSchedules");
+export const vehicleInspectionsRepo = createRepository<VehicleInspection>("vehicleInspections");
+export const tyreRecordsRepo = createRepository<TyreRecord>("tyreRecords");

@@ -56,82 +56,27 @@ service cloud.firestore {
         allow create, update: if canEditOperations(orgId) || canEditFinance(orgId);
         allow delete: if false;
       }
+      match /trucks/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /drivers/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /jobs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /trips/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /deliveries/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /deliveryNotes/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /deliveryExceptions/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
 
-      match /trucks/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
+      match /fuelLogs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /workOrders/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /supplierPOs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /invoices/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
+      match /journalEntries/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
 
-      match /drivers/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
+      // Phase 2: persisted operational intelligence. Same operational role boundary as trips/fuel.
+      match /tripMetrics/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
 
-      match /jobs/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      match /trips/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      match /deliveries/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      match /deliveryNotes/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      match /deliveryExceptions/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      // =======================================================
-      // WORKSHOP / FINANCE
-      // =======================================================
-
-      match /fuelLogs/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      match /workOrders/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      match /supplierPOs/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditOperations(orgId);
-        allow delete: if false;
-      }
-
-      match /invoices/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditFinance(orgId);
-        allow delete: if false;
-      }
-
-      match /journalEntries/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update: if canEditFinance(orgId);
-        allow delete: if false;
-      }
+      // Phase 3: workshop control domains. Same operational role boundary as work orders.
+      match /maintenanceSchedules/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /vehicleInspections/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /tyreRecords/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
     }
   }
 }
