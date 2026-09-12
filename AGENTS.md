@@ -94,6 +94,11 @@ Recent project history includes:
 - fcadeaa275e32cf7b56fd266aa0d22c7a18c22ee Implement Patch 2 delivery domain foundation
 - a9e21b956aa7d61604811ce8bee631150cce18e3 Patch 2: add Delivery Note and Material Lines workflow
 - 20d9dd93582dfec40c894e0be3abf78d0cda1b9f Patch 2: add delivery arrival departure and acknowledgements
+- 560189c48a4150090297d010a7fea25f560de218 Update authoritative Patch 2 delivery checkpoint
+- 1e8b3da07d97e86f109a717512941eccb980301b Patch 2: persist UploadThing evidence metadata to delivery records
+- c38871567ce84d9d1f6f3b5850f6496c48af151a Patch 2: make UploadThing evidence route self-contained
+- 2c185fbc5df650d7dadb262c587c53ce55c63eb7 Patch 2: add authenticated Delivery evidence uploader
+- 1237ac87e135e872563921f8e4348941593fc1be Patch 2: add Delivery evidence capture panel
 
 The actual repository state is authoritative if commits have advanced beyond
 this list.
@@ -138,9 +143,20 @@ First-class org-scoped repositories now exist for:
 - deliveryNotes
 - deliveryExceptions
 
-UploadThing POD/evidence authorization is protected by authenticated Firebase
-ID token + active organization membership + operational permission. Firebase
-Storage must not be used for new POD/evidence flows.
+The UploadThing POD/evidence route now:
+
+- requires a Firebase ID token
+- verifies active organization membership
+- enforces the operational permission matrix
+- validates Delivery + Delivery Note relationship before upload
+- accepts image/PDF evidence up to 8MB
+- persists evidence metadata to both Delivery and Delivery Note
+- keeps Firestore as the business source of truth
+- never uses Firebase Storage
+
+An authenticated client uploader and reusable Delivery Evidence panel now exist.
+The remaining immediate integration task is to place the evidence panel into the
+Delivery Note dialog so the existing workflow exposes it directly to users.
 
 The Deliveries page now supports:
 
@@ -150,7 +166,7 @@ The Deliveries page now supports:
 - persisted arrival with acting user and timestamp
 - persisted departure with acting user and timestamp
 - departure blocked until arrival exists
-- repeated arrival/departure clicks are idempotently ignored once recorded
+- repeated arrival/departure clicks are ignored once recorded
 - driver, foreman, and receiver acknowledgement records
 - acknowledgement role/name/timestamp/acting UID persistence
 - live Delivery history and mobile-friendly workflow dialogs
@@ -159,7 +175,7 @@ The Deliveries page now supports:
 
 Continue Patch 2 in this order:
 
-1. UploadThing evidence/POD capture and Firestore evidence references
+1. Integrate the evidence panel into the Delivery Note workflow
 2. POD completeness state driven by real delivery/evidence/acknowledgement state
 3. Delivery exceptions and resolution workflow
 4. Invoice readiness derived from real delivery/POD/business state
