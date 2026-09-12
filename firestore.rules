@@ -53,11 +53,6 @@ service cloud.firestore {
 
     match /organizations/{orgId} {
       allow read: if isOrgMember(orgId);
-      // Creation happens client-side by an authenticated user
-      // creating themself as Owner in the same transaction as the
-      // first member doc — so we allow create by any signed-in
-      // user, but only if they are also creating their own Owner
-      // membership (validated by the members rule below).
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow update: if isOrgMember(orgId) && memberRole(orgId) == 'owner';
       allow delete: if false;
@@ -65,7 +60,6 @@ service cloud.firestore {
       match /members/{memberUid} {
         allow read: if isOrgMember(orgId);
         allow create: if isSignedIn() && (
-          // first member ever created must be the owner, creating themself
           (memberUid == request.auth.uid && request.resource.data.role == 'owner') ||
           canManageMembers(orgId)
         );
@@ -75,7 +69,7 @@ service cloud.firestore {
       match /customers/{docId} {
         allow read: if isOrgMember(orgId);
         allow create, update: if canEditOperations(orgId) || canEditFinance(orgId);
-        allow delete: if false; // soft delete only, via update
+        allow delete: if false;
       }
 
       match /trucks/{docId} {
@@ -103,6 +97,18 @@ service cloud.firestore {
       }
 
       match /deliveries/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update: if canEditOperations(orgId);
+        allow delete: if false;
+      }
+
+      match /deliveryNotes/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update: if canEditOperations(orgId);
+        allow delete: if false;
+      }
+
+      match /deliveryExceptions/{docId} {
         allow read: if isOrgMember(orgId);
         allow create, update: if canEditOperations(orgId);
         allow delete: if false;

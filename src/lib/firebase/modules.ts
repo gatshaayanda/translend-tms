@@ -7,7 +7,16 @@
 // new contributors should read first.
 
 import { createRepository } from "./repository";
-import type { Customer, Truck, Driver, Job, Trip, Delivery } from "@/types/core";
+import type {
+  Customer,
+  Truck,
+  Driver,
+  Job,
+  Trip,
+  Delivery,
+  DeliveryNote,
+  DeliveryException,
+} from "@/types/core";
 
 export const customersRepo = createRepository<Customer>("customers");
 export const trucksRepo = createRepository<Truck>("trucks");
@@ -15,3 +24,5 @@ export const driversRepo = createRepository<Driver>("drivers");
 export const jobsRepo = createRepository<Job>("jobs");
 export const tripsRepo = createRepository<Trip>("trips");
 export const deliveriesRepo = createRepository<Delivery>("deliveries");
+export const deliveryNotesRepo = createRepository<DeliveryNote>("deliveryNotes");
+export const deliveryExceptionsRepo = createRepository<DeliveryException>("deliveryExceptions");

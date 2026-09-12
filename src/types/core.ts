@@ -224,15 +224,110 @@ export interface Trip extends BaseRecord {
 // ---------------------------------------------------------------
 export type DeliveryStatus = "pending" | "delivered" | "partial" | "exception";
 
+export type DeliveryAcknowledgementRole = "driver" | "foreman" | "receiver";
+
+export interface DeliveryAcknowledgement {
+  role: DeliveryAcknowledgementRole;
+  name: string;
+  uid: string | null;
+  acknowledgedAt: Timestamp;
+}
+
+export interface DeliveryEvidenceRef {
+  id: string;
+  key: string;
+  url: string;
+  kind: "pod" | "photo" | "document" | "other";
+  uploadedBy: string;
+  uploadedAt: Timestamp;
+}
+
+export type DeliveryPodState = "not_started" | "incomplete" | "complete";
+
+export interface MaterialLine {
+  id: string;
+  description: string;
+  materialCode: string | null;
+  quantity: number;
+  unit: string;
+  expectedQuantity: number | null;
+  notes: string;
+}
+
+export interface DeliveryNote extends BaseRecord {
+  noteReference: string;
+  noteDateTime: Timestamp;
+  jobId: string;
+  tripId: string;
+  deliveryId: string;
+  suppliedTo: string;
+  customerName: string;
+  vehicleRegistration: string;
+  deliveryLocation: string;
+  driverId: string;
+  driverName: string;
+  orderReference: string | null;
+  podReference: string | null;
+  loadingPoint: string | null;
+  receivedByName: string;
+  receivedByRole: string | null;
+  notes: string;
+  materialLines: MaterialLine[];
+  arrivalAt: Timestamp | null;
+  arrivalBy: string | null;
+  departureAt: Timestamp | null;
+  departureBy: string | null;
+  acknowledgements: DeliveryAcknowledgement[];
+  evidenceRefs: DeliveryEvidenceRef[];
+  exceptionIds: string[];
+  podState: DeliveryPodState;
+}
+
+export type DeliveryExceptionCategory =
+  | "shortage"
+  | "damage"
+  | "quantity_discrepancy"
+  | "wrong_material"
+  | "refused"
+  | "site"
+  | "vehicle"
+  | "other";
+
+export type DeliveryExceptionStatus = "open" | "resolved" | "void";
+
+export interface DeliveryException extends BaseRecord {
+  deliveryNoteId: string;
+  deliveryId: string;
+  category: DeliveryExceptionCategory;
+  description: string;
+  reportedBy: string;
+  reportedAt: Timestamp;
+  status: DeliveryExceptionStatus;
+  evidenceRefs: DeliveryEvidenceRef[];
+  resolutionNotes: string | null;
+  resolvedBy: string | null;
+  resolvedAt: Timestamp | null;
+}
+
 export interface Delivery extends BaseRecord {
   tripId: string;
   jobId: string;
   status: DeliveryStatus;
   deliveredAt: Timestamp | null;
   receivedByName: string;
-  podFileUrl: string | null; // Firebase Storage download URL
+  /** Legacy field retained for existing records; new evidence uses UploadThing refs. */
+  podFileUrl: string | null;
   signatureUrl: string | null;
   exceptionReason: string | null;
+  deliveryNoteId?: string | null;
+  arrivalAt?: Timestamp | null;
+  arrivalBy?: string | null;
+  departureAt?: Timestamp | null;
+  departureBy?: string | null;
+  acknowledgements?: DeliveryAcknowledgement[];
+  evidenceRefs?: DeliveryEvidenceRef[];
+  exceptionIds?: string[];
+  podState?: DeliveryPodState;
 }
 
 // ---------------------------------------------------------------

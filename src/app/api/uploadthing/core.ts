@@ -3,6 +3,8 @@ import { UploadThingError } from "uploadthing/server";
 import type { FileRouter } from "uploadthing/next";
 
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import type { OrgRole } from "@/types/core";
+import { ROLE_PERMISSIONS } from "@/types/core";
 
 const f = createUploadthing();
 
@@ -29,7 +31,7 @@ async function authenticateRequest(request: Request) {
 async function verifyOrganizationMembership(
   orgId: string,
   uid: string,
-): Promise<"owner" | "admin" | "dispatcher" | "driver" | "viewer"> {
+): Promise<OrgRole> {
   const membershipRef = adminDb.doc(
     `organizations/${orgId}/members/${uid}`,
   );
@@ -46,16 +48,16 @@ async function verifyOrganizationMembership(
     throw new UploadThingError("Organization membership is not active");
   }
 
-  const role = membership.role;
+  const role = membership.role as OrgRole;
 
-  if (
-    role !== "owner" &&
-    role !== "admin" &&
-    role !== "dispatcher" &&
-    role !== "driver" &&
-    role !== "viewer"
-  ) {
+  if (!Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS, role)) {
     throw new UploadThingError("Invalid organization membership");
+  }
+
+  // POD/evidence upload is an operational write. Keep the server-side
+  // gate aligned with the same permission matrix used by Firestore.
+  if (!ROLE_PERMISSIONS[role].editOperations) {
+    throw new UploadThingError("Insufficient organization permissions");
   }
 
   return role;
