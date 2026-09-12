@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import { deliveryExceptionsRepo, deliveryNotesRepo, deliveriesRepo } from "@/lib/firebase/modules";
-import type { Delivery, DeliveryException, DeliveryExceptionCategory, DeliveryExceptionStatus, DeliveryNote } from "@/types/core";
+import type { BaseRecord, Delivery, DeliveryException, DeliveryExceptionCategory, DeliveryExceptionStatus, DeliveryNote } from "@/types/core";
 
 const CATEGORIES: Array<{ value: DeliveryExceptionCategory; label: string }> = [
   { value: "shortage", label: "Shortage" },
@@ -49,7 +49,7 @@ export function DeliveryExceptionPanel({
     if (!description.trim()) return onError("Enter an exception description before saving it.");
     setBusy(true);
     try {
-      const payload: Omit<DeliveryException, keyof DeliveryNote> = {
+      const payload: Omit<DeliveryException, keyof BaseRecord> = {
         deliveryNoteId: note.id,
         deliveryId: delivery.id,
         category,
@@ -61,7 +61,7 @@ export function DeliveryExceptionPanel({
         resolutionNotes: "",
         resolvedBy: null,
         resolvedAt: null,
-      } as Omit<DeliveryException, keyof DeliveryNote>;
+      };
 
       const exceptionId = await deliveryExceptionsRepo.create(orgId, userId, payload, "LIVE");
       const exceptionIds = Array.from(new Set([...(note.exceptionIds ?? []), exceptionId]));
@@ -130,11 +130,17 @@ function ExceptionList({
 }) {
   const [items, setItems] = useState<DeliveryException[] | null>(null);
 
-  useState(() => {
+  useEffect(() => {
+    let cancelled = false;
     void deliveryExceptionsRepo.list(orgId, { environment: "LIVE" }).then((all) => {
-      setItems(all.filter((item) => ids.includes(item.id)));
-    }).catch(() => setItems([]));
-  });
+      if (!cancelled) setItems(all.filter((item) => ids.includes(item.id)));
+    }).catch(() => {
+      if (!cancelled) setItems([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, ids]);
 
   if (items === null) return <p className="text-xs text-slate-600">Loading exceptions…</p>;
 
@@ -165,7 +171,7 @@ function ExceptionList({
                   }}
                 />
                 <button
-                  onClick={() => void onUpdate(exception, { status: "resolved", resolvedBy: exception.reportedBy, resolvedAt: Timestamp.now() })}
+                  onClick={() => void onUpdate(exception, { status: "resolved", resolvedBy: null, resolvedAt: Timestamp.now() })}
                   disabled={busy}
                   className="rounded-md border border-emerald-900/50 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-950/30 disabled:opacity-50"
                 >
