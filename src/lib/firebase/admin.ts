@@ -22,12 +22,29 @@ function getAdminApp() {
   return adminApp;
 }
 
-export function getAdminAuth() {
+export function getAdminAuth(): Auth {
   authInstance ??= getAuth(getAdminApp());
   return authInstance;
 }
 
-export function getAdminDb() {
+export function getAdminDb(): Firestore {
   dbInstance ??= getFirestore(getAdminApp());
   return dbInstance;
 }
+
+/**
+ * Backwards-compatible lazy proxies for existing server integrations.
+ * Importing this module is safe during a Next.js build; Firebase Admin is
+ * initialized only when a property/method is actually used at runtime.
+ */
+export const adminAuth = new Proxy({} as Auth, {
+  get(_target, property, receiver) {
+    return Reflect.get(getAdminAuth(), property, receiver);
+  },
+});
+
+export const adminDb = new Proxy({} as Firestore, {
+  get(_target, property, receiver) {
+    return Reflect.get(getAdminDb(), property, receiver);
+  },
+});
