@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { deliveryNotesRepo } from "@/lib/firebase/modules";
 import { uploadDeliveryEvidence, type DeliveryEvidenceKind } from "@/lib/uploadthing/client";
 import type { DeliveryEvidenceRef, DeliveryNote } from "@/types/core";
@@ -9,16 +10,18 @@ import type { DeliveryEvidenceRef, DeliveryNote } from "@/types/core";
 const KINDS: Array<{ value: DeliveryEvidenceKind; label: string }> = [
   { value: "pod", label: "POD" }, { value: "photo", label: "Photo" }, { value: "document", label: "Document" }, { value: "other", label: "Other" },
 ];
+const REVIEW_ROLES = new Set(["owner", "operations_manager", "dispatcher", "fleet_manager"]);
 
-export function DeliveryEvidencePanel({ orgId, note, onSaved, onError }: {
-  orgId: string; note: DeliveryNote; onSaved: (note: DeliveryNote) => void; onError: (message: string) => void;
-}) {
+export function DeliveryEvidencePanel({ orgId, note, onSaved, onError }: { orgId: string; note: DeliveryNote; onSaved: (note: DeliveryNote) => void; onError: (message: string) => void }) {
   const { user } = useAuth();
+  const { activeMembership } = useWorkspace();
   const [kind, setKind] = useState<DeliveryEvidenceKind>("pod");
   const [replaceId, setReplaceId] = useState("");
   const [uploading, setUploading] = useState(false);
-
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const canReview = Boolean(activeMembership?.role && REVIEW_ROLES.has(activeMembership.role));
   const activeRefs = note.evidenceRefs.filter((item) => (item.status ?? "active") !== "replaced");
+
   const upload = async (file: File) => {
     if (!user) return onError("You must be signed in to upload evidence.");
     if (file.size > 8 * 1024 * 1024) return onError("Evidence files must be 8MB or smaller.");
@@ -34,6 +37,23 @@ export function DeliveryEvidencePanel({ orgId, note, onSaved, onError }: {
     finally { setUploading(false); }
   };
 
+  const review = async (evidence: DeliveryEvidenceRef, action: "approve_evidence" | "reject_evidence") => {
+    if (!user) return onError("You must be signed in to review evidence.");
+    const rejectionReason = action === "reject_evidence" ? window.prompt("Why is this evidence being rejected?")?.trim() ?? "" : "";
+    if (action === "reject_evidence" && !rejectionReason) return onError("A rejection reason is required.");
+    setReviewing(evidence.id);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/deliveries/workflow-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ orgId, deliveryId: note.deliveryId, deliveryNoteId: note.id, evidenceId: evidence.id, action, rejectionReason }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Evidence review failed.");
+      const updated = await deliveryNotesRepo.getById(orgId, note.id);
+      if (!updated) throw new Error("Evidence was reviewed but the Delivery Note could not be reloaded.");
+      onSaved(updated);
+    } catch (err) { onError(err instanceof Error ? err.message : "Evidence review failed."); }
+    finally { setReviewing(null); }
+  };
+
   return <section className="rounded-lg border border-slate-800 bg-slate-950/60 p-4">
     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="text-sm font-semibold text-slate-200">Evidence / POD</h3><p className="mt-0.5 text-xs text-slate-500">Upload images or PDFs. POD evidence is required before a delivery can be completed.</p></div><span className="text-xs text-slate-500">State: <strong className="text-slate-300">{note.podState.replace("_", " ")}</strong></span></div>
     <div className="mt-3 grid gap-2 md:grid-cols-[150px_1fr_220px]">
@@ -41,6 +61,6 @@ export function DeliveryEvidencePanel({ orgId, note, onSaved, onError }: {
       <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-900">{uploading ? "Uploading…" : "Choose image or PDF"}<input className="sr-only" type="file" accept="image/*,application/pdf" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ""; if (file) void upload(file); }} /></label>
       <select className="input" value={replaceId} onChange={(event) => setReplaceId(event.target.value)} disabled={uploading || activeRefs.length === 0}><option value="">New evidence</option>{activeRefs.filter((item) => item.kind === kind).map((item) => <option key={item.id} value={item.id}>Replace v{item.version ?? 1} · {item.kind.toUpperCase()}</option>)}</select>
     </div>
-    <div className="mt-3 space-y-2">{note.evidenceRefs.length === 0 ? <p className="text-xs text-slate-600">No evidence uploaded yet.</p> : note.evidenceRefs.map((evidence: DeliveryEvidenceRef) => <a key={evidence.id} href={evidence.url} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-md border border-slate-800 px-3 py-2 text-xs hover:bg-slate-900"><span className="truncate text-slate-300">{evidence.kind.toUpperCase()} · v{evidence.version ?? 1} · {evidence.status ?? "active"}{evidence.required ? " · required" : ""}</span><span className="ml-3 shrink-0 text-sky-400">Open</span></a>)}</div>
+    <div className="mt-3 space-y-2">{note.evidenceRefs.length === 0 ? <p className="text-xs text-slate-600">No evidence uploaded yet.</p> : note.evidenceRefs.map((evidence: DeliveryEvidenceRef) => <div key={evidence.id} className="flex flex-col gap-2 rounded-md border border-slate-800 px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between"><a href={evidence.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-slate-300 hover:text-sky-300">{evidence.kind.toUpperCase()} · v{evidence.version ?? 1} · {evidence.status ?? "active"}{evidence.required ? " · required" : ""}</a>{canReview && (evidence.status ?? "active") !== "replaced" && <div className="flex shrink-0 gap-2"><button disabled={reviewing === evidence.id} onClick={() => void review(evidence, "approve_evidence")} className="text-emerald-300 hover:text-emerald-200 disabled:opacity-50">Approve</button><button disabled={reviewing === evidence.id} onClick={() => void review(evidence, "reject_evidence")} className="text-red-300 hover:text-red-200 disabled:opacity-50">Reject</button></div>}</div>)}</div>
   </section>;
 }
