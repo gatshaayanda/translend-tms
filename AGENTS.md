@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `cae324dfe835b92505a4817bb042db7aa554a462`
+- Current application checkpoint: `84671bb55559546a40d241cb572884da7e14c250`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -25,19 +25,9 @@ Git/GitHub are the source of truth. Current repository state outranks remembered
 - ENGINE = auth, workspace, Firestore, repositories, APIs, security, uploads, business logic and CRUD.
 - PRODUCT DATA = real persisted customer/operational records.
 
-Rules:
-- Wire real data when it exists.
-- Preserve existing workflows and CRUD.
-- Missing domains say **Database still being configured** rather than inventing values.
-- If a missing domain is required for a real product action, add it coherently as types + repository + rules + indexes/query shape + UI workflow.
-- Never create fixtures merely to make screens look complete.
-- Never iframe or serve raw HTML as the application.
+Rules: wire real data when it exists; preserve existing workflows and CRUD; missing domains say **Database still being configured** rather than inventing values; missing domains required for real actions are added coherently as types + repository + rules + indexes/query shape + UI workflow; never create fixtures merely to make screens look complete; never iframe or serve raw HTML as the application.
 
-## Current product state
-
-Native application covers Operations Hub / Control Tower, Fleet & Live Map foundation, Fleet Intelligence, Trips / Dispatch, Delivery Notes / POs, POD/evidence workflow, Customers, Drivers, Fuel & Workshop, Invoicing & Statements, Performance Dashboard, Journal Entry, P&L / Cash Flow / Balance Sheet / Trial Balance, Business Controls, Team / Invitations and Driver My Trip PWA workflow.
-
-Core operational chain:
+## Core operational chain
 
 `Job → Dispatch → Trip → Delivery → Delivery Note → Material lines → Arrival → Departure → Acknowledgement → Evidence/POD → Exceptions → Invoice → Payment/Journal → Financial reporting`
 
@@ -45,86 +35,53 @@ Core operational chain:
 
 ### 1. Offline + Sync foundation — BASELINE COMPLETE
 
-Firestore IndexedDB persistence, multi-tab persistence, online/offline/syncing/synced states, pending-write awareness and offline shell/navigation fallback.
-
-Not yet claimed: full offline CRUD, durable mutation queues, conflict resolution and complete offline business-data recovery.
+Firestore IndexedDB persistence, multi-tab persistence, online/offline/syncing/synced states, pending-write awareness and offline shell/navigation fallback. Full offline CRUD, durable mutation queues, conflict resolution and complete offline business-data recovery are not yet claimed.
 
 ### 2. Professional Live Fleet Map — FOUNDATION COMPLETE
 
-Real Firestore truck location events, latest position per truck, moving/idle/stale states, filters, selection, focus/pan/zoom, real marker positions when a provider is configured, location table, route trail and GPS source/timestamp. No fabricated truck locations.
-
-Automatic production fleet movement still requires a real driver GPS or telematics source and, where applicable, a map/routing provider.
+Real Firestore truck location events, latest position per truck, moving/idle/stale states, filters, selection, focus/pan/zoom, real marker positions when a provider is configured, location table, route trail and GPS source/timestamp. No fabricated truck locations. Automatic production fleet movement still requires a real driver GPS or telematics source and, where applicable, a map/routing provider.
 
 ### 3. GPS / Telematics Integration — FOUNDATION COMPLETE
 
-Provider-neutral `POST /api/telematics/ingest`, server-side auth/workspace validation, provider vehicle → Translend truck mapping, validation, duplicate/idempotency protection, stale-event protection, safe mapping and normalized LIVE telemetry with `orgId`. Fleet Map consumes normalized `truckLocationEvents`.
-
-Provider choice and credentials remain external dependencies and must never be faked.
+Provider-neutral `POST /api/telematics/ingest`, server-side auth/workspace validation, provider vehicle → Translend truck mapping, validation, duplicate/idempotency protection, stale-event protection, safe mapping and normalized LIVE telemetry with `orgId`. Fleet Map consumes normalized `truckLocationEvents`. Provider credentials remain external and must never be faked.
 
 ### 4. Complete Driver Workflow — CORE COMPLETE
 
-Driver My Trip supports `planned → en_route_pickup → loading → in_transit → unloading → completed`, assigned-driver filtering, secure server-side status changes, delivery arrival/departure, receiver acknowledgement, delivery exceptions, POD/evidence handoff, inspections, defects, defect→work-order handoff, maintenance/tyre visibility, browser GPS capture and offline awareness.
-
-Driver writes are server/role scoped; do not weaken Firestore rules to make UI work.
+Driver My Trip supports `planned → en_route_pickup → loading → in_transit → unloading → completed`, assigned-driver filtering, secure server-side status changes, delivery arrival/departure, receiver acknowledgement, delivery exceptions, POD/evidence handoff, inspections, defects, defect→work-order handoff, maintenance/tyre visibility, browser GPS capture and offline awareness. Driver writes are server/role scoped; do not weaken Firestore rules.
 
 ### 5. Complete Dispatch — CORE COMPLETE
 
-Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch now creates an in-app assignment notification for a linked driver and an immutable server audit event.
+Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch creates an in-app assignment notification for linked drivers and an immutable server audit event.
 
 ### 6. Accounting — CORE CONTROL PASS COMPLETE
 
-Implemented chart of accounts, accounting periods/open-period posting control, journal balancing and reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection.
+Implemented chart of accounts, accounting periods/open-period posting control, journal balancing/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection.
 
 Still not claimed complete: dedicated credit/debit-note domain, full tax/VAT configuration, bank/cash reconciliation and dedicated accounting statement/export workflows.
 
-### 7. POD / Evidence maturity — SUBSTANTIAL PASS COMPLETE; FINAL END-TO-END HARDENING REMAINS
+### 7. POD / Evidence maturity — SUBSTANTIAL PASS COMPLETE; FINAL HARDENING REMAINS
 
-Implemented:
-- secure UploadThing authorization and delivery/Delivery Note linkage;
-- multiple evidence categories;
-- required POD semantics;
-- replacement/version relationships;
-- approval/rejection with reviewer metadata and rejection reason;
-- server-controlled delivery completion;
-- approved-POD requirement before completion;
-- secure authenticated evidence viewing/proxying;
-- driver-only access to assigned delivery evidence;
-- exception resolution through server boundary;
-- upload failure retention + retry;
-- missing-POD operational queue with ageing;
-- POD queue route in application navigation;
-- POD state and invoice-readiness helper logic;
-- server audit event on evidence upload;
-- operations notification when evidence is uploaded or rejected.
+Implemented secure UploadThing authorization and delivery linkage; multiple evidence categories; required POD semantics; replacement/version relationships; approval/rejection with reviewer metadata/reason; server-controlled completion requiring approved required POD; authenticated evidence proxy/view; driver-only assigned-delivery access; exception resolution through server boundary; upload failure retention + retry; missing-POD queue with ageing; POD queue navigation; POD state/invoice-readiness helpers; audit on evidence upload; operations notifications on upload/rejection.
 
-Evidence stays on UploadThing. Firebase Storage is not used.
-
-Still to harden before calling #7 absolutely final: deeper offline mutation queueing for uploads, broader audit coverage across every evidence mutation path, and tighter direct navigation/context from the POD queue into the exact Delivery Note.
+Still to harden: deeper offline upload mutation queueing, broader evidence audit coverage and exact Delivery Note context from the POD queue.
 
 ### 8. Notifications — FOUNDATION IMPLEMENTED
 
-Implemented:
-- persisted org-scoped notification records;
-- recipient-scoped Firestore reads;
-- read/unread state;
-- in-app notification center in the main shell;
-- server-side role notification dispatcher;
-- driver assignment notification from dispatch;
-- POD upload/rejection notifications;
-- driver delivery exception escalation notifications;
-- notification query index.
+Persisted org-scoped notification records, recipient-scoped reads, read/unread state, shell notification center, server role dispatcher, driver assignment notifications, POD upload/rejection notifications and driver delivery-exception escalation. Query index is present.
 
-Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and push/email providers. Never claim email/push is live without a real configured provider.
+Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and real push/email providers. Never claim email/push live without a configured provider.
 
 ### 9. Audit / Data Integrity — FOUNDATION IMPLEMENTED
 
-Implemented immutable server-written `auditEvents` domain and server audit writer, with Firestore client create/update/delete denied. Dispatch, evidence upload and driver delivery exceptions now create server audit events.
+Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload and driver delivery exceptions write audit events.
 
 Still to expand: audit coverage across all important mutations, idempotency keys, referential/orphan checks, concurrency protection, mutation queues and partial-workflow recovery.
 
-### 10. Workspace / Admin / Permissions — NEXT
+### 10. Workspace / Admin / Permissions — FOUNDATION NOW IMPLEMENTED
 
-Member management, invitation lifecycle, role changes, suspension/removal, company settings/defaults, permission testing and real transactional email when configured.
+Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension and restoration, with owner protection, operations-manager limits, audit events and in-app notification to affected users. Team UI now surfaces active/suspended members and access controls.
+
+Still to expand: owner transfer, richer permission testing, company settings/defaults, invitation cancellation/resend controls and real transactional email when configured.
 
 ### 11. Reporting / Exports / Intelligence — NEXT
 
@@ -132,100 +89,30 @@ Operational/fleet/trip/delivery/POD/fuel/workshop/customer/invoice/supplier/fina
 
 ### 12. Full End-to-End + HTML Compliance — FINAL
 
-Validate:
-`job → trip → delivery → POD → invoice → payment → journal → reports`
-
-Then verify real CRUD, failure/retry, offline/sync/conflicts, permissions/multi-user, mobile driver workflow, location permission, map/provider states and every important HTML/reference control mapped to a real route/data/mutation/state or an honest unsupported/configuration state.
+Validate `job → trip → delivery → POD → invoice → payment → journal → reports`, then verify real CRUD, failure/retry, offline/sync/conflicts, permissions/multi-user, mobile driver workflow, location permission, map/provider states and every important HTML/reference control mapped to a real route/data/mutation/state or an honest unsupported/configuration state.
 
 ## External capability boundaries
 
-### Location
-Driver browser GPS is foreground and permission-based. Do not claim background tracking while the app is closed. Automatic fleet telematics requires a real provider/data source; the ingestion boundary is ready but credentials/mapping are external.
-
-### Maps
-A real map/routing provider may require an account/key. Keep provider access behind server-side configuration. Never fabricate configuration/billing.
-
-### Email
-Do not claim invitation/notification email delivery unless a real provider is configured.
+Driver browser GPS is foreground and permission-based; do not claim background tracking while the app is closed. Automatic fleet telematics requires a real provider. Maps may require a real provider/key. Do not claim invitation/notification email delivery without a real provider.
 
 ## Firestore safety
 
-Firestore rules are security boundaries, not UI configuration.
-
-- Preserve organization/workspace membership security.
-- Do not weaken rules to fix UI/query problems.
-- Verify query shapes against rules and indexes.
-- New domains require types + repository + rules + indexes/query shape + UI workflow as one coherent change.
-- Preserve organization/environment/soft-delete conventions.
-- `workspaceInvites` remains server-controlled; client access is denied.
-- `notifications` are client-readable only by the recipient and client-writable only for `readAt` metadata.
-- `auditEvents` are client-readable but immutable to clients; server code writes them.
+Firestore rules are security boundaries, not UI configuration. Preserve workspace membership security; do not weaken rules to fix UI/query problems; verify query shapes against rules/indexes; new domains require types + repository + rules + indexes/query shape + UI workflow; preserve environment/soft-delete conventions; workspaceInvites remain server-controlled; notifications are recipient-readable and only readAt-writable by clients; auditEvents are immutable to clients.
 
 ## UploadThing
 
-UploadThing is the secure transport for POD/evidence and finance receipts. Never migrate these to Firebase Storage as a shortcut.
+UploadThing is the secure transport for POD/evidence and finance receipts. Never migrate these to Firebase Storage.
 
-## Button / interaction rule
+## Failure standard
 
-Every reference control is classified before implementation:
-1. Existing engine action → wire to native route/workflow.
-2. Existing data operation → use repository/mutation and preserve security.
-3. Reference-only domain → show **Database still being configured** rather than fake writes.
-4. Action belongs elsewhere → pass supported context to the receiving route.
-5. Missing domain required for a real action → add the smallest coherent persisted domain.
-
-A button that only looks clickable is not complete.
-
-## PWA readiness
-
-Beyond shell baseline: native manifest, standalone metadata, service worker/offline navigation fallback, browser install prompt where supported, offline connection notice, driver-first My Trip workflow, secure server trip-status changes, GPS capture and delivery/POD handoff.
-
-Full offline business CRUD, mutation queues and conflict resolution remain future work until actually implemented/tested.
-
-## Application failure standard
-
-Fail honestly and recoverably:
-1. Preserve existing data.
-2. Show a clear human-readable failure.
-3. Offer retry when safe.
-4. Explain the next safe action.
-5. Expose compact diagnostics where useful without secrets/tokens/private records.
-6. Route failures use `src/app/error.tsx`; catastrophic failures use `src/app/global-error.tsx`.
-7. Driver/team workflows show loading, success and failure states.
-8. APIs return appropriate non-2xx statuses with safe messages.
-9. Unsupported integrations say they are not configured.
-10. Never invent support contacts/developer identities.
+Preserve data; show clear failures; retry when safe; explain next action; avoid secrets/tokens/private diagnostics; use route/global error boundaries; show loading/success/failure states; APIs return safe non-2xx errors; unsupported integrations say not configured; never fabricate support contacts or live integrations.
 
 ## Required workflow for every future pass
 
-### START
-`read AGENTS.md → confirm branch → inspect HEAD/recent commits → inspect actual route/component/data flow`
+`read AGENTS.md → confirm branch → inspect HEAD/recent commits → inspect actual route/component/data flow → implement coherent pass → inspect diff → typecheck/build/lint where available → fix root causes → verify affected workflows → update AGENTS.md → commit → push → report exact SHA and verification evidence`
 
-### DESIGN / AUDIT
-`inspect reference → inspect native route → map reference elements to real repositories/workflows → identify unsupported domains`
-
-### BUILD
-`preserve engine → adapt FACE natively → wire real data → expose existing workflows → add coherent domain only when a real product action requires it`
-
-### VERIFY
-`inspect diff → typecheck/build/lint where available → fix root causes → verify affected workflows → inspect deployment status when requested/appropriate`
-
-### CHECKPOINT
-`update AGENTS.md when reusable context/continuation changes → commit → push → report exact SHA and verification evidence`
-
-Do not repeatedly ask for approval for obvious safe next steps. Continue through inspect → implement → verify → commit → push → report.
+Do not repeatedly ask for approval for obvious safe next steps.
 
 ## Explicit non-goals
 
-Do NOT:
-- rebuild authentication;
-- replace Firebase/Firestore;
-- replace UploadThing;
-- introduce Firebase Storage for new POD/evidence or receipt uploads;
-- weaken Firestore rules casually;
-- use old project generations because they look similar;
-- discard working CRUD/delivery workflows;
-- create a raw HTML/iframe application;
-- fabricate live business data;
-- claim an integration is live without its real provider/data source;
-- stop at analysis when a safe implementation/verification step can be completed.
+Do NOT rebuild authentication, replace Firebase/Firestore, replace UploadThing, introduce Firebase Storage for new POD/evidence/receipts, weaken Firestore rules casually, reuse old project generations, discard working CRUD/delivery workflows, create a raw HTML/iframe application, fabricate live data, claim integrations are live without real providers, or stop at analysis when a safe implementation step can be completed.
