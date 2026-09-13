@@ -26,12 +26,13 @@ export async function POST(request: NextRequest) {
     const result = await adminDb.runTransaction(async (transaction) => {
       const mappingSnap = await transaction.get(mappingRef);
       if (mappingSnap.exists) {
-        const mapping = mappingSnap.data();
-        if (mapping.active === false) throw new Error("This telematics vehicle mapping is inactive.");
-        if (mapping.truckId && truckId && mapping.truckId !== truckId) {
+        const mappingData = mappingSnap.data();
+        if (!mappingData) throw new Error("Telematics vehicle mapping could not be read.");
+        if (mappingData.active === false) throw new Error("This telematics vehicle mapping is inactive.");
+        if (mappingData.truckId && truckId && mappingData.truckId !== truckId) {
           throw new Error("Telematics vehicle is mapped to a different Translend truck.");
         }
-        truckId = mapping.truckId;
+        truckId = mappingData.truckId;
       }
 
       if (!truckId) throw new Error("No Translend truck mapping exists for this provider vehicle.");
@@ -88,21 +89,14 @@ export async function POST(request: NextRequest) {
         status: event.status,
         provider: event.provider,
         providerVehicleId: event.providerVehicleId,
-        providerEventId: event.providerEventId,
-        environment: "LIVE",
-        createdAt: FieldValue.serverTimestamp(),
-        createdBy: "telematics",
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: "telematics",
-        deletedAt: null,
       });
+
       return { duplicate: false, eventId: eventKey, truckId };
     });
 
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Telematics ingestion failed.";
-    const status = /required|valid|between|negative|cannot be|mapping|mapped|does not exist|inactive/i.test(message) ? 400 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const message = error instanceof Error ? error.message : "Unable to ingest telematics event.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
