@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 
 const OPS_ROLES = new Set(["owner", "operations_manager", "finance"]);
@@ -14,7 +14,7 @@ async function context(request: Request, orgId: string) {
   return { user, db };
 }
 
-async function openPeriod(db: FirebaseFirestore.Firestore, orgId: string, at: Timestamp) {
+async function openPeriod(db: Firestore, orgId: string, at: Timestamp) {
   const snap = await db.collection(`organizations/${orgId}/accountingPeriods`).where("environment", "==", "LIVE").where("status", "==", "open").where("deletedAt", "==", null).get();
   return snap.docs.find((d) => {
     const data = d.data();
