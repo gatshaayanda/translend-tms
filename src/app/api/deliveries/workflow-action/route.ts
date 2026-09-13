@@ -60,7 +60,11 @@ export async function POST(request: Request) {
       if (action === "reject_evidence" && !rejectionReason) return NextResponse.json({ error: "A rejection reason is required." }, { status: 400 });
       evidence.status = action === "approve_evidence" ? "approved" : "rejected";
       evidence.reviewedBy = user.uid;
-      evidence.reviewedAt = now;
+      // Firestore server routes use the Admin SDK Timestamp while the shared
+      // browser-facing domain type uses the client SDK Timestamp. The stored
+      // value is intentionally the Admin Timestamp; this cast bridges the
+      // framework-neutral type boundary without changing runtime data.
+      evidence.reviewedAt = now as unknown as DeliveryEvidenceRef["reviewedAt"];
       evidence.rejectionReason = action === "reject_evidence" ? rejectionReason : null;
       await Promise.all([
         deliveryRef.update({ evidenceRefs: refs, podState: "incomplete", updatedAt: now, updatedBy: user.uid }),
