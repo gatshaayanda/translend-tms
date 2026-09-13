@@ -34,9 +34,29 @@ async function verifyOrganizationMembership(orgId: string, uid: string, finance 
   return role;
 }
 
+async function verifyEvidenceAccess(orgId: string, uid: string, deliveryId: string, deliveryNoteId: string): Promise<OrgRole> {
+  const db = getAdminDb();
+  const membershipSnap = await db.doc(`organizations/${orgId}/members/${uid}`).get();
+  if (!membershipSnap.exists || membershipSnap.data()?.status !== "active") throw new UploadThingError("Organization membership is not active");
+  const role = membershipSnap.data()?.role as OrgRole;
+  if (!Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS, role)) throw new UploadThingError("Invalid organization membership");
+  if (ROLE_PERMISSIONS[role].editOperations) return role;
+  if (role !== "driver") throw new UploadThingError("Insufficient organization permissions");
+  const [driverSnap, noteSnap, deliverySnap] = await Promise.all([
+    db.collection(`organizations/${orgId}/drivers`).where("linkedUid", "==", uid).limit(1).get(),
+    db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`).get(),
+    db.doc(`organizations/${orgId}/deliveries/${deliveryId}`).get(),
+  ]);
+  if (driverSnap.empty || !noteSnap.exists || !deliverySnap.exists) throw new UploadThingError("Driver delivery access could not be verified");
+  if (deliverySnap.data()?.deliveryNoteId !== deliveryNoteId) throw new UploadThingError("Delivery and Delivery Note do not match");
+  const tripSnap = await db.doc(`organizations/${orgId}/trips/${noteSnap.data()?.tripId}`).get();
+  if (!tripSnap.exists || tripSnap.data()?.driverId !== driverSnap.docs[0].id) throw new UploadThingError("This delivery is not assigned to you");
+  return role;
+}
+
 export const ourFileRouter = {
   podEvidence: f({ image: { maxFileSize: "8MB", maxFileCount: 1 }, pdf: { maxFileSize: "8MB", maxFileCount: 1 } }).input(evidenceInput).middleware(async ({ req, input }) => {
-    const user = await authenticateRequest(req); const role = await verifyOrganizationMembership(input.orgId, user.uid); const db = getAdminDb();
+    const user = await authenticateRequest(req); const role = await verifyEvidenceAccess(input.orgId, user.uid, input.deliveryId, input.deliveryNoteId); const db = getAdminDb();
     const [deliverySnap, noteSnap] = await Promise.all([db.doc(`organizations/${input.orgId}/deliveries/${input.deliveryId}`).get(), db.doc(`organizations/${input.orgId}/deliveryNotes/${input.deliveryNoteId}`).get()]);
     if (!deliverySnap.exists || !noteSnap.exists) throw new UploadThingError("Delivery record not found");
     const delivery = deliverySnap.data(); const note = noteSnap.data();
