@@ -23,7 +23,9 @@ service cloud.firestore {
       match /members/{memberUid} {
         allow read: if isSignedIn() && ((memberUid == request.auth.uid && resource.data.uid == request.auth.uid && resource.data.status == 'active') || isOrgMember(orgId));
         allow create: if isSignedIn() && ((memberUid == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.orgId == orgId && request.resource.data.role == 'owner' && request.resource.data.status == 'active') || canManageMembers(orgId));
-        allow update: if canManageMembers(orgId) && (memberUid != request.auth.uid || (resource.data.role == request.resource.data.role && resource.data.status == request.resource.data.status));
+        // Membership identity, role and status are security-sensitive. All member mutations
+        // are controlled by the server-side team actions; clients cannot self-edit membership.
+        allow update: if canManageMembers(orgId) && memberUid != request.auth.uid;
         allow delete: if false;
       }
 
@@ -47,7 +49,7 @@ service cloud.firestore {
       match /deliveryNotes/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /deliveryExceptions/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /fuelLogs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /workOrders/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /workOrders/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: false; }
       match /supplierPOs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /invoices/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
       match /journalEntries/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
