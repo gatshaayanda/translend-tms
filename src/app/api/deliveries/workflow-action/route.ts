@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import type { DeliveryEvidenceRef, OrgRole } from "@/types/core";
+import { notifyOrgRoles } from "@/lib/notifications/server";
 
 const EDIT_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager"];
 
@@ -62,6 +63,9 @@ export async function POST(request: Request) {
         deliveryRef.update({ evidenceRefs: refs, podState: "incomplete", updatedAt: now, updatedBy: user.uid }),
         noteRef.update({ evidenceRefs: refs, podState: "incomplete", updatedAt: now, updatedBy: user.uid }),
       ]);
+      if (action === "reject_evidence") {
+        await notifyOrgRoles({ orgId, roles: ["owner", "operations_manager", "dispatcher"], type: "pod_rejected", severity: "warning", title: "POD rejected", message: `Evidence for delivery ${deliveryNoteId.slice(0, 8)} was rejected: ${rejectionReason}`, href: `/${orgId}/deliveries`, sourceId: deliveryId, sourceType: "delivery" });
+      }
       return NextResponse.json({ ok: true, action, evidenceId });
     }
 
