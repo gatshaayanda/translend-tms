@@ -80,6 +80,10 @@ service cloud.firestore {
       match /maintenanceSchedules/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /vehicleInspections/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /tyreRecords/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /invoicePayments/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
+      match /supplierBills/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
+      match /chartAccounts/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
+      match /accountingPeriods/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
     }
   }
 }
