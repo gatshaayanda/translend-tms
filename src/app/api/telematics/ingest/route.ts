@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
       const truckSnap = await transaction.get(truckRef);
       if (!truckSnap.exists || truckSnap.data()?.deletedAt) throw new Error("The mapped Translend truck does not exist or is inactive.");
 
+      const eventKey = event.providerEventId
+        ? createHash("sha256").update(`${event.provider}:${event.providerVehicleId}:${event.providerEventId}`).digest("hex")
+        : fallbackEventId({ ...event, truckId });
+      const eventRef = truckEventsRef.doc(eventKey);
+      const existing = await transaction.get(eventRef);
+      if (existing.exists) return { duplicate: true, eventId: eventKey, truckId };
+
+      const capturedAt = Timestamp.fromDate(new Date(event.capturedAt));
       if (!mappingSnap.exists) {
         transaction.set(mappingRef, {
           orgId: event.orgId,
@@ -47,7 +55,7 @@ export async function POST(request: NextRequest) {
           providerVehicleId: event.providerVehicleId,
           truckId,
           active: true,
-          lastEventAt: Timestamp.fromDate(new Date(event.capturedAt)),
+          lastEventAt: capturedAt,
           environment: "LIVE",
           createdAt: FieldValue.serverTimestamp(),
           createdBy: "telematics",
@@ -56,19 +64,15 @@ export async function POST(request: NextRequest) {
           deletedAt: null,
         });
       } else {
-        transaction.update(mappingRef, {
-          lastEventAt: Timestamp.fromDate(new Date(event.capturedAt)),
-          updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: "telematics",
-        });
+        const previousLastEvent = mappingSnap.data()?.lastEventAt as Timestamp | undefined;
+        if (!previousLastEvent || capturedAt.toMillis() >= previousLastEvent.toMillis()) {
+          transaction.update(mappingRef, {
+            lastEventAt: capturedAt,
+            updatedAt: FieldValue.serverTimestamp(),
+            updatedBy: "telematics",
+          });
+        }
       }
-
-      const eventKey = event.providerEventId
-        ? createHash("sha256").update(`${event.provider}:${event.providerVehicleId}:${event.providerEventId}`).digest("hex")
-        : fallbackEventId({ ...event, truckId });
-      const eventRef = truckEventsRef.doc(eventKey);
-      const existing = await transaction.get(eventRef);
-      if (existing.exists) return { duplicate: true, eventId: eventKey, truckId };
 
       transaction.create(eventRef, {
         orgId: event.orgId,
@@ -79,7 +83,7 @@ export async function POST(request: NextRequest) {
         accuracyMeters: event.accuracyMeters,
         speedKph: event.speedKph,
         headingDegrees: event.headingDegrees,
-        capturedAt: Timestamp.fromDate(new Date(event.capturedAt)),
+        capturedAt,
         source: "telematics",
         status: event.status,
         provider: event.provider,
