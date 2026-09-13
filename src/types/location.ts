@@ -22,6 +22,7 @@ export interface TruckLocationEvent extends BaseRecord {
 
 /** Normalized event produced by a provider adapter before persistence. */
 export interface NormalizedTelematicsEvent {
+  orgId: string;
   provider: string;
   providerVehicleId: string;
   providerEventId: string | null;
