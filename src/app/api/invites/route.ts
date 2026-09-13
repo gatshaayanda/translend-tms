@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     const snap = await db.collection("workspaceInvites").where("orgId", "==", orgId).get();
     const now = Date.now();
     const invites = snap.docs
-      .map((doc): InviteRecord => ({ id: doc.id, ...(doc.data() as Omit<InviteRecord, "id">) }))
+      .map((doc) => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }) as InviteRecord)
       .filter((invite) => invite.status === "pending" && (invite.expiresAt?.toMillis?.() ?? 0) > now)
       .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
       .map(({ tokenHash: _tokenHash, ...safe }) => safe);
