@@ -70,6 +70,9 @@ service cloud.firestore {
       match /invoices/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
       match /journalEntries/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
 
+      // Location capture supports driver-device GPS and server-side telematics ingestion.
+      match /truckLocationEvents/{docId} { allow read: if isOrgMember(orgId); allow create, update: if isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'driver']; allow delete: if false; }
+
       // Phase 2: persisted operational intelligence. Same operational role boundary as trips/fuel.
       match /tripMetrics/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
 
