@@ -15,7 +15,6 @@ export function DeliveryExceptionPanel({ orgId, userId, note, delivery, onSaved,
   orgId: string; userId: string | null; note: DeliveryNote; delivery: Delivery | null;
   onSaved: (note: DeliveryNote, delivery: Delivery | null) => void; onError: (message: string) => void;
 }) {
-  const { user } = useAuth();
   const [category, setCategory] = useState<DeliveryExceptionCategory>("other");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,23 +45,6 @@ export function DeliveryExceptionPanel({ orgId, userId, note, delivery, onSaved,
     finally { setBusy(false); }
   };
 
-  const updateException = async (exception: DeliveryException, patch: Partial<DeliveryException>) => {
-    if (!user || !userId || !delivery) return onError("You must be signed in to update an exception.");
-    setBusy(true);
-    try {
-      const token = await user.getIdToken();
-      const action = patch.status === "void" ? "void_exception" : "resolve_exception";
-      const response = await fetch("/api/deliveries/workflow-action", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ orgId, deliveryId: delivery.id, deliveryNoteId: note.id, exceptionId: exception.id, action, resolutionNotes: patch.resolutionNotes ?? exception.resolutionNotes ?? "" }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Failed to update the delivery exception.");
-      await reload();
-    } catch (err) { onError(err instanceof Error ? err.message : "Failed to update the delivery exception."); }
-    finally { setBusy(false); }
-  };
-
   return <section className="rounded-lg border border-slate-800 bg-slate-950/60 p-4">
     <div><h3 className="text-sm font-semibold text-slate-200">Exceptions</h3><p className="mt-0.5 text-xs text-slate-500">Capture shortages, damage, refusals and other delivery issues against the Delivery Note.</p></div>
     <div className="mt-3 grid gap-2 md:grid-cols-[180px_1fr_auto]">
@@ -70,21 +52,44 @@ export function DeliveryExceptionPanel({ orgId, userId, note, delivery, onSaved,
       <input className="input" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the delivery exception" disabled={busy} />
       <button onClick={createException} disabled={busy} className="rounded-md bg-red-700 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50">{busy ? "Saving…" : "Report exception"}</button>
     </div>
-    <div className="mt-3 space-y-2">{(note.exceptionIds ?? []).length === 0 ? <p className="text-xs text-slate-600">No exceptions recorded.</p> : <ExceptionList orgId={orgId} userId={userId} ids={note.exceptionIds ?? []} busy={busy} onUpdate={updateException} />}</div>
+    <div className="mt-3 space-y-2">{(note.exceptionIds ?? []).length === 0 ? <p className="text-xs text-slate-600">No exceptions recorded.</p> : <ExceptionList orgId={orgId} userId={userId} ids={note.exceptionIds ?? []} busy={busy} onSaved={reload} onError={onError} />}</div>
   </section>;
 }
 
-function ExceptionList({ orgId, userId, ids, busy, onUpdate }: {
-  orgId: string; userId: string | null; ids: string[]; busy: boolean; onUpdate: (exception: DeliveryException, patch: Partial<DeliveryException>) => Promise<void>;
+function ExceptionList({ orgId, userId, ids, busy, onSaved, onError }: {
+  orgId: string; userId: string | null; ids: string[]; busy: boolean; onSaved: () => Promise<void>; onError: (message: string) => void;
 }) {
   const [items, setItems] = useState<DeliveryException[] | null>(null);
   useEffect(() => { let cancelled = false; void deliveryExceptionsRepo.list(orgId, { environment: "LIVE" }).then((all) => { if (!cancelled) setItems(all.filter((item) => ids.includes(item.id))); }).catch(() => { if (!cancelled) setItems([]); }); return () => { cancelled = true; }; }, [orgId, ids]);
   if (items === null) return <p className="text-xs text-slate-600">Loading exceptions…</p>;
-  return <div className="space-y-2">{items.map((exception) => {
-    const status: DeliveryExceptionStatus = exception.status;
-    return <div key={exception.id} className="rounded-md border border-red-900/40 bg-red-950/10 p-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-red-300">{exception.category.replaceAll("_", " ")}</p><p className="mt-1 text-sm text-slate-200">{exception.description}</p><p className="mt-1 text-xs text-slate-500">Reported {exception.reportedAt.toDate().toLocaleString()}</p></div><span className={`rounded-full px-2 py-0.5 text-xs ${status === "open" ? "bg-red-950 text-red-300" : "bg-emerald-950 text-emerald-300"}`}>{status}</span></div>
-      {status === "open" ? <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><input className="input" placeholder="Resolution notes (optional)" defaultValue={exception.resolutionNotes ?? ""} disabled={busy} onBlur={(event) => { const value = event.target.value.trim(); if (value !== (exception.resolutionNotes ?? "")) void onUpdate(exception, { resolutionNotes: value }); }} /><button onClick={() => void onUpdate(exception, { status: "resolved", resolvedBy: userId, resolvedAt: Timestamp.now() })} disabled={busy} className="rounded-md border border-emerald-900/50 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-950/30 disabled:opacity-50">Resolve</button></div> : <p className="mt-2 text-xs text-slate-500">Resolved {exception.resolvedAt ? exception.resolvedAt.toDate().toLocaleString() : ""}</p>}
-    </div>;
-  })}</div>;
+  return <div className="space-y-2">{items.map((exception) => <ExceptionItem key={exception.id} exception={exception} userId={userId} busy={busy} orgId={orgId} onSaved={onSaved} onError={onError} />)}</div>;
+}
+
+function ExceptionItem({ exception, userId, busy, orgId, onSaved, onError }: {
+  exception: DeliveryException; userId: string | null; busy: boolean; orgId: string; onSaved: () => Promise<void>; onError: (message: string) => void;
+}) {
+  const { user } = useAuth();
+  const [resolutionNotes, setResolutionNotes] = useState(exception.resolutionNotes ?? "");
+  const [saving, setSaving] = useState(false);
+  const resolve = async () => {
+    if (!user || !userId) return onError("You must be signed in to resolve an exception.");
+    setSaving(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/deliveries/workflow-action", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orgId, deliveryId: exception.deliveryId, deliveryNoteId: exception.deliveryNoteId, exceptionId: exception.id, action: "resolve_exception", resolutionNotes: resolutionNotes.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Failed to resolve the delivery exception.");
+      await onSaved();
+    } catch (err) { onError(err instanceof Error ? err.message : "Failed to resolve the delivery exception."); }
+    finally { setSaving(false); }
+  };
+
+  const status: DeliveryExceptionStatus = exception.status;
+  return <div className="rounded-md border border-red-900/40 bg-red-950/10 p-3">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-red-300">{exception.category.replaceAll("_", " ")}</p><p className="mt-1 text-sm text-slate-200">{exception.description}</p><p className="mt-1 text-xs text-slate-500">Reported {exception.reportedAt.toDate().toLocaleString()}</p></div><span className={`rounded-full px-2 py-0.5 text-xs ${status === "open" ? "bg-red-950 text-red-300" : "bg-emerald-950 text-emerald-300"}`}>{status}</span></div>
+    {status === "open" ? <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><input className="input" placeholder="Resolution notes (optional)" value={resolutionNotes} onChange={(event) => setResolutionNotes(event.target.value)} disabled={busy || saving} /><button onClick={() => void resolve()} disabled={busy || saving} className="rounded-md border border-emerald-900/50 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-950/30 disabled:opacity-50">{saving ? "Resolving…" : "Resolve"}</button></div> : <p className="mt-2 text-xs text-slate-500">Resolved {exception.resolvedAt ? exception.resolvedAt.toDate().toLocaleString() : ""}</p>}
+  </div>;
 }
