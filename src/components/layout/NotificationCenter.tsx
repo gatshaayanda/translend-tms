@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, where } from "firebase/firestore";
 import { notificationsRepo } from "@/lib/firebase/modules";
 import { useAuth } from "@/contexts/AuthContext";
 import type { NotificationRecord } from "@/types/notifications";
@@ -14,7 +14,7 @@ export default function NotificationCenter({ orgId }: { orgId: string }) {
 
   useEffect(() => {
     if (!user) return;
-    return notificationsRepo.subscribe(orgId, { environment: "LIVE", orderByField: "createdAt", orderDirection: "desc", limitTo: 30 }, setItems, () => undefined);
+    return notificationsRepo.subscribe(orgId, { environment: "LIVE", orderByField: "createdAt", orderDirection: "desc", limitTo: 30, extra: [where("recipientUid", "==", user.uid)] }, setItems, () => undefined);
   }, [orgId, user]);
 
   const unread = useMemo(() => items.filter((item) => !item.readAt), [items]);
