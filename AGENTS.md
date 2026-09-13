@@ -254,3 +254,30 @@ Current location checkpoint: browser GPS capture + normalized telematics ingesti
 - Do not cache authenticated Firestore business responses blindly in the service worker. Cache the shell/fallback first; Firestore already manages client persistence separately where enabled.
 - Current inviteMember(uid...) is an internal member-assignment helper, not a complete email invitation system. A real invite must be email/token based before the invitee has a Firebase UID, then accepted only after authentication and verified server-side.
 - Preferred collaboration flow: Owner/Operations Manager chooses email + role → pending invite with random token and expiry → transactional email/link → invitee signs in → server verifies token/email/expiry → membership created atomically → invite marked accepted. Do not let a client self-create membership from a token by weakening Firestore rules.
+
+
+## Current completion checkpoint — operational intelligence through accounting control
+
+The four remaining internal capability passes are now advanced as follows:
+
+1. **Fleet intelligence:** period filtering, loaded/empty KM, utilisation, fuel efficiency, fuel cost/KM, route profit, variance and backhaul/empty-KM alerts are derived from persisted trip measurements. Driver GPS/telematics remains the truth source for live movement.
+2. **Workshop/fleet control:** persisted maintenance schedules, inspections, tyres and work-order domains remain the authoritative workshop model; lifecycle state must be updated in-place rather than creating duplicate records.
+3. **Money lifecycle:** invoice payments and supplier bills are now first-class organization-scoped records; invoice paid status is updated when recorded payments reach the invoice amount. Customer and payables registers are live from those records.
+4. **Accounting controls:** chart accounts and accounting periods are first-class organization-scoped records. Do not represent an accounting period as a UI-only date picker.
+
+### Business Controls route
+
+/[orgId]/business-controls is the control workspace for receivables/payments, supplier bills/payables, chart accounts and accounting periods. It is intentionally an engine/control surface; existing v19 financial statement routes remain preserved.
+
+### PWA baseline
+
+- Manifest and standalone metadata are native to Next.js.
+- A service worker is registered after load.
+- Navigation has a custom offline fallback.
+- Do not claim full offline CRUD yet. Offline mutation queues, conflict resolution and authenticated data caching require an explicit later design.
+
+### Invite architecture audit
+
+The existing inviteMember(orgId, invitedBy, member) helper assumes a Firebase UID already exists and immediately writes an active membership. It is **not** the correct public owner-email invitation flow.
+
+Next collaboration phase must use: pending invite email + immutable role + random token + expiry → invite link → sign-in → server-side token/email/expiry verification → atomic membership creation → invite consumed/revoked. Keep the acceptance write behind a trusted server Route Handler/Admin SDK rather than weakening client Firestore rules.
