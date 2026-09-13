@@ -190,3 +190,41 @@ Do NOT:
 - create a raw HTML/iframe application;
 - fabricate live business data;
 - stop at analysis when a safe implementation/verification step can be completed.
+
+
+## Remaining capability readiness and external dependencies
+
+### Build now — no new API key required
+These domains can be completed using the existing Next.js + Firebase/Firestore + UploadThing engine:
+
+- Fleet date-range filters and Trip Lookup filtering.
+- Loaded/empty KM from persisted trip metrics.
+- Revenue/empty KM ratios, utilisation and route profitability from trip, fuel, job-rate and invoice data.
+- Backhaul-gap, dwell and data-based route/fuel exceptions when the required timestamps/KM/location fields are persisted.
+- Fuel consumption per truck/trip and cost per KM.
+- Work-order lifecycle, maintenance schedules/history/alerts, inspections and defect-to-work-order handoff.
+- Tyre records, assignment/history, cost and cost-per-KM.
+- Supplier PO lifecycle and actual-cost linkage.
+- Invoice lifecycle, payments, receivables and customer statements.
+- Supplier bills/payables and supplier statements.
+- Chart of accounts, journal balancing, accounting periods and financial date filters.
+- Performance/Operations drill-downs and CSV/report exports where data exists.
+
+Build these with the established domain rule: **types → repository → Firestore rules/index/query shape → UI action → derived calculations → verification**. Prefer derived calculations from persisted truth; do not duplicate summary values unless a deliberate cache/metric is justified.
+
+### External integration required — do not fake
+Real live fleet movement needs a genuine location source. Browser/device GPS can be used for a driver-facing capture flow without buying a fleet API, subject to user/device permission, but it is not an automatic truck telematics feed. Persist authorized location events in Firestore only at a controlled cadence; do not create high-frequency writes that burn quota.
+
+Map rendering/routing/traffic may require a provider account and key/token. Keep provider access behind server-side API routes/environment variables; never commit secrets or expose unrestricted server keys to the client. Google Routes or Mapbox are candidate providers and must be selected by the Product Owner before integration because cost, billing and provider terms differ.
+
+Do not block the rest of the product on GPS/maps. Complete all data-driven fleet intelligence first and leave the live-map integration behind an explicit capability boundary until a real provider/data source exists.
+
+### Execution order for remaining work
+1. Finish persisted operational truth: KM, timestamps, statuses, costs, rates and lifecycle fields.
+2. Add derived fleet intelligence and date filters from that truth.
+3. Complete workshop/inspection/tyre and supplier PO lifecycles.
+4. Complete invoice/payment/receivable/payable/accounting lifecycles.
+5. Add dashboard drill-downs and reporting.
+6. Integrate real location capture/provider only after provider choice and required credentials exist.
+
+For each phase: inspect current HEAD → inspect existing domain → extend current implementation (never replace it) → update rules only for actual new collections → build → commit/push coherent checkpoint → record the new state here.
