@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { customersRepo, deliveriesRepo, driversRepo, fuelLogsRepo, invoicesRepo, jobsRepo, journalEntriesRepo, maintenanceSchedulesRepo, supplierBillsRepo, supplierPOsRepo, trucksRepo, tripsRepo, vehicleInspectionsRepo, workOrdersRepo } from "@/lib/firebase/modules";
 import type { Customer, Delivery, Driver, Job, Trip, Truck } from "@/types/core";
 import type { FuelLog, Invoice, JournalEntry, SupplierPO, WorkOrder } from "@/types/finance";
@@ -23,7 +23,7 @@ export function ReportsHub({ orgId }: { orgId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"operations" | "fleet" | "pod" | "finance" | "customers">("operations");
 
-  const loadReports = () => {
+  const loadReports = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     Promise.all([
@@ -39,9 +39,9 @@ export function ReportsHub({ orgId }: { orgId: string }) {
       setError(null);
     }).catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : "Reports could not be loaded."); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  };
+  }, [orgId]);
 
-  useEffect(() => loadReports(), [orgId]);
+  useEffect(() => loadReports(), [loadReports]);
 
   const operationsRows = useMemo(() => data.jobs.map((job) => {
     const trip = data.trips.find((item) => item.jobId === job.id);
