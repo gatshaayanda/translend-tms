@@ -1,19 +1,11 @@
 import { createRepository } from "./repository";
-import type {
-  Customer,
-  Truck,
-  Driver,
-  Job,
-  Trip,
-  Delivery,
-  DeliveryNote,
-  DeliveryException,
-} from "@/types/core";
+import type { Customer, Truck, Driver, Job, Trip, Delivery, DeliveryNote, DeliveryException } from "@/types/core";
 import type { FuelLog, WorkOrder, SupplierPO, Invoice, JournalEntry } from "@/types/finance";
 import type { TripMetrics } from "@/types/fleet";
 import type { TruckLocationEvent } from "@/types/location";
 import type { MaintenanceSchedule, VehicleInspection, TyreRecord } from "@/types/workshop";
 import type { InvoicePayment, SupplierBill, ChartAccount, AccountingPeriod } from "@/types/business";
+import type { NotificationRecord } from "@/types/notifications";
 
 export const customersRepo = createRepository<Customer>("customers");
 export const trucksRepo = createRepository<Truck>("trucks");
@@ -37,3 +29,4 @@ export const invoicePaymentsRepo = createRepository<InvoicePayment>("invoicePaym
 export const supplierBillsRepo = createRepository<SupplierBill>("supplierBills");
 export const chartAccountsRepo = createRepository<ChartAccount>("chartAccounts");
 export const accountingPeriodsRepo = createRepository<AccountingPeriod>("accountingPeriods");
+export const notificationsRepo = createRepository<NotificationRecord>("notifications");
