@@ -15,15 +15,11 @@ export async function POST(request: Request) {
     const action = String(body.action ?? "");
     const deliveryId = String(body.deliveryId ?? "");
     const deliveryNoteId = String(body.deliveryNoteId ?? "");
-    if (!orgId || !deliveryId || !deliveryNoteId || !["complete", "resolve_exception", "void_exception", "approve_evidence", "reject_evidence"].includes(action)) {
-      return NextResponse.json({ error: "Organization, delivery, delivery note and valid action are required." }, { status: 400 });
-    }
+    if (!orgId || !deliveryId || !deliveryNoteId || !["complete", "resolve_exception", "void_exception", "approve_evidence", "reject_evidence"].includes(action)) return NextResponse.json({ error: "Organization, delivery, delivery note and valid action are required." }, { status: 400 });
 
     const db = getAdminDb();
     const memberSnap = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
-    if (!memberSnap.exists || memberSnap.data()?.status !== "active" || !EDIT_ROLES.includes(memberSnap.data()?.role as OrgRole)) {
-      return NextResponse.json({ error: "Delivery operations access required." }, { status: 403 });
-    }
+    if (!memberSnap.exists || memberSnap.data()?.status !== "active" || !EDIT_ROLES.includes(memberSnap.data()?.role as OrgRole)) return NextResponse.json({ error: "Delivery operations access required." }, { status: 403 });
     const deliveryRef = db.doc(`organizations/${orgId}/deliveries/${deliveryId}`);
     const noteRef = db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`);
     const [deliverySnap, noteSnap] = await Promise.all([deliveryRef.get(), noteRef.get()]);
@@ -37,12 +33,11 @@ export async function POST(request: Request) {
       const exceptionsSnap = await db.collection(`organizations/${orgId}/deliveryExceptions`).where("deliveryId", "==", deliveryId).get();
       const exceptions = exceptionsSnap.docs.map((doc) => doc.data());
       const receiverAcknowledged = Array.isArray(note.acknowledgements) && note.acknowledgements.some((item: { role?: string }) => item.role === "receiver");
-      const activeRequiredEvidence = ((note.evidenceRefs ?? []) as DeliveryEvidenceRef[]).some((item) => item.required && !["replaced", "rejected"].includes(item.status ?? "active"));
-      const hasEvidence = ((note.evidenceRefs ?? []) as DeliveryEvidenceRef[]).some((item) => !["replaced", "rejected"].includes(item.status ?? "active"));
+      const evidence = (note.evidenceRefs ?? []) as DeliveryEvidenceRef[];
+      const approvedRequiredPod = evidence.some((item) => item.required && item.kind === "pod" && item.status === "approved");
+      const hasActiveEvidence = evidence.some((item) => !["replaced", "rejected"].includes(item.status ?? "active"));
       const openException = exceptions.some((item) => item.status === "open");
-      if (!delivery.arrivalAt || !delivery.departureAt || !receiverAcknowledged || !hasEvidence || !activeRequiredEvidence || openException) {
-        return NextResponse.json({ error: "Delivery requires arrival, departure, receiver acknowledgement, an active required POD, other active evidence and no open exceptions before completion." }, { status: 409 });
-      }
+      if (!delivery.arrivalAt || !delivery.departureAt || !receiverAcknowledged || !hasActiveEvidence || !approvedRequiredPod || openException) return NextResponse.json({ error: "Delivery requires arrival, departure, receiver acknowledgement, an approved required POD, active evidence and no open exceptions before completion." }, { status: 409 });
       await Promise.all([
         deliveryRef.update({ status: "delivered", deliveredAt: now, podState: "complete", updatedAt: now, updatedBy: user.uid }),
         noteRef.update({ podState: "complete", updatedAt: now, updatedBy: user.uid }),
