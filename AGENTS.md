@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `84671bb55559546a40d241cb572884da7e14c250`
+- Current application checkpoint: `057aa32c0724069e1fcd1ba087ed6ecd3027645a`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -34,61 +34,51 @@ Rules: wire real data when it exists; preserve existing workflows and CRUD; miss
 ## Development programme status
 
 ### 1. Offline + Sync foundation — BASELINE COMPLETE
-
-Firestore IndexedDB persistence, multi-tab persistence, online/offline/syncing/synced states, pending-write awareness and offline shell/navigation fallback. Full offline CRUD, durable mutation queues, conflict resolution and complete offline business-data recovery are not yet claimed.
+Firestore IndexedDB persistence, multi-tab persistence, online/offline/syncing/synced states, pending-write awareness and offline shell/navigation fallback. Full offline CRUD, durable business mutation queues and conflict resolution are not universally claimed.
 
 ### 2. Professional Live Fleet Map — FOUNDATION COMPLETE
-
-Real Firestore truck location events, latest position per truck, moving/idle/stale states, filters, selection, focus/pan/zoom, real marker positions when a provider is configured, location table, route trail and GPS source/timestamp. No fabricated truck locations. Automatic production fleet movement still requires a real driver GPS or telematics source and, where applicable, a map/routing provider.
+Real Firestore truck location events, latest position per truck, moving/idle/stale states, filters, selection, focus/pan/zoom, real marker positions when a provider is configured, location table, route trail and GPS source/timestamp. No fabricated truck locations. Automatic fleet movement still requires a real driver GPS or telematics source and, where applicable, a map/routing provider.
 
 ### 3. GPS / Telematics Integration — FOUNDATION COMPLETE
-
-Provider-neutral `POST /api/telematics/ingest`, server-side auth/workspace validation, provider vehicle → Translend truck mapping, validation, duplicate/idempotency protection, stale-event protection, safe mapping and normalized LIVE telemetry with `orgId`. Fleet Map consumes normalized `truckLocationEvents`. Provider credentials remain external and must never be faked.
+Provider-neutral `POST /api/telematics/ingest`, server-side auth/workspace validation, provider vehicle → Translend truck mapping, validation, duplicate/idempotency protection, stale-event protection, safe mapping and normalized LIVE telemetry with `orgId`. Provider credentials remain external and must never be faked.
 
 ### 4. Complete Driver Workflow — CORE COMPLETE
-
-Driver My Trip supports `planned → en_route_pickup → loading → in_transit → unloading → completed`, assigned-driver filtering, secure server-side status changes, delivery arrival/departure, receiver acknowledgement, delivery exceptions, POD/evidence handoff, inspections, defects, defect→work-order handoff, maintenance/tyre visibility, browser GPS capture and offline awareness. Driver writes are server/role scoped; do not weaken Firestore rules.
+Driver My Trip supports `planned → en_route_pickup → loading → in_transit → unloading → completed`, assigned-driver filtering, secure server-side status changes, delivery arrival/departure, receiver acknowledgement, delivery exceptions, POD/evidence handoff, inspections, defects, defect→work-order handoff, maintenance/tyre visibility, browser GPS capture and offline awareness. Driver writes are server/role scoped.
 
 ### 5. Complete Dispatch — CORE COMPLETE
-
-Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch creates an in-app assignment notification for linked drivers and an immutable server audit event.
+Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch creates assignment notifications and immutable server audit events.
 
 ### 6. Accounting — CORE CONTROL PASS COMPLETE
-
-Implemented chart of accounts, accounting periods/open-period posting control, journal balancing/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection.
+Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection.
 
 Still not claimed complete: dedicated credit/debit-note domain, full tax/VAT configuration, bank/cash reconciliation and dedicated accounting statement/export workflows.
 
-### 7. POD / Evidence maturity — SUBSTANTIAL PASS COMPLETE; FINAL HARDENING REMAINS
+### 7. POD / Evidence maturity — HARDENED PASS COMPLETE
+Secure UploadThing authorization and delivery linkage; multiple evidence categories; required POD semantics; replacement/version relationships; approval/rejection with reviewer metadata/reason; server-controlled completion requiring approved required POD; authenticated evidence proxy/view; driver-only assigned-delivery access; exception resolution through server boundary; upload failure retry; **IndexedDB-backed offline evidence queue with automatic online retry**; missing-POD queue with ageing; POD queue now opens the exact Delivery Note context; audit events for evidence review/completion/exception resolution and upload; operations notifications on upload/rejection.
 
-Implemented secure UploadThing authorization and delivery linkage; multiple evidence categories; required POD semantics; replacement/version relationships; approval/rejection with reviewer metadata/reason; server-controlled completion requiring approved required POD; authenticated evidence proxy/view; driver-only assigned-delivery access; exception resolution through server boundary; upload failure retention + retry; missing-POD queue with ageing; POD queue navigation; POD state/invoice-readiness helpers; audit on evidence upload; operations notifications on upload/rejection.
-
-Still to harden: deeper offline upload mutation queueing, broader evidence audit coverage and exact Delivery Note context from the POD queue.
+Remaining product-level extensions can still be added later, but the core POD/evidence workflow is now considered hardened rather than merely substantial.
 
 ### 8. Notifications — FOUNDATION IMPLEMENTED
-
 Persisted org-scoped notification records, recipient-scoped reads, read/unread state, shell notification center, server role dispatcher, driver assignment notifications, POD upload/rejection notifications and driver delivery-exception escalation. Query index is present.
 
 Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and real push/email providers. Never claim email/push live without a configured provider.
 
 ### 9. Audit / Data Integrity — FOUNDATION IMPLEMENTED
+Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception resolution and driver delivery exceptions write audit events.
 
-Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload and driver delivery exceptions write audit events.
+Still to expand: audit coverage across all important mutations, stronger idempotency keys, referential/orphan checks, concurrency protection, generalized mutation queues and partial-workflow recovery.
 
-Still to expand: audit coverage across all important mutations, idempotency keys, referential/orphan checks, concurrency protection, mutation queues and partial-workflow recovery.
+### 10. Workspace / Admin / Permissions — CONTROL PASS COMPLETE
+Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension/restoration, with owner protection, operations-manager limits, audit events and in-app notifications. Added a controlled owner-transfer transaction: current owner transfers ownership to an active member, becomes Operations Manager, organization `ownerUid` is updated atomically, and both parties are notified/audited. Team UI exposes member access controls and owner transfer.
 
-### 10. Workspace / Admin / Permissions — FOUNDATION NOW IMPLEMENTED
+Still to expand: richer permission testing, company settings/defaults, invitation cancellation/resend controls and real transactional email when configured.
 
-Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension and restoration, with owner protection, operations-manager limits, audit events and in-app notification to affected users. Team UI now surfaces active/suspended members and access controls.
+### 11. Reporting / Exports / Intelligence — OPERATIONAL PASS IMPLEMENTED
+Added an org-scoped Reports & Intelligence route with LIVE-derived operational, fleet/compliance, finance, customer, fuel, workshop and inspection reporting. Reports are derived from persisted Firestore truth; no fake values. Current selected report exports CSV, and browser Print/PDF is supported through the native print dialog. Reports are available from the primary application navigation.
 
-Still to expand: owner transfer, richer permission testing, company settings/defaults, invitation cancellation/resend controls and real transactional email when configured.
-
-### 11. Reporting / Exports / Intelligence — NEXT
-
-Operational/fleet/trip/delivery/POD/fuel/workshop/customer/invoice/supplier/financial reports; CSV/PDF/print; management trends and drill-downs derived from persisted truth.
+Still to expand: richer time-series trend charts, scheduled reports, server-side large-data exports, dedicated PDF generation and deeper drill-down links into source records.
 
 ### 12. Full End-to-End + HTML Compliance — FINAL
-
 Validate `job → trip → delivery → POD → invoice → payment → journal → reports`, then verify real CRUD, failure/retry, offline/sync/conflicts, permissions/multi-user, mobile driver workflow, location permission, map/provider states and every important HTML/reference control mapped to a real route/data/mutation/state or an honest unsupported/configuration state.
 
 ## External capability boundaries
@@ -101,7 +91,7 @@ Firestore rules are security boundaries, not UI configuration. Preserve workspac
 
 ## UploadThing
 
-UploadThing is the secure transport for POD/evidence and finance receipts. Never migrate these to Firebase Storage.
+UploadThing is the secure transport for POD/evidence and finance receipts. Never migrate these to Firebase Storage. Offline POD files may be temporarily persisted in browser IndexedDB until UploadThing succeeds.
 
 ## Failure standard
 
@@ -112,6 +102,9 @@ Preserve data; show clear failures; retry when safe; explain next action; avoid 
 `read AGENTS.md → confirm branch → inspect HEAD/recent commits → inspect actual route/component/data flow → implement coherent pass → inspect diff → typecheck/build/lint where available → fix root causes → verify affected workflows → update AGENTS.md → commit → push → report exact SHA and verification evidence`
 
 Do not repeatedly ask for approval for obvious safe next steps.
+
+## Verification note for checkpoint 057aa32
+The authoritative branch is pushed through the GitHub contents API. A local `npm ci && npm run build` attempt was blocked by the execution environment because outbound DNS/network access to GitHub was unavailable, so this checkpoint must **not** be described as locally build-verified or Vercel-green. Vercel tooling currently exposes the connected `adminhub-global` project, but no connected Translend Vercel project was available to verify this branch deployment directly.
 
 ## Explicit non-goals
 
