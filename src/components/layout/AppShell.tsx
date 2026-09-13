@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLE_LABELS } from "@/types/core";
+import NotificationCenter from "@/components/layout/NotificationCenter";
 
 interface NavItem { label: string; href: (orgId: string) => string; icon: string; section?: string; badge?: string; roles?: string[]; }
 
@@ -44,7 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="translend-nav" aria-label="Primary navigation">{visibleNav.map((item) => { const href = item.href(activeOrg.id); const active = pathname === href || pathname?.startsWith(`${href}/`); return <div key={`${item.section ?? ""}-${item.label}`}>{item.section && <div className="nav-section-label">{item.section}</div>}<Link href={href} onClick={() => setMobileOpen(false)} className={`translend-nav-item ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}><span className="nav-icon">{item.icon}</span><span>{item.label}</span>{item.badge && <span className="nav-badge">{item.badge}</span>}</Link></div>; })}</nav>
       <div className="sidebar-footer"><div className="user-chip"><div className="user-avatar">{initials}</div><div className="user-info"><div className="name">{user?.displayName || user?.email || "Signed in"}</div><div className="role">{ROLE_LABELS[activeMembership.role]}</div></div></div><button className="signout-button" onClick={signOut}>Sign out</button></div>
     </aside>
-    <div className="translend-main"><header className="translend-topbar"><div className="topbar-left"><button className="mobile-menu-button" onClick={() => setMobileOpen(true)} aria-label="Open navigation">☰</button><div><h1>{activeOrg.name}</h1><div className="breadcrumb">Truck Division <span>›</span> {getPageLabel(pathname, activeOrg.id)}</div></div></div><div className="topbar-right"><span className="connection-pill"><span className="connection-dot" /> Live data</span><span className="org-pill">{activeMembership.role}</span></div></header><main className="translend-content">{children}</main></div>
+    <div className="translend-main"><header className="translend-topbar"><div className="topbar-left"><button className="mobile-menu-button" onClick={() => setMobileOpen(true)} aria-label="Open navigation">☰</button><div><h1>{activeOrg.name}</h1><div className="breadcrumb">Truck Division <span>›</span> {getPageLabel(pathname, activeOrg.id)}</div></div></div><div className="topbar-right"><NotificationCenter orgId={activeOrg.id} /><span className="connection-pill"><span className="connection-dot" /> Live data</span><span className="org-pill">{activeMembership.role}</span></div></header><main className="translend-content">{children}</main></div>
   </div>;
 }
 
