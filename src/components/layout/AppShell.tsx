@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Workshop Control", href: (id) => `/${id}/workshop-control`, icon: "⚙", badge: "NEW" },
   { label: "Invoicing & Statements", href: (id) => `/${id}/invoicing`, icon: "▤" },
   { label: "Performance Dashboard", href: (id) => `/${id}/performance`, icon: "▥" },
+  { label: "Reports & Intelligence", href: (id) => `/${id}/reports`, icon: "▤", badge: "NEW" },
   { section: "Financials", label: "Journal Entry", href: (id) => `/${id}/journal`, icon: "▦" },
   { label: "P&L Statement", href: (id) => `/${id}/p-and-l`, icon: "⌁" },
   { label: "Cash Flow", href: (id) => `/${id}/cash-flow`, icon: "◒" },
@@ -52,6 +53,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
 function getPageLabel(pathname: string | null, orgId: string) {
   const current = pathname?.replace(`/${orgId}`, "").split("/").filter(Boolean)[0];
-  const labels: Record<string, string> = { "control-tower": "Operations Hub", "my-trip": "My Trip", team: "Team & Invites", customers: "Customers", trucks: "Fleet & Live Map", "fleet-intelligence": "Fleet Intelligence", drivers: "Drivers", jobs: "Jobs", trips: "Trips", deliveries: "Delivery Notes & POs", "pod-queue": "POD Queue", "fuel-workshop": "Fuel & Workshop", "workshop-control": "Workshop Control", invoicing: "Invoicing & Statements", performance: "Performance Dashboard", journal: "Journal Entry", "p-and-l": "P&L Statement", "cash-flow": "Cash Flow", "balance-sheet": "Balance Sheet", "trial-balance": "Trial Balance", "business-controls": "Business Controls" };
+  const labels: Record<string, string> = { "control-tower": "Operations Hub", "my-trip": "My Trip", team: "Team & Invites", customers: "Customers", trucks: "Fleet & Live Map", "fleet-intelligence": "Fleet Intelligence", drivers: "Drivers", jobs: "Jobs", trips: "Trips", deliveries: "Delivery Notes & POs", "pod-queue": "POD Queue", "fuel-workshop": "Fuel & Workshop", "workshop-control": "Workshop Control", invoicing: "Invoicing & Statements", performance: "Performance Dashboard", reports: "Reports & Intelligence", journal: "Journal Entry", "p-and-l": "P&L Statement", "cash-flow": "Cash Flow", "balance-sheet": "Balance Sheet", "trial-balance": "Trial Balance", "business-controls": "Business Controls" };
   return labels[current ?? ""] ?? "Operations Hub";
 }
