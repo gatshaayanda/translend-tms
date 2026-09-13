@@ -16,14 +16,15 @@ export async function notifyOrgRoles({ orgId, roles, type, severity, title, mess
 }) {
   if (!roles.length) return 0;
   const db = getAdminDb();
-  const members = await db.collection(`organizations/${orgId}/members`).where("role", "in", roles).where("status", "==", "active").get();
-  if (members.empty) return 0;
+  const members = await db.collection(`organizations/${orgId}/members`).get();
+  const recipients = members.docs.filter((member) => member.data().status === "active" && roles.includes(member.data().role as OrgRole));
+  if (!recipients.length) return 0;
   const now = Timestamp.now();
   const batch = db.batch();
-  members.docs.forEach((member) => {
+  recipients.forEach((member) => {
     const ref = db.collection(`organizations/${orgId}/notifications`).doc();
     batch.set(ref, { orgId, environment: "LIVE", createdAt: now, createdBy: "system", updatedAt: now, updatedBy: "system", deletedAt: null, recipientUid: member.id, type, severity, title, message, href: href ?? null, sourceId: sourceId ?? null, sourceType: sourceType ?? null, readAt: null, roles });
   });
   await batch.commit();
-  return members.size;
+  return recipients.length;
 }
