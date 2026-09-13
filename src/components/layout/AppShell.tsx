@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Cash Flow", href: (id) => `/${id}/cash-flow`, icon: "◒" },
   { label: "Balance Sheet", href: (id) => `/${id}/balance-sheet`, icon: "⚖" },
   { label: "Trial Balance", href: (id) => `/${id}/trial-balance`, icon: "≡" },
+  { label: "Business Controls", href: (id) => `/${id}/business-controls`, icon: "◫", badge: "NEW" },
   { section: "Management", label: "Customers", href: (id) => `/${id}/customers`, icon: "▤" },
   { label: "Jobs", href: (id) => `/${id}/jobs`, icon: "□" },
   { label: "Trips", href: (id) => `/${id}/trips`, icon: "➜" },
@@ -46,6 +47,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
 function getPageLabel(pathname: string | null, orgId: string) {
   const current = pathname?.replace(`/${orgId}`, "").split("/").filter(Boolean)[0];
-  const labels: Record<string, string> = { "control-tower": "Operations Hub", customers: "Customers", trucks: "Fleet & Live Map", "fleet-intelligence": "Fleet Intelligence", drivers: "Drivers", jobs: "Jobs", trips: "Trips", deliveries: "Delivery Notes & POs", "fuel-workshop": "Fuel & Workshop", "workshop-control": "Workshop Control", invoicing: "Invoicing & Statements", performance: "Performance Dashboard", journal: "Journal Entry", "p-and-l": "P&L Statement", "cash-flow": "Cash Flow", "balance-sheet": "Balance Sheet", "trial-balance": "Trial Balance" };
+  const labels: Record<string, string> = { "control-tower": "Operations Hub", customers: "Customers", trucks: "Fleet & Live Map", "fleet-intelligence": "Fleet Intelligence", drivers: "Drivers", jobs: "Jobs", trips: "Trips", deliveries: "Delivery Notes & POs", "fuel-workshop": "Fuel & Workshop", "workshop-control": "Workshop Control", invoicing: "Invoicing & Statements", performance: "Performance Dashboard", journal: "Journal Entry", "p-and-l": "P&L Statement", "cash-flow": "Cash Flow", "balance-sheet": "Balance Sheet", "trial-balance": "Trial Balance", "business-controls": "Business Controls" };
   return labels[current ?? ""] ?? "Operations Hub";
 }
