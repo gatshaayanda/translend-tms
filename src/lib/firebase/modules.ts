@@ -13,6 +13,7 @@ import type { FuelLog, WorkOrder, SupplierPO, Invoice, JournalEntry } from "@/ty
 import type { TripMetrics } from "@/types/fleet";
 import type { TruckLocationEvent } from "@/types/location";
 import type { MaintenanceSchedule, VehicleInspection, TyreRecord } from "@/types/workshop";
+import type { InvoicePayment, SupplierBill, ChartAccount, AccountingPeriod } from "@/types/business";
 
 export const customersRepo = createRepository<Customer>("customers");
 export const trucksRepo = createRepository<Truck>("trucks");
@@ -32,3 +33,7 @@ export const truckLocationEventsRepo = createRepository<TruckLocationEvent>("tru
 export const maintenanceSchedulesRepo = createRepository<MaintenanceSchedule>("maintenanceSchedules");
 export const vehicleInspectionsRepo = createRepository<VehicleInspection>("vehicleInspections");
 export const tyreRecordsRepo = createRepository<TyreRecord>("tyreRecords");
+export const invoicePaymentsRepo = createRepository<InvoicePayment>("invoicePayments");
+export const supplierBillsRepo = createRepository<SupplierBill>("supplierBills");
+export const chartAccountsRepo = createRepository<ChartAccount>("chartAccounts");
+export const accountingPeriodsRepo = createRepository<AccountingPeriod>("accountingPeriods");
