@@ -17,16 +17,21 @@ export function PwaBootstrap() {
     }
 
     const onBeforeInstall = (event: Event) => { event.preventDefault(); setInstallEvent(event as InstallPromptEvent); };
-    const updateConnection = () => {
+    const onConnectionChange = () => {
       const nextOnline = navigator.onLine;
       setOnline(nextOnline);
       setSyncState(nextOnline ? "syncing" : "offline");
+      if (nextOnline) {
+        void waitForOfflineWrites()
+          .then(() => setSyncState("synced"))
+          .catch(() => setSyncState("ready"));
+      }
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    window.addEventListener("online", updateConnection);
-    window.addEventListener("offline", updateConnection);
-    updateConnection();
+    window.addEventListener("online", onConnectionChange);
+    window.addEventListener("offline", onConnectionChange);
+    onConnectionChange();
 
     void enableOfflinePersistence().then((status) => {
       if (status === "unavailable" || status === "failed") {
@@ -45,18 +50,10 @@ export function PwaBootstrap() {
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-      window.removeEventListener("online", updateConnection);
-      window.removeEventListener("offline", updateConnection);
+      window.removeEventListener("online", onConnectionChange);
+      window.removeEventListener("offline", onConnectionChange);
     };
   }, []);
-
-  useEffect(() => {
-    if (!online || syncState === "starting" || syncState === "unavailable" || syncState === "failed") return;
-    setSyncState("syncing");
-    void waitForOfflineWrites()
-      .then(() => setSyncState("synced"))
-      .catch(() => setSyncState("ready"));
-  }, [online]);
 
   const install = async () => {
     if (!installEvent) return;
