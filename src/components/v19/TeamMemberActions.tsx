@@ -9,8 +9,9 @@ export default function TeamMemberActions({ orgId, member, actorRole, onDone, on
   const [busy, setBusy] = useState(false);
   if (member.role === "owner" || member.uid === user?.uid || (actorRole === "operations_manager" && member.role === "operations_manager")) return null;
   const roles = ORG_ROLES.filter((role) => role !== "owner");
-  const run = async (action: "change_role" | "suspend" | "restore", role?: OrgRole) => {
+  const run = async (action: "change_role" | "suspend" | "restore" | "transfer_owner", role?: OrgRole) => {
     if (!user) return onError("You must be signed in to manage workspace access.");
+    if (action === "transfer_owner" && !window.confirm(`Transfer workspace ownership to ${member.displayName || member.email}? You will become Operations Manager.`)) return;
     setBusy(true);
     try {
       const token = await user.getIdToken();
@@ -23,5 +24,6 @@ export default function TeamMemberActions({ orgId, member, actorRole, onDone, on
   return <div className="mt-2 flex flex-wrap items-center gap-2">
     <select className="form-select" value={member.role} disabled={busy} onChange={(event) => void run("change_role", event.target.value as OrgRole)} aria-label={`Change role for ${member.displayName || member.email}`}>{roles.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}</select>
     {member.status === "active" ? <button className="btn-secondary" disabled={busy} onClick={() => void run("suspend")}>{busy ? "Saving…" : "Suspend"}</button> : <button className="btn-secondary" disabled={busy} onClick={() => void run("restore")}>{busy ? "Saving…" : "Restore"}</button>}
+    {actorRole === "owner" && member.status === "active" && <button className="btn-secondary" disabled={busy} onClick={() => void run("transfer_owner")}>{busy ? "Transferring…" : "Transfer ownership"}</button>}
   </div>;
 }
