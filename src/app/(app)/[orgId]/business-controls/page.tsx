@@ -1,0 +1,1 @@
+import BusinessControlsPage from "@/components/v19/BusinessControlsPage"; export default function Page(){return <BusinessControlsPage/>;}
