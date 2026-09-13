@@ -11,6 +11,7 @@ import type {
 } from "@/types/core";
 import type { FuelLog, WorkOrder, SupplierPO, Invoice, JournalEntry } from "@/types/finance";
 import type { TripMetrics } from "@/types/fleet";
+import type { TruckLocationEvent } from "@/types/location";
 import type { MaintenanceSchedule, VehicleInspection, TyreRecord } from "@/types/workshop";
 
 export const customersRepo = createRepository<Customer>("customers");
@@ -27,6 +28,7 @@ export const supplierPOsRepo = createRepository<SupplierPO>("supplierPOs");
 export const invoicesRepo = createRepository<Invoice>("invoices");
 export const journalEntriesRepo = createRepository<JournalEntry>("journalEntries");
 export const tripMetricsRepo = createRepository<TripMetrics>("tripMetrics");
+export const truckLocationEventsRepo = createRepository<TruckLocationEvent>("truckLocationEvents");
 export const maintenanceSchedulesRepo = createRepository<MaintenanceSchedule>("maintenanceSchedules");
 export const vehicleInspectionsRepo = createRepository<VehicleInspection>("vehicleInspections");
 export const tyreRecordsRepo = createRepository<TyreRecord>("tyreRecords");
