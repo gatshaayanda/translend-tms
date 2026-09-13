@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import type { OrgRole } from "@/types/core";
 
 const EDIT_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager"];
-const EXCEPTION_STATUSES = ["open", "resolved", "void"] as const;
 
 export async function POST(request: Request) {
   try {
@@ -68,24 +67,15 @@ export async function POST(request: Request) {
 
     const status = action === "resolve_exception" ? "resolved" : "void";
     const resolutionNotes = String(body.resolutionNotes ?? "").trim();
-    await exceptionRef.update({
-      status,
-      resolutionNotes: resolutionNotes || null,
-      resolvedBy: user.uid,
-      resolvedAt: now,
-      updatedAt: now,
-      updatedBy: user.uid,
-    });
+    await exceptionRef.update({ status, resolutionNotes: resolutionNotes || null, resolvedBy: user.uid, resolvedAt: now, updatedAt: now, updatedBy: user.uid });
 
-    if (status === "void" || status === "resolved") {
-      const remainingSnap = await db.collection(`organizations/${orgId}/deliveryExceptions`).where("deliveryId", "==", deliveryId).get();
-      const hasOpen = remainingSnap.docs.some((doc) => doc.id !== exceptionId && doc.data().status === "open");
-      if (!hasOpen) {
-        await Promise.all([
-          deliveryRef.update({ status: delivery.status === "exception" ? "pending" : delivery.status, updatedAt: now, updatedBy: user.uid }),
-          noteRef.update({ updatedAt: now, updatedBy: user.uid }),
-        ]);
-      }
+    const remainingSnap = await db.collection(`organizations/${orgId}/deliveryExceptions`).where("deliveryId", "==", deliveryId).get();
+    const hasOpen = remainingSnap.docs.some((doc) => doc.id !== exceptionId && doc.data().status === "open");
+    if (!hasOpen) {
+      await Promise.all([
+        deliveryRef.update({ status: delivery.status === "exception" ? "pending" : delivery.status, updatedAt: now, updatedBy: user.uid }),
+        noteRef.update({ updatedAt: now, updatedBy: user.uid }),
+      ]);
     }
 
     return NextResponse.json({ ok: true, action, status });
