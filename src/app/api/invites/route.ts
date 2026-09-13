@@ -6,6 +6,18 @@ import type { OrgRole } from "@/types/core";
 
 const INVITABLE_ROLES: OrgRole[] = ["operations_manager", "dispatcher", "fleet_manager", "finance", "driver", "viewer"];
 
+type InviteRecord = {
+  id: string;
+  orgId: string;
+  email: string;
+  role: OrgRole;
+  status: string;
+  expiresAt?: { toMillis?: () => number };
+  createdAt?: { toMillis?: () => number };
+  tokenHash?: string;
+  [key: string]: unknown;
+};
+
 async function authenticate(request: Request) {
   const header = request.headers.get("authorization");
   if (!header?.startsWith("Bearer ")) throw new Error("Authentication required.");
@@ -28,7 +40,11 @@ export async function GET(request: Request) {
     const db = getAdminDb();
     const snap = await db.collection("workspaceInvites").where("orgId", "==", orgId).get();
     const now = Date.now();
-    const invites = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter((invite) => invite.status === "pending" && invite.expiresAt?.toMillis?.() > now).sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()).map(({ tokenHash: _tokenHash, ...safe }) => safe);
+    const invites = snap.docs
+      .map((doc): InviteRecord => ({ id: doc.id, ...(doc.data() as Omit<InviteRecord, "id">) }))
+      .filter((invite) => invite.status === "pending" && (invite.expiresAt?.toMillis?.() ?? 0) > now)
+      .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
+      .map(({ tokenHash: _tokenHash, ...safe }) => safe);
     return NextResponse.json({ invites });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load invitations." }, { status: 401 });
