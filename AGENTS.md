@@ -53,11 +53,13 @@ The native application covers:
 
 - Operations Hub / Control Tower
 - Fleet & Live Map
+- Fleet Intelligence
 - Trips
 - Delivery Notes & POs
 - Customers
 - Drivers
 - Fuel & Workshop
+- Workshop Control
 - Invoicing & Statements
 - Performance Dashboard
 - Journal Entry
@@ -65,6 +67,9 @@ The native application covers:
 - Cash Flow
 - Balance Sheet
 - Trial Balance
+- Business Controls
+- Team & Invites
+- Driver My Trip PWA workflow
 
 The real operational chain is:
 
@@ -86,15 +91,11 @@ A button that only looks clickable is not complete.
 
 ### Fleet action checkpoint
 
-The Fleet trip actions are wired from real Trip Lookup records:
-
 - **Pre-fill Fuel Log** → `/fuel-workshop` with `truckId` and `tripId` context.
 - **Pre-fill Delivery Note** → `/deliveries` with `tripId` context.
 - **Open Trip Sheet** → `/trips` with `tripId` context.
 
 ### Finance/workshop action checkpoint
-
-The previously inert v19 finance/workshop controls are now backed by persisted domains:
 
 - **Raise invoice** → creates an `invoices` record and its Accounts Receivable / Haulage Revenue journal entry from a completed POD.
 - **Log fuel / Save Fuel Log** → creates a `fuelLogs` record and Fuel Expense journal entry.
@@ -105,8 +106,6 @@ The previously inert v19 finance/workshop controls are now backed by persisted d
 - **Export** → exports the live journal to CSV rather than pretending to have a Google Sheets integration.
 - **P&L / Cash Flow / Balance Sheet / Trial Balance** → derive displayed figures from persisted LIVE journal entries rather than demo figures.
 
-Finance/workshop collections are organization-scoped and role-protected in Firestore. Operational fuel/workshop/PO writes use operations roles; invoice and journal writes use owner/finance roles.
-
 ## Firestore safety
 
 Firestore rules are security boundaries, not UI configuration.
@@ -115,7 +114,8 @@ Firestore rules are security boundaries, not UI configuration.
 - Do not weaken rules to fix a UI/query problem.
 - Verify query shapes against the actual rules and indexes.
 - Any new domain must have types + repository + security rules + indexes/query shape + UI workflow considered as one change.
-- New finance/workshop collections currently use the generic environment/deletedAt query shape without additional ordering indexes.
+- New finance/workshop collections use the established organization/environment/soft-delete query conventions.
+- `workspaceInvites` is server-controlled and client reads/writes are denied.
 
 ## UploadThing
 
@@ -141,8 +141,10 @@ The project has `build`, `start` and `lint` scripts. Run the actual available ve
 - Finance/workshop Firestore rules: `b5f19ef86a59dccbee4bf7ad662c80d4f77a86d3`
 - UploadThing finance receipt support: `6e52abc8b97c45b2fb58c48a9c2bf796aad0d0fd`
 - Finance/workshop UI action implementation: `9fbd8216ef4060ef8677ae5261bc7d7ce8a6b9b7`
+- Control-pass documentation: `434f3c683d936e879b743aac57b6f085042d9b15`
+- Workspace invites + driver PWA checkpoint: `f847e9b01acc0ef8529225bec638af2079c14ec3`
 
-The latest application code checkpoint above was submitted to Vercel. Verify the exact SHA before calling deployment green.
+The latest application code checkpoint above must be verified in Vercel before calling deployment green.
 
 ## Required workflow
 
@@ -191,16 +193,14 @@ Do NOT:
 - fabricate live business data;
 - stop at analysis when a safe implementation/verification step can be completed.
 
-
 ## Remaining capability readiness and external dependencies
 
 ### Build now — no new API key required
-These domains can be completed using the existing Next.js + Firebase/Firestore + UploadThing engine:
 
 - Fleet date-range filters and Trip Lookup filtering.
 - Loaded/empty KM from persisted trip metrics.
 - Revenue/empty KM ratios, utilisation and route profitability from trip, fuel, job-rate and invoice data.
-- Backhaul-gap, dwell and data-based route/fuel exceptions when the required timestamps/KM/location fields are persisted.
+- Backhaul-gap, dwell and data-based route/fuel exceptions when required fields exist.
 - Fuel consumption per truck/trip and cost per KM.
 - Work-order lifecycle, maintenance schedules/history/alerts, inspections and defect-to-work-order handoff.
 - Tyre records, assignment/history, cost and cost-per-KM.
@@ -213,71 +213,71 @@ These domains can be completed using the existing Next.js + Firebase/Firestore +
 Build these with the established domain rule: **types → repository → Firestore rules/index/query shape → UI action → derived calculations → verification**. Prefer derived calculations from persisted truth; do not duplicate summary values unless a deliberate cache/metric is justified.
 
 ### External integration required — do not fake
+
 Real live fleet movement needs a genuine location source. Browser/device GPS can be used for a driver-facing capture flow without buying a fleet API, subject to user/device permission, but it is not an automatic truck telematics feed. Persist authorized location events in Firestore only at a controlled cadence; do not create high-frequency writes that burn quota.
 
 Map rendering/routing/traffic may require a provider account and key/token. Keep provider access behind server-side API routes/environment variables; never commit secrets or expose unrestricted server keys to the client. Google Routes or Mapbox are candidate providers and must be selected by the Product Owner before integration because cost, billing and provider terms differ.
 
 Do not block the rest of the product on GPS/maps. Complete all data-driven fleet intelligence first and leave the live-map integration behind an explicit capability boundary until a real provider/data source exists.
 
-### Execution order for remaining work
-1. Finish persisted operational truth: KM, timestamps, statuses, costs, rates and lifecycle fields.
-2. Add derived fleet intelligence and date filters from that truth.
-3. Complete workshop/inspection/tyre and supplier PO lifecycles.
-4. Complete invoice/payment/receivable/payable/accounting lifecycles.
-5. Add dashboard drill-downs and reporting.
-6. Integrate real location capture/provider only after provider choice and required credentials exist.
-
-For each phase: inspect current HEAD → inspect existing domain → extend current implementation (never replace it) → update rules only for actual new collections → build → commit/push coherent checkpoint → record the new state here.
-
-
 ## Dual-source live location readiness
 
-### Option A — driver device GPS is implemented
-- Use the browser Geolocation API only after an explicit user action and permission.
-- Location capture is HTTPS/secure-context only and must be user-visible: Start location / Stop location.
-- Throttle persisted points by both time and movement; never write every browser callback to Firestore.
-- Persist LIVE points in `truckLocationEvents` with source `driver_gps`, truck/trip linkage, accuracy, speed, heading and capture time.
-- Driver-role capture is allowed only for this location collection; it does not grant wider operations write access.
+### Driver device GPS
 
-### Option B — telematics provider takeover is implemented as an adapter boundary
-- `POST /api/telematics/ingest` accepts normalized provider events after server-secret authentication.
-- The provider is intentionally not hard-coded: choose the customer's actual GPS/telematics vendor first, then map that vendor's payload/auth to the normalized ingest contract.
-- Keep provider secrets server-only. Never put telematics secrets in NEXT_PUBLIC variables.
-- Google Maps is a map/routing display choice, not a truck GPS provider. A Google Maps API key is only needed when the real map/routing layer is switched on.
+- Browser Geolocation API is used only after explicit user action and permission.
+- `LocationCapturePanel` exposes Start/Stop location and persists throttled `truckLocationEvents`.
+- Driver-role writes are limited to location events by Firestore rules.
+- Browser/PWA GPS is foreground capture; do not claim background tracking while the app is closed.
+
+### Telematics provider boundary
+
+- `POST /api/telematics/ingest` remains the provider-neutral normalized ingestion boundary.
+- Provider choice and credentials are still external dependencies.
+- Google Maps is a map/routing display choice, not a truck GPS provider.
 - Do not claim live truck positions until real driver GPS points or telematics events exist.
 
-Current location checkpoint: browser GPS capture + normalized telematics ingestion foundation are in the authoritative app. Map rendering remains provider-gated so no API key or billing configuration is fabricated.
+## PWA readiness checkpoint
 
+The PWA is now beyond the shell-only baseline:
 
-## PWA and collaboration next checkpoint
-- PWA baseline is now native: manifest, standalone metadata, service-worker registration and custom offline fallback. Keep live Firestore mutations network-dependent unless an explicit offline mutation queue with conflict handling is designed.
-- Do not cache authenticated Firestore business responses blindly in the service worker. Cache the shell/fallback first; Firestore already manages client persistence separately where enabled.
-- Current inviteMember(uid...) is an internal member-assignment helper, not a complete email invitation system. A real invite must be email/token based before the invitee has a Firebase UID, then accepted only after authentication and verified server-side.
-- Preferred collaboration flow: Owner/Operations Manager chooses email + role → pending invite with random token and expiry → transactional email/link → invitee signs in → server verifies token/email/expiry → membership created atomically → invite marked accepted. Do not let a client self-create membership from a token by weakening Firestore rules.
+- Native manifest with standalone display, scope, portrait orientation and install metadata.
+- Service worker registration and offline navigation fallback remain in place.
+- `PwaBootstrap` now exposes the browser install prompt when supported and an offline connection notice.
+- `/[orgId]/my-trip` is the driver-first PWA surface: assigned trip, status progression, driver GPS capture and existing delivery/POD workflow handoff.
+- Driver trip status changes use a trusted server Route Handler rather than weakening Firestore trip rules.
+- Full offline CRUD is still deliberately not claimed. Authenticated business data caching, mutation queues and conflict resolution remain a later explicit design.
+- Driver GPS remains foreground/permission based; a native background location strategy is not claimed.
 
+## Workspace invitation checkpoint
 
-## Current completion checkpoint — operational intelligence through accounting control
+The old `inviteMember(orgId, invitedBy, member)` helper remains an internal UID-based assignment helper and is not the public invitation flow.
 
-The four remaining internal capability passes are now advanced as follows:
+The implemented collaboration flow is now:
 
-1. **Fleet intelligence:** period filtering, loaded/empty KM, utilisation, fuel efficiency, fuel cost/KM, route profit, variance and backhaul/empty-KM alerts are derived from persisted trip measurements. Driver GPS/telematics remains the truth source for live movement.
-2. **Workshop/fleet control:** persisted maintenance schedules, inspections, tyres and work-order domains remain the authoritative workshop model; lifecycle state must be updated in-place rather than creating duplicate records.
-3. **Money lifecycle:** invoice payments and supplier bills are now first-class organization-scoped records; invoice paid status is updated when recorded payments reach the invoice amount. Customer and payables registers are live from those records.
-4. **Accounting controls:** chart accounts and accounting periods are first-class organization-scoped records. Do not represent an accounting period as a UI-only date picker.
+`Owner/Operations Manager enters email + role → pending workspace invite → invited person signs in with Google → server verifies Firebase identity/email → pending invite is matched → membership is created atomically → invite is consumed → workspace opens.`
 
-### Business Controls route
+If the authenticated email has no pending invite, the existing company setup path remains available so the person can create their own workspace.
 
-/[orgId]/business-controls is the control workspace for receivables/payments, supplier bills/payables, chart accounts and accounting periods. It is intentionally an engine/control surface; existing v19 financial statement routes remain preserved.
+Implementation rules:
 
-### PWA baseline
+- Invitations live in top-level `workspaceInvites` and are server-controlled.
+- Invite records contain immutable role, normalized email, random-token hash, expiry and acceptance metadata.
+- Client Firestore access to `workspaceInvites` is denied; acceptance is performed through Firebase Admin on trusted Route Handlers.
+- A new invitation to the same email revokes the previous pending invite for that workspace.
+- Invite expiry is 7 days.
+- The Team & Invites route is available to Owner and Operations Manager roles.
+- No Firebase UID is required when the owner first enters the person's email.
+- No Firebase Storage, new auth provider or weakened membership rule is introduced.
+- Transactional email delivery is not fabricated; the current workflow persists the invitation and performs automatic email matching at Google sign-in. A real mail provider can be added later without changing membership semantics.
 
-- Manifest and standalone metadata are native to Next.js.
-- A service worker is registered after load.
-- Navigation has a custom offline fallback.
-- Do not claim full offline CRUD yet. Offline mutation queues, conflict resolution and authenticated data caching require an explicit later design.
+## Current product completion direction
 
-### Invite architecture audit
+The core v19 button/functionality pass is considered complete enough to move from chasing inert controls into product maturation. Future work should focus on:
 
-The existing inviteMember(orgId, invitedBy, member) helper assumes a Firebase UID already exists and immediately writes an active membership. It is **not** the correct public owner-email invitation flow.
+1. driver-first daily workflow and mobile/PWA usability;
+2. real workspace collaboration and role-aware access;
+3. real location provider/map integration only when a provider is selected;
+4. remaining reporting/drill-down depth from persisted truth;
+5. verification and deployment hardening.
 
-Next collaboration phase must use: pending invite email + immutable role + random token + expiry → invite link → sign-in → server-side token/email/expiry verification → atomic membership creation → invite consumed/revoked. Keep the acceptance write behind a trusted server Route Handler/Admin SDK rather than weakening client Firestore rules.
+Do not add controls merely because a competitor has a button. Every new control must lead to a real existing workflow or a newly justified persisted domain.
