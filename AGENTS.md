@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `7a466867b18f165e48b4680bf6d586c6b906d588`
+- Current application checkpoint: `cae324dfe835b92505a4817bb042db7aa554a462`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -45,11 +45,7 @@ Core operational chain:
 
 ### 1. Offline + Sync foundation — BASELINE COMPLETE
 
-- Firestore IndexedDB persistence.
-- Multi-tab persistence.
-- Online/offline/syncing/synced states.
-- Pending-write awareness.
-- Offline shell/navigation fallback.
+Firestore IndexedDB persistence, multi-tab persistence, online/offline/syncing/synced states, pending-write awareness and offline shell/navigation fallback.
 
 Not yet claimed: full offline CRUD, durable mutation queues, conflict resolution and complete offline business-data recovery.
 
@@ -73,17 +69,11 @@ Driver writes are server/role scoped; do not weaken Firestore rules to make UI w
 
 ### 5. Complete Dispatch — CORE COMPLETE
 
-Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch now also creates an in-app assignment notification for a linked driver and writes an immutable server audit event.
+Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch now creates an in-app assignment notification for a linked driver and an immutable server audit event.
 
 ### 6. Accounting — CORE CONTROL PASS COMPLETE
 
 Implemented chart of accounts, accounting periods/open-period posting control, journal balancing and reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection.
-
-Transaction actions:
-- invoice payment → payment record + AR/Cash journal;
-- supplier bill → AP/expense journal;
-- manual journal → balanced journal;
-- journal reversal → balanced reversal journal.
 
 Still not claimed complete: dedicated credit/debit-note domain, full tax/VAT configuration, bank/cash reconciliation and dedicated accounting statement/export workflows.
 
@@ -102,14 +92,16 @@ Implemented:
 - exception resolution through server boundary;
 - upload failure retention + retry;
 - missing-POD operational queue with ageing;
-- POD queue route in the application navigation;
-- POD state and invoice-readiness helper logic.
+- POD queue route in application navigation;
+- POD state and invoice-readiness helper logic;
+- server audit event on evidence upload;
+- operations notification when evidence is uploaded or rejected.
 
 Evidence stays on UploadThing. Firebase Storage is not used.
 
-Still to harden before calling #7 absolutely final: deeper offline mutation queueing for uploads, broader evidence/audit coverage across every mutation path, and tighter direct navigation/context from the POD queue into the exact Delivery Note.
+Still to harden before calling #7 absolutely final: deeper offline mutation queueing for uploads, broader audit coverage across every evidence mutation path, and tighter direct navigation/context from the POD queue into the exact Delivery Note.
 
-### 8. Notifications — FOUNDATION NOW IMPLEMENTED
+### 8. Notifications — FOUNDATION IMPLEMENTED
 
 Implemented:
 - persisted org-scoped notification records;
@@ -118,14 +110,15 @@ Implemented:
 - in-app notification center in the main shell;
 - server-side role notification dispatcher;
 - driver assignment notification from dispatch;
-- POD rejection notification to operations;
+- POD upload/rejection notifications;
+- driver delivery exception escalation notifications;
 - notification query index.
 
-Still to expand: missing POD notifications, route variance, maintenance/inspection, finance due dates, driver reminders, exception escalation, preferences and push/email providers. Never claim email/push is live without a real configured provider.
+Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and push/email providers. Never claim email/push is live without a real configured provider.
 
-### 9. Audit / Data Integrity — FOUNDATION NOW IMPLEMENTED
+### 9. Audit / Data Integrity — FOUNDATION IMPLEMENTED
 
-Implemented immutable server-written `auditEvents` domain and server audit writer, with Firestore client create/update/delete denied. Dispatch now records a server audit event.
+Implemented immutable server-written `auditEvents` domain and server audit writer, with Firestore client create/update/delete denied. Dispatch, evidence upload and driver delivery exceptions now create server audit events.
 
 Still to expand: audit coverage across all important mutations, idempotency keys, referential/orphan checks, concurrency protection, mutation queues and partial-workflow recovery.
 
