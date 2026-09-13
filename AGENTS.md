@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `057aa32c0724069e1fcd1ba087ed6ecd3027645a`
+- Current application checkpoint: `197a4200b6cfc33ba2fce83bf1d3be98c2a56277`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -103,7 +103,7 @@ Preserve data; show clear failures; retry when safe; explain next action; avoid 
 
 Do not repeatedly ask for approval for obvious safe next steps.
 
-## Verification note for checkpoint 057aa32
+## Verification note for checkpoint 197a420
 The authoritative branch is pushed through the GitHub contents API. A local `npm ci && npm run build` attempt was blocked by the execution environment because outbound DNS/network access to GitHub was unavailable, so this checkpoint must **not** be described as locally build-verified or Vercel-green. Vercel tooling currently exposes the connected `adminhub-global` project, but no connected Translend Vercel project was available to verify this branch deployment directly.
 
 ## Explicit non-goals
