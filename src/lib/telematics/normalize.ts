@@ -37,6 +37,7 @@ export function normalizeTelematicsPayload(body: TelematicsIngestPayload): Norma
   if (date.getTime() > Date.now() + 5 * 60 * 1000) throw new Error("capturedAt cannot be more than five minutes in the future.");
 
   return {
+    orgId: body.orgId.trim(),
     provider: body.provider.trim().toLowerCase(),
     providerVehicleId: body.providerVehicleId.trim(),
     providerEventId: body.providerEventId?.trim() || null,
