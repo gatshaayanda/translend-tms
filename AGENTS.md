@@ -228,3 +228,22 @@ Do not block the rest of the product on GPS/maps. Complete all data-driven fleet
 6. Integrate real location capture/provider only after provider choice and required credentials exist.
 
 For each phase: inspect current HEAD → inspect existing domain → extend current implementation (never replace it) → update rules only for actual new collections → build → commit/push coherent checkpoint → record the new state here.
+
+
+## Dual-source live location readiness
+
+### Option A — driver device GPS is implemented
+- Use the browser Geolocation API only after an explicit user action and permission.
+- Location capture is HTTPS/secure-context only and must be user-visible: Start location / Stop location.
+- Throttle persisted points by both time and movement; never write every browser callback to Firestore.
+- Persist LIVE points in `truckLocationEvents` with source `driver_gps`, truck/trip linkage, accuracy, speed, heading and capture time.
+- Driver-role capture is allowed only for this location collection; it does not grant wider operations write access.
+
+### Option B — telematics provider takeover is implemented as an adapter boundary
+- `POST /api/telematics/ingest` accepts normalized provider events after server-secret authentication.
+- The provider is intentionally not hard-coded: choose the customer's actual GPS/telematics vendor first, then map that vendor's payload/auth to the normalized ingest contract.
+- Keep provider secrets server-only. Never put telematics secrets in NEXT_PUBLIC variables.
+- Google Maps is a map/routing display choice, not a truck GPS provider. A Google Maps API key is only needed when the real map/routing layer is switched on.
+- Do not claim live truck positions until real driver GPS points or telematics events exist.
+
+Current location checkpoint: browser GPS capture + normalized telematics ingestion foundation are in the authoritative app. Map rendering remains provider-gated so no API key or billing configuration is fabricated.
