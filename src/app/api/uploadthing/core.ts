@@ -1,16 +1,17 @@
 import { createUploadthing } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 import type { FileRouter } from "uploadthing/next";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
-
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
-import type { OrgRole } from "@/types/core";
+import type { DeliveryEvidenceRef, OrgRole } from "@/types/core";
 import { ROLE_PERMISSIONS } from "@/types/core";
 
 const f = createUploadthing();
-
-const evidenceInput = z.object({ orgId: z.string().min(1), deliveryId: z.string().min(1), deliveryNoteId: z.string().min(1), kind: z.enum(["pod", "photo", "document", "other"]) });
+const evidenceInput = z.object({
+  orgId: z.string().min(1), deliveryId: z.string().min(1), deliveryNoteId: z.string().min(1),
+  kind: z.enum(["pod", "photo", "document", "other"]), required: z.boolean().default(false), replacesEvidenceId: z.string().min(1).optional(),
+});
 const fuelReceiptInput = z.object({ orgId: z.string().min(1), fuelLogId: z.string().min(1) });
 
 async function authenticateRequest(request: Request) {
@@ -61,15 +62,27 @@ export const ourFileRouter = {
     if (!deliverySnap.exists || !noteSnap.exists) throw new UploadThingError("Delivery record not found");
     const delivery = deliverySnap.data(); const note = noteSnap.data();
     if (delivery?.deliveryNoteId !== input.deliveryNoteId || note?.deliveryId !== input.deliveryId) throw new UploadThingError("Delivery and Delivery Note do not match");
-    return { uid: user.uid, orgId: input.orgId, role, deliveryId: input.deliveryId, deliveryNoteId: input.deliveryNoteId, kind: input.kind };
+    if (input.replacesEvidenceId) {
+      const refs = (note.evidenceRefs ?? []) as DeliveryEvidenceRef[];
+      const previous = refs.find((item) => item.id === input.replacesEvidenceId && (item.status ?? "active") !== "replaced");
+      if (!previous) throw new UploadThingError("The evidence selected for replacement was not found or has already been replaced.");
+    }
+    return { uid: user.uid, orgId: input.orgId, role, deliveryId: input.deliveryId, deliveryNoteId: input.deliveryNoteId, kind: input.kind, required: input.required, replacesEvidenceId: input.replacesEvidenceId ?? null };
   }).onUploadComplete(async ({ metadata, file }) => {
     const uploadedAt = Timestamp.now(); const db = getAdminDb();
-    const evidence = { id: file.key, key: file.key, url: file.ufsUrl, kind: metadata.kind, uploadedBy: metadata.uid, uploadedAt };
+    const [deliverySnap, noteSnap] = await Promise.all([db.doc(`organizations/${metadata.orgId}/deliveries/${metadata.deliveryId}`).get(), db.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`).get()]);
+    if (!deliverySnap.exists || !noteSnap.exists) throw new UploadThingError("Delivery record disappeared before evidence was finalized.");
+    const existing = ((noteSnap.data()?.evidenceRefs ?? []) as DeliveryEvidenceRef[]).map((item) => ({ ...item }));
+    const previous = metadata.replacesEvidenceId ? existing.find((item) => item.id === metadata.replacesEvidenceId) : null;
+    const version = previous ? (previous.version ?? 1) + 1 : Math.max(0, ...existing.filter((item) => item.kind === metadata.kind).map((item) => item.version ?? 1)) + 1;
+    if (previous) previous.status = "replaced";
+    const evidence: DeliveryEvidenceRef = { id: file.key, key: file.key, url: file.ufsUrl, kind: metadata.kind, uploadedBy: metadata.uid, uploadedAt, required: metadata.required, status: "active", version, replacesEvidenceId: previous?.id ?? null, reviewedBy: null, reviewedAt: null, rejectionReason: null };
+    const nextRefs = [...existing.filter((item) => item.id !== evidence.id), evidence];
     await Promise.all([
-      db.doc(`organizations/${metadata.orgId}/deliveries/${metadata.deliveryId}`).update({ evidenceRefs: FieldValue.arrayUnion(evidence), podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid }),
-      db.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`).update({ evidenceRefs: FieldValue.arrayUnion(evidence), podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid }),
+      db.doc(`organizations/${metadata.orgId}/deliveries/${metadata.deliveryId}`).update({ evidenceRefs: nextRefs, podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid }),
+      db.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`).update({ evidenceRefs: nextRefs, podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid }),
     ]);
-    return { uploadedBy: metadata.uid, organizationId: metadata.orgId, role: metadata.role, deliveryId: metadata.deliveryId, deliveryNoteId: metadata.deliveryNoteId, url: file.ufsUrl, key: file.key, kind: metadata.kind };
+    return { uploadedBy: metadata.uid, organizationId: metadata.orgId, role: metadata.role, deliveryId: metadata.deliveryId, deliveryNoteId: metadata.deliveryNoteId, url: file.ufsUrl, key: file.key, kind: metadata.kind, version };
   }),
   financeReceipt: f({ image: { maxFileSize: "8MB", maxFileCount: 1 }, pdf: { maxFileSize: "8MB", maxFileCount: 1 } }).input(fuelReceiptInput).middleware(async ({ req, input }) => {
     const user = await authenticateRequest(req); const role = await verifyOrganizationMembership(input.orgId, user.uid, true); const db = getAdminDb();
