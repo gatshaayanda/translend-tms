@@ -1,0 +1,2 @@
+"use client"; import { useEffect } from "react";
+export function PwaBootstrap(){useEffect(()=>{if("serviceWorker" in navigator) window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>undefined);},{once:true});},[]);return null;}
