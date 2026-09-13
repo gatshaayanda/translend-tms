@@ -33,6 +33,11 @@ service cloud.firestore {
         allow create, delete: if false;
       }
 
+      match /auditEvents/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create, update, delete: if false;
+      }
+
       match /customers/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId) || canEditFinance(orgId); allow delete: if false; }
       match /trucks/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /drivers/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
