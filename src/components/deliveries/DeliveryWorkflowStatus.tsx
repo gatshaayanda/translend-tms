@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { deliveryExceptionsRepo, deliveryNotesRepo, deliveriesRepo } from "@/lib/firebase/modules";
 import { deriveDeliveryPodState, isDeliveryInvoiceReady } from "@/lib/deliveries/workflow";
 import type { Delivery, DeliveryException, DeliveryNote } from "@/types/core";
@@ -20,6 +21,7 @@ export function DeliveryWorkflowStatus({
   onSaved: (note: DeliveryNote, delivery: Delivery | null) => void;
   onError: (message: string) => void;
 }) {
+  const { user } = useAuth();
   const [exceptions, setExceptions] = useState<DeliveryException[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -36,9 +38,7 @@ export function DeliveryWorkflowStatus({
     }
   };
 
-  useEffect(() => {
-    void loadExceptions();
-  }, [orgId, note.id, note.exceptionIds]);
+  useEffect(() => { void loadExceptions(); }, [orgId, note.id, note.exceptionIds]);
 
   const podState = useMemo(() => deriveDeliveryPodState(note, delivery, exceptions), [note, delivery, exceptions]);
   const invoiceReady = useMemo(() => isDeliveryInvoiceReady(note, delivery, exceptions), [note, delivery, exceptions]);
@@ -48,14 +48,18 @@ export function DeliveryWorkflowStatus({
   const canComplete = Boolean(delivery?.arrivalAt && delivery?.departureAt && receiverAcknowledged && hasEvidence && openExceptions.length === 0);
 
   const completeDelivery = async () => {
-    if (!userId || !delivery) return onError("You must be signed in to complete a delivery.");
+    if (!user || !userId || !delivery) return onError("You must be signed in to complete a delivery.");
     if (!canComplete) return onError("Complete arrival, departure, receiver acknowledgement and evidence, and resolve all open exceptions before completing the delivery.");
     setBusy(true);
     try {
-      await Promise.all([
-        deliveriesRepo.update(orgId, userId, delivery.id, { status: "delivered", podState: "complete" }),
-        deliveryNotesRepo.update(orgId, userId, note.id, { podState: "complete" }),
-      ]);
+      const token = await user.getIdToken();
+      const response = await fetch("/api/deliveries/workflow-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orgId, deliveryId: delivery.id, deliveryNoteId: note.id, action: "complete" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Delivery completion failed.");
       const [updatedNote, updatedDelivery] = await Promise.all([
         deliveryNotesRepo.getById(orgId, note.id),
         deliveriesRepo.getById(orgId, delivery.id),
@@ -76,7 +80,6 @@ export function DeliveryWorkflowStatus({
         <StatusCard label="Invoice readiness" value={loading ? "Loading…" : invoiceReady ? "Ready" : "Not ready"} />
         <StatusCard label="Open exceptions" value={loading ? "Loading…" : String(openExceptions.length)} />
       </div>
-
       <div className="mt-3 rounded-md border border-slate-800 bg-slate-950/70 p-3">
         <p className="text-xs text-slate-500">Completion requires arrival, departure, receiver acknowledgement, evidence and no open exceptions.</p>
         <button onClick={completeDelivery} disabled={busy || loading || !canComplete || delivery?.status === "delivered"} className="mt-3 rounded-md bg-emerald-700 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50">
