@@ -10,101 +10,14 @@
 
 import type { Timestamp } from "firebase/firestore";
 
-// ---------------------------------------------------------------
-// Environment / record hygiene
-// ---------------------------------------------------------------
-// Every business record must declare which "lane" it belongs to.
-// This is how we guarantee demo/seed data can NEVER leak into a
-// real customer workspace, and vice versa.
 export type RecordEnvironment = "LIVE" | "DEMO" | "SEED" | "FIXTURE";
+export interface BaseRecord { id: string; orgId: string; environment: RecordEnvironment; createdAt: Timestamp; createdBy: string; updatedAt: Timestamp; updatedBy: string; deletedAt: Timestamp | null; }
 
-export interface BaseRecord {
-  id: string;
-  orgId: string;
-  environment: RecordEnvironment;
-  createdAt: Timestamp;
-  createdBy: string;
-  updatedAt: Timestamp;
-  updatedBy: string;
-  /** Soft delete. Never hard-delete operational records. */
-  deletedAt: Timestamp | null;
-}
-
-// ---------------------------------------------------------------
-// Users & Organizations (workspaces)
-// ---------------------------------------------------------------
-export interface UserProfile {
-  uid: string;
-  email: string;
-  displayName: string;
-  photoURL: string | null;
-  /** The org the user last worked in. Used to skip the picker on
-   * next sign-in. Not a source of truth for access control. */
-  lastActiveOrgId: string | null;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export type OrgRole =
-  | "owner"
-  | "operations_manager"
-  | "dispatcher"
-  | "fleet_manager"
-  | "finance"
-  | "driver"
-  | "viewer";
-
-export const ORG_ROLES: OrgRole[] = [
-  "owner",
-  "operations_manager",
-  "dispatcher",
-  "fleet_manager",
-  "finance",
-  "driver",
-  "viewer",
-];
-
-export const ROLE_LABELS: Record<OrgRole, string> = {
-  owner: "Owner",
-  operations_manager: "Operations Manager",
-  dispatcher: "Dispatcher",
-  fleet_manager: "Fleet Manager",
-  finance: "Finance",
-  driver: "Driver",
-  viewer: "Viewer",
-};
-
-export interface Organization {
-  id: string;
-  name: string;
-  country: string;
-  currency: string; // ISO 4217, e.g. "BWP", "ZAR", "USD"
-  timezone: string; // IANA tz, e.g. "Africa/Gaborone"
-  ownerUid: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  /** Denormalized so security rules and UI don't need a members
-   * query just to check "does this org have anyone in it yet". */
-  memberCount: number;
-}
-
-export interface OrgMember {
-  uid: string;
-  orgId: string;
-  role: OrgRole;
-  email: string;
-  displayName: string;
-  invitedBy: string | null;
-  joinedAt: Timestamp;
-  status: "active" | "invited" | "suspended";
-}
-
-// Permission matrix — deliberately explicit rather than clever,
-// so it's auditable at a glance and cheap to extend per-module.
-export const ROLE_PERMISSIONS: Record<
-  OrgRole,
-  { manageOrg: boolean; manageMembers: boolean; editOperations: boolean; editFinance: boolean; driverAppOnly: boolean }
-> = {
+export interface UserProfile { uid: string; email: string; displayName: string; photoURL: string | null; lastActiveOrgId: string | null; createdAt: Timestamp; updatedAt: Timestamp; }
+export type OrgRole = "owner" | "operations_manager" | "dispatcher" | "fleet_manager" | "finance" | "driver" | "viewer";
+export const ORG_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "driver", "viewer"];
+export const ROLE_LABELS: Record<OrgRole, string> = { owner: "Owner", operations_manager: "Operations Manager", dispatcher: "Dispatcher", fleet_manager: "Fleet Manager", finance: "Finance", driver: "Driver", viewer: "Viewer" };
+export const ROLE_PERMISSIONS: Record<OrgRole, { manageOrg: boolean; manageMembers: boolean; editOperations: boolean; editFinance: boolean; driverAppOnly: boolean }> = {
   owner: { manageOrg: true, manageMembers: true, editOperations: true, editFinance: true, driverAppOnly: false },
   operations_manager: { manageOrg: false, manageMembers: true, editOperations: true, editFinance: false, driverAppOnly: false },
   dispatcher: { manageOrg: false, manageMembers: false, editOperations: true, editFinance: false, driverAppOnly: false },
@@ -114,125 +27,24 @@ export const ROLE_PERMISSIONS: Record<
   viewer: { manageOrg: false, manageMembers: false, editOperations: false, editFinance: false, driverAppOnly: false },
 };
 
-// ---------------------------------------------------------------
-// Commercial — Customers
-// ---------------------------------------------------------------
-export interface Customer extends BaseRecord {
-  name: string;
-  billingAddress: string;
-  country: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  currency: string;
-  paymentTermsDays: number;
-  status: "active" | "inactive" | "prospect";
-  notes: string;
-  /** Denormalized rollups, recomputed by a backend job — never
-   * hand-edited from the client. */
-  stats: {
-    openJobs: number;
-    activeTrips: number;
-    outstandingBalance: number;
-    lastActivityAt: Timestamp | null;
-  };
-}
+export interface Organization { id: string; name: string; country: string; currency: string; timezone: string; ownerUid: string; createdAt: Timestamp; updatedAt: Timestamp; memberCount: number; }
+export interface OrgMember { uid: string; orgId: string; role: OrgRole; email: string; displayName: string; invitedBy: string | null; joinedAt: Timestamp; status: "active" | "invited" | "suspended"; }
 
-// ---------------------------------------------------------------
-// Fleet — Trucks
-// ---------------------------------------------------------------
+export interface Customer extends BaseRecord { name: string; billingAddress: string; country: string; contactName: string; contactEmail: string; contactPhone: string; currency: string; paymentTermsDays: number; status: "active" | "inactive" | "prospect"; notes: string; stats: { openJobs: number; activeTrips: number; outstandingBalance: number; lastActivityAt: Timestamp | null }; }
 export type TruckStatus = "available" | "on_trip" | "in_maintenance" | "out_of_service";
-
-export interface Truck extends BaseRecord {
-  registrationNumber: string;
-  make: string;
-  model: string;
-  year: number;
-  vinNumber: string;
-  capacityTons: number;
-  fuelType: "diesel" | "petrol" | "electric" | "hybrid";
-  status: TruckStatus;
-  odometerKm: number;
-  assignedDriverId: string | null;
-  complianceExpiryDates: {
-    licenseDisc: Timestamp | null;
-    roadworthy: Timestamp | null;
-    insurance: Timestamp | null;
-  };
-  notes: string;
-}
-
-// ---------------------------------------------------------------
-// Fleet — Drivers
-// ---------------------------------------------------------------
+export interface Truck extends BaseRecord { registrationNumber: string; make: string; model: string; year: number; vinNumber: string; capacityTons: number; fuelType: "diesel" | "petrol" | "electric" | "hybrid"; status: TruckStatus; odometerKm: number; assignedDriverId: string | null; complianceExpiryDates: { licenseDisc: Timestamp | null; roadworthy: Timestamp | null; insurance: Timestamp | null }; notes: string; }
 export type DriverStatus = "available" | "on_trip" | "on_leave" | "suspended";
+export interface Driver extends BaseRecord { fullName: string; phone: string; email: string; licenseNumber: string; licenseClass: string; licenseExpiry: Timestamp | null; status: DriverStatus; assignedTruckId: string | null; linkedUid: string | null; notes: string; }
 
-export interface Driver extends BaseRecord {
-  fullName: string;
-  phone: string;
-  email: string;
-  licenseNumber: string;
-  licenseClass: string;
-  licenseExpiry: Timestamp | null;
-  status: DriverStatus;
-  assignedTruckId: string | null;
-  linkedUid: string | null; // if the driver also has app login access
-  notes: string;
-}
-
-// ---------------------------------------------------------------
-// Operations — Jobs, Trips
-// ---------------------------------------------------------------
 export type JobStatus = "draft" | "confirmed" | "dispatched" | "in_progress" | "completed" | "cancelled";
-
-export interface Job extends BaseRecord {
-  jobNumber: string;
-  customerId: string;
-  customerName: string; // denormalized for list rendering
-  origin: string;
-  destination: string;
-  cargoDescription: string;
-  cargoWeightTons: number;
-  requestedPickupDate: Timestamp;
-  requestedDeliveryDate: Timestamp;
-  rate: number;
-  currency: string;
-  status: JobStatus;
-  notes: string;
-}
-
+export interface Job extends BaseRecord { jobNumber: string; customerId: string; customerName: string; origin: string; destination: string; cargoDescription: string; cargoWeightTons: number; requestedPickupDate: Timestamp; requestedDeliveryDate: Timestamp; rate: number; currency: string; status: JobStatus; notes: string; }
 export type TripStatus = "planned" | "en_route_pickup" | "loading" | "in_transit" | "unloading" | "completed" | "exception";
+export interface Trip extends BaseRecord { jobId: string; jobNumber: string; truckId: string; truckRegistration: string; driverId: string; driverName: string; status: TripStatus; plannedStart: Timestamp; plannedEnd: Timestamp; actualStart: Timestamp | null; actualEnd: Timestamp | null; currentLocation: string | null; lastCheckpointAt: Timestamp | null; }
 
-export interface Trip extends BaseRecord {
-  jobId: string;
-  jobNumber: string;
-  truckId: string;
-  truckRegistration: string;
-  driverId: string;
-  driverName: string;
-  status: TripStatus;
-  plannedStart: Timestamp;
-  plannedEnd: Timestamp;
-  actualStart: Timestamp | null;
-  actualEnd: Timestamp | null;
-  currentLocation: string | null;
-  lastCheckpointAt: Timestamp | null;
-}
-
-// ---------------------------------------------------------------
-// Delivery — POD & Exceptions
-// ---------------------------------------------------------------
 export type DeliveryStatus = "pending" | "delivered" | "partial" | "exception";
-
 export type DeliveryAcknowledgementRole = "driver" | "foreman" | "receiver";
-
-export interface DeliveryAcknowledgement {
-  role: DeliveryAcknowledgementRole;
-  name: string;
-  uid: string | null;
-  acknowledgedAt: Timestamp;
-}
-
+export interface DeliveryAcknowledgement { role: DeliveryAcknowledgementRole; name: string; uid: string | null; acknowledgedAt: Timestamp; }
+export type DeliveryEvidenceStatus = "active" | "approved" | "rejected" | "replaced";
 export interface DeliveryEvidenceRef {
   id: string;
   key: string;
@@ -240,107 +52,20 @@ export interface DeliveryEvidenceRef {
   kind: "pod" | "photo" | "document" | "other";
   uploadedBy: string;
   uploadedAt: Timestamp;
+  required?: boolean;
+  status?: DeliveryEvidenceStatus;
+  version?: number;
+  replacesEvidenceId?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: Timestamp | null;
+  rejectionReason?: string | null;
 }
-
 export type DeliveryPodState = "not_started" | "incomplete" | "complete";
-
-export interface MaterialLine {
-  id: string;
-  description: string;
-  materialCode: string | null;
-  quantity: number;
-  unit: string;
-  expectedQuantity: number | null;
-  notes: string;
-}
-
-export interface DeliveryNote extends BaseRecord {
-  noteReference: string;
-  noteDateTime: Timestamp;
-  jobId: string;
-  tripId: string;
-  deliveryId: string;
-  suppliedTo: string;
-  customerName: string;
-  vehicleRegistration: string;
-  deliveryLocation: string;
-  driverId: string;
-  driverName: string;
-  orderReference: string | null;
-  podReference: string | null;
-  loadingPoint: string | null;
-  receivedByName: string;
-  receivedByRole: string | null;
-  notes: string;
-  materialLines: MaterialLine[];
-  arrivalAt: Timestamp | null;
-  arrivalBy: string | null;
-  departureAt: Timestamp | null;
-  departureBy: string | null;
-  acknowledgements: DeliveryAcknowledgement[];
-  evidenceRefs: DeliveryEvidenceRef[];
-  exceptionIds: string[];
-  podState: DeliveryPodState;
-}
-
-export type DeliveryExceptionCategory =
-  | "shortage"
-  | "damage"
-  | "quantity_discrepancy"
-  | "wrong_material"
-  | "refused"
-  | "site"
-  | "vehicle"
-  | "other";
-
+export interface MaterialLine { id: string; description: string; materialCode: string | null; quantity: number; unit: string; expectedQuantity: number | null; notes: string; }
+export interface DeliveryNote extends BaseRecord { noteReference: string; noteDateTime: Timestamp; jobId: string; tripId: string; deliveryId: string; suppliedTo: string; customerName: string; vehicleRegistration: string; deliveryLocation: string; driverId: string; driverName: string; orderReference: string | null; podReference: string | null; loadingPoint: string | null; receivedByName: string; receivedByRole: string | null; notes: string; materialLines: MaterialLine[]; arrivalAt: Timestamp | null; arrivalBy: string | null; departureAt: Timestamp | null; departureBy: string | null; acknowledgements: DeliveryAcknowledgement[]; evidenceRefs: DeliveryEvidenceRef[]; exceptionIds: string[]; podState: DeliveryPodState; }
+export type DeliveryExceptionCategory = "shortage" | "damage" | "quantity_discrepancy" | "wrong_material" | "refused" | "site" | "vehicle" | "other";
 export type DeliveryExceptionStatus = "open" | "resolved" | "void";
+export interface DeliveryException extends BaseRecord { deliveryNoteId: string; deliveryId: string; category: DeliveryExceptionCategory; description: string; reportedBy: string; reportedAt: Timestamp; status: DeliveryExceptionStatus; evidenceRefs: DeliveryEvidenceRef[]; resolutionNotes: string | null; resolvedBy: string | null; resolvedAt: Timestamp | null; }
+export interface Delivery extends BaseRecord { tripId: string; jobId: string; status: DeliveryStatus; deliveredAt: Timestamp | null; receivedByName: string; podFileUrl: string | null; signatureUrl: string | null; exceptionReason: string | null; deliveryNoteId?: string | null; arrivalAt?: Timestamp | null; arrivalBy?: string | null; departureAt?: Timestamp | null; departureBy?: string | null; acknowledgements?: DeliveryAcknowledgement[]; evidenceRefs?: DeliveryEvidenceRef[]; exceptionIds?: string[]; podState?: DeliveryPodState; }
 
-export interface DeliveryException extends BaseRecord {
-  deliveryNoteId: string;
-  deliveryId: string;
-  category: DeliveryExceptionCategory;
-  description: string;
-  reportedBy: string;
-  reportedAt: Timestamp;
-  status: DeliveryExceptionStatus;
-  evidenceRefs: DeliveryEvidenceRef[];
-  resolutionNotes: string | null;
-  resolvedBy: string | null;
-  resolvedAt: Timestamp | null;
-}
-
-export interface Delivery extends BaseRecord {
-  tripId: string;
-  jobId: string;
-  status: DeliveryStatus;
-  deliveredAt: Timestamp | null;
-  receivedByName: string;
-  /** Legacy field retained for existing records; new evidence uses UploadThing refs. */
-  podFileUrl: string | null;
-  signatureUrl: string | null;
-  exceptionReason: string | null;
-  deliveryNoteId?: string | null;
-  arrivalAt?: Timestamp | null;
-  arrivalBy?: string | null;
-  departureAt?: Timestamp | null;
-  departureBy?: string | null;
-  acknowledgements?: DeliveryAcknowledgement[];
-  evidenceRefs?: DeliveryEvidenceRef[];
-  exceptionIds?: string[];
-  podState?: DeliveryPodState;
-}
-
-// ---------------------------------------------------------------
-// Control Tower aggregation shape (client-computed for now;
-// intended to migrate to a scheduled aggregation job later)
-// ---------------------------------------------------------------
-export interface ControlTowerSnapshot {
-  activeTrips: number;
-  jobsAwaitingDispatch: number;
-  jobsDelayed: number;
-  trucksAvailable: number;
-  trucksInMaintenance: number;
-  driversAvailable: number;
-  deliveriesExceptionCount: number;
-  generatedAt: Timestamp;
-}
+export interface ControlTowerSnapshot { activeTrips: number; jobsAwaitingDispatch: number; jobsDelayed: number; trucksAvailable: number; trucksInMaintenance: number; driversAvailable: number; deliveriesExceptionCount: number; generatedAt: Timestamp; }
