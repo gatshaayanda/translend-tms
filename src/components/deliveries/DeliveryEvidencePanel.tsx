@@ -19,6 +19,7 @@ export function DeliveryEvidencePanel({ orgId, note, onSaved, onError }: { orgId
   const [replaceId, setReplaceId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [reviewing, setReviewing] = useState<string | null>(null);
+  const [retryFile, setRetryFile] = useState<File | null>(null);
   const canReview = Boolean(activeMembership?.role && REVIEW_ROLES.has(activeMembership.role));
   const activeRefs = note.evidenceRefs.filter((item) => (item.status ?? "active") !== "replaced");
 
@@ -32,9 +33,25 @@ export function DeliveryEvidencePanel({ orgId, note, onSaved, onError }: { orgId
       await uploadDeliveryEvidence({ user, orgId, deliveryId: note.deliveryId, deliveryNoteId: note.id, kind, file, ...(replaceId ? { replacesEvidenceId: replaceId } : {}) });
       const updated = await deliveryNotesRepo.getById(orgId, note.id);
       if (!updated) throw new Error("Evidence uploaded but the Delivery Note could not be reloaded.");
-      setReplaceId(""); onSaved(updated);
-    } catch (err) { onError(err instanceof Error ? err.message : "Failed to upload delivery evidence."); }
-    finally { setUploading(false); }
+      setReplaceId(""); setRetryFile(null); onSaved(updated);
+    } catch (err) {
+      setRetryFile(file);
+      onError(err instanceof Error ? err.message : "Failed to upload delivery evidence. The file is retained here so you can retry.");
+    } finally { setUploading(false); }
+  };
+
+  const openEvidence = async (evidence: DeliveryEvidenceRef) => {
+    if (!user) return onError("You must be signed in to view evidence.");
+    try {
+      const token = await user.getIdToken();
+      const params = new URLSearchParams({ orgId, deliveryId: note.deliveryId, deliveryNoteId: note.id, evidenceId: evidence.id });
+      const response = await fetch(`/api/deliveries/evidence?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error ?? "Evidence could not be opened."); }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (err) { onError(err instanceof Error ? err.message : "Evidence could not be opened. Please retry."); }
   };
 
   const review = async (evidence: DeliveryEvidenceRef, action: "approve_evidence" | "reject_evidence") => {
@@ -61,6 +78,7 @@ export function DeliveryEvidencePanel({ orgId, note, onSaved, onError }: { orgId
       <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-900">{uploading ? "Uploading…" : "Choose image or PDF"}<input className="sr-only" type="file" accept="image/*,application/pdf" disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ""; if (file) void upload(file); }} /></label>
       <select className="input" value={replaceId} onChange={(event) => setReplaceId(event.target.value)} disabled={uploading || activeRefs.length === 0}><option value="">New evidence</option>{activeRefs.filter((item) => item.kind === kind).map((item) => <option key={item.id} value={item.id}>Replace v{item.version ?? 1} · {item.kind.toUpperCase()}</option>)}</select>
     </div>
-    <div className="mt-3 space-y-2">{note.evidenceRefs.length === 0 ? <p className="text-xs text-slate-600">No evidence uploaded yet.</p> : note.evidenceRefs.map((evidence: DeliveryEvidenceRef) => <div key={evidence.id} className="flex flex-col gap-2 rounded-md border border-slate-800 px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between"><a href={evidence.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-slate-300 hover:text-sky-300">{evidence.kind.toUpperCase()} · v{evidence.version ?? 1} · {evidence.status ?? "active"}{evidence.required ? " · required" : ""}</a>{canReview && (evidence.status ?? "active") !== "replaced" && <div className="flex shrink-0 gap-2"><button disabled={reviewing === evidence.id} onClick={() => void review(evidence, "approve_evidence")} className="text-emerald-300 hover:text-emerald-200 disabled:opacity-50">Approve</button><button disabled={reviewing === evidence.id} onClick={() => void review(evidence, "reject_evidence")} className="text-red-300 hover:text-red-200 disabled:opacity-50">Reject</button></div>}</div>)}</div>
+    {retryFile && <div className="mt-2 flex items-center justify-between rounded-md border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-200"><span>Upload failed. The selected file is ready to retry.</span><button disabled={uploading} onClick={() => void upload(retryFile)} className="font-medium hover:underline disabled:opacity-50">Retry upload</button></div>}
+    <div className="mt-3 space-y-2">{note.evidenceRefs.length === 0 ? <p className="text-xs text-slate-600">No evidence uploaded yet.</p> : note.evidenceRefs.map((evidence: DeliveryEvidenceRef) => <div key={evidence.id} className="flex flex-col gap-2 rounded-md border border-slate-800 px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between"><button onClick={() => void openEvidence(evidence)} className="min-w-0 truncate text-left text-slate-300 hover:text-sky-300">{evidence.kind.toUpperCase()} · v{evidence.version ?? 1} · {evidence.status ?? "active"}{evidence.required ? " · required" : ""}</button>{canReview && (evidence.status ?? "active") !== "replaced" && <div className="flex shrink-0 gap-2"><button disabled={reviewing === evidence.id} onClick={() => void review(evidence, "approve_evidence")} className="text-emerald-300 hover:text-emerald-200 disabled:opacity-50">Approve</button><button disabled={reviewing === evidence.id} onClick={() => void review(evidence, "reject_evidence")} className="text-red-300 hover:text-red-200 disabled:opacity-50">Reject</button></div>}</div>)}</div>
   </section>;
 }
