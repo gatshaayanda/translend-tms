@@ -3,6 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import type { DeliveryEvidenceRef, OrgRole } from "@/types/core";
 import { notifyOrgRoles } from "@/lib/notifications/server";
+import { recordAuditEvent } from "@/lib/audit/server";
 
 const EDIT_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager"];
 
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
 
     const db = getAdminDb();
     const memberSnap = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
-    if (!memberSnap.exists || memberSnap.data()?.status !== "active" || !EDIT_ROLES.includes(memberSnap.data()?.role as OrgRole)) return NextResponse.json({ error: "Delivery operations access required." }, { status: 403 });
+    const memberRole = memberSnap.data()?.role as OrgRole | undefined;
+    if (!memberSnap.exists || memberSnap.data()?.status !== "active" || !memberRole || !EDIT_ROLES.includes(memberRole)) return NextResponse.json({ error: "Delivery operations access required." }, { status: 403 });
     const deliveryRef = db.doc(`organizations/${orgId}/deliveries/${deliveryId}`);
     const noteRef = db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`);
     const [deliverySnap, noteSnap] = await Promise.all([deliveryRef.get(), noteRef.get()]);
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
         deliveryRef.update({ status: "delivered", deliveredAt: now, podState: "complete", updatedAt: now, updatedBy: user.uid }),
         noteRef.update({ podState: "complete", updatedAt: now, updatedBy: user.uid }),
       ]);
+      await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: memberRole, action: "complete", entityType: "delivery", entityId: deliveryId, summary: `Delivery Note ${deliveryNoteId.slice(0, 8)} completed after POD validation.`, metadata: { deliveryNoteId, approvedRequiredPod: true } });
       return NextResponse.json({ ok: true, action });
     }
 
@@ -63,8 +66,9 @@ export async function POST(request: Request) {
         deliveryRef.update({ evidenceRefs: refs, podState: "incomplete", updatedAt: now, updatedBy: user.uid }),
         noteRef.update({ evidenceRefs: refs, podState: "incomplete", updatedAt: now, updatedBy: user.uid }),
       ]);
+      await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: memberRole, action: action === "approve_evidence" ? "approve" : "reject", entityType: "deliveryEvidence", entityId: evidenceId, summary: `${action === "approve_evidence" ? "Approved" : "Rejected"} evidence ${evidenceId.slice(0, 8)} on Delivery Note ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryId, deliveryNoteId, evidenceKind: evidence.kind, rejectionReason: action === "reject_evidence" ? rejectionReason : null } });
       if (action === "reject_evidence") {
-        await notifyOrgRoles({ orgId, roles: ["owner", "operations_manager", "dispatcher"], type: "pod_rejected", severity: "warning", title: "POD rejected", message: `Evidence for delivery ${deliveryNoteId.slice(0, 8)} was rejected: ${rejectionReason}`, href: `/${orgId}/deliveries`, sourceId: deliveryId, sourceType: "delivery" });
+        await notifyOrgRoles({ orgId, roles: ["owner", "operations_manager", "dispatcher"], type: "pod_rejected", severity: "warning", title: "POD rejected", message: `Evidence for delivery ${deliveryNoteId.slice(0, 8)} was rejected: ${rejectionReason}`, href: `/${orgId}/deliveries?deliveryNoteId=${encodeURIComponent(deliveryNoteId)}`, sourceId: deliveryId, sourceType: "delivery" });
       }
       return NextResponse.json({ ok: true, action, evidenceId });
     }
@@ -85,6 +89,7 @@ export async function POST(request: Request) {
       deliveryRef.update({ status: delivery.status === "exception" ? "pending" : delivery.status, updatedAt: now, updatedBy: user.uid }),
       noteRef.update({ updatedAt: now, updatedBy: user.uid }),
     ]);
+    await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: memberRole, action: "resolve", entityType: "deliveryException", entityId: exceptionId, summary: `${status === "resolved" ? "Resolved" : "Voided"} delivery exception ${exceptionId.slice(0, 8)}.`, metadata: { deliveryId, deliveryNoteId, status, resolutionNotes: resolutionNotes || null } });
     return NextResponse.json({ ok: true, action, status });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Delivery workflow action failed." }, { status: 401 });
