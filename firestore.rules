@@ -3,46 +3,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() { return request.auth != null; }
+    function isOrgMember(orgId) { return isSignedIn() && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)) && get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.status == 'active'; }
+    function memberRole(orgId) { return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role; }
+    function canManageMembers(orgId) { return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager']; }
+    function canEditOperations(orgId) { return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager']; }
+    function canEditFinance(orgId) { return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'finance']; }
+    function isOwner(orgId) { return isOrgMember(orgId) && memberRole(orgId) == 'owner'; }
 
-    function isOrgMember(orgId) {
-      return isSignedIn()
-        && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid))
-        && get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.status == 'active';
-    }
-
-    function memberRole(orgId) {
-      return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
-    }
-
-    function canManageMembers(orgId) {
-      return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager'];
-    }
-
-    function canEditOperations(orgId) {
-      return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager'];
-    }
-
-    function canEditFinance(orgId) {
-      return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'finance'];
-    }
-
-    function isOwner(orgId) {
-      return isOrgMember(orgId) && memberRole(orgId) == 'owner';
-    }
-
-    match /users/{uid} {
-      allow read, write: if isSignedIn() && request.auth.uid == uid;
-    }
-
-    // Workspace invitations are server-controlled. The client never gets a rule
-    // path that can be used to self-create or self-accept membership.
-    match /workspaceInvites/{inviteId} {
-      allow read, write: if false;
-    }
-
-    match /{path=**}/members/{memberUid} {
-      allow read: if isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'active';
-    }
+    match /users/{uid} { allow read, write: if isSignedIn() && request.auth.uid == uid; }
+    match /workspaceInvites/{inviteId} { allow read, write: if false; }
+    match /{path=**}/members/{memberUid} { allow read: if isSignedIn() && resource.data.uid == request.auth.uid && resource.data.status == 'active'; }
 
     match /organizations/{orgId} {
       allow read: if isOrgMember(orgId);
@@ -55,6 +25,12 @@ service cloud.firestore {
         allow create: if isSignedIn() && ((memberUid == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.orgId == orgId && request.resource.data.role == 'owner' && request.resource.data.status == 'active') || canManageMembers(orgId));
         allow update: if canManageMembers(orgId) && (memberUid != request.auth.uid || (resource.data.role == request.resource.data.role && resource.data.status == request.resource.data.status));
         allow delete: if false;
+      }
+
+      match /notifications/{docId} {
+        allow read: if isOrgMember(orgId) && resource.data.recipientUid == request.auth.uid;
+        allow update: if isOrgMember(orgId) && resource.data.recipientUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt', 'updatedAt', 'updatedBy']);
+        allow create, delete: if false;
       }
 
       match /customers/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId) || canEditFinance(orgId); allow delete: if false; }
