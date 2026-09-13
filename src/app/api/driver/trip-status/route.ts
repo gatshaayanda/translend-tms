@@ -28,12 +28,26 @@ export async function POST(request: Request) {
     const currentIndex = DRIVER_STATUS_FLOW.indexOf(current);
     const nextIndex = DRIVER_STATUS_FLOW.indexOf(requestedStatus);
     if (nextIndex !== currentIndex + 1) return NextResponse.json({ error: "Trip status can only move forward one step at a time." }, { status: 409 });
+
     const patch: Record<string, unknown> = { status: requestedStatus, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid };
     if (requestedStatus === "in_transit" && !trip.data()?.actualStart) patch.actualStart = FieldValue.serverTimestamp();
     if (requestedStatus === "completed") patch.actualEnd = FieldValue.serverTimestamp();
-    await tripRef.update(patch);
+
+    await db.runTransaction(async (tx) => {
+      const latest = await tx.get(tripRef);
+      if (!latest.exists || latest.data()?.driverId !== driverId) throw new Error("This trip is no longer assigned to you.");
+      if (latest.data()?.status !== current) throw new Error("The trip changed before this update. Refresh and try again.");
+      tx.update(tripRef, patch);
+      if (requestedStatus === "completed") {
+        const data = latest.data()!;
+        const now = FieldValue.serverTimestamp();
+        tx.update(db.doc(`organizations/${orgId}/trucks/${data.truckId}`), { status: "available", assignedDriverId: null, updatedAt: now, updatedBy: user.uid });
+        tx.update(db.doc(`organizations/${orgId}/drivers/${data.driverId}`), { status: "available", assignedTruckId: null, updatedAt: now, updatedBy: user.uid });
+        tx.update(db.doc(`organizations/${orgId}/jobs/${data.jobId}`), { status: "completed", updatedAt: now, updatedBy: user.uid });
+      }
+    });
     return NextResponse.json({ ok: true, status: requestedStatus });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Trip update failed." }, { status: 401 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Trip update failed." }, { status: 400 });
   }
 }
