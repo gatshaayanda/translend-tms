@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import type { OrgRole, DeliveryEvidenceRef } from "@/types/core";
 
-const REVIEW_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer", "driver"];
+const ACCESS_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer", "driver"];
+const FULL_ACCESS_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer"];
 
 export async function GET(request: Request) {
   try {
@@ -18,17 +19,22 @@ export async function GET(request: Request) {
 
     const db = getAdminDb();
     const memberSnap = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
-    if (!memberSnap.exists || memberSnap.data()?.status !== "active" || !REVIEW_ROLES.includes(memberSnap.data()?.role as OrgRole)) return NextResponse.json({ error: "Organization access required." }, { status: 403 });
-    const [deliverySnap, noteSnap] = await Promise.all([
-      db.doc(`organizations/${orgId}/deliveries/${deliveryId}`).get(),
-      db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`).get(),
-    ]);
+    const role = memberSnap.data()?.role as OrgRole;
+    if (!memberSnap.exists || memberSnap.data()?.status !== "active" || !ACCESS_ROLES.includes(role)) return NextResponse.json({ error: "Organization access required." }, { status: 403 });
+    const [deliverySnap, noteSnap] = await Promise.all([db.doc(`organizations/${orgId}/deliveries/${deliveryId}`).get(), db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`).get()]);
     if (!deliverySnap.exists || !noteSnap.exists) return NextResponse.json({ error: "Delivery record not found." }, { status: 404 });
     if (deliverySnap.data()?.deliveryNoteId !== deliveryNoteId || noteSnap.data()?.deliveryId !== deliveryId) return NextResponse.json({ error: "Delivery and Delivery Note do not match." }, { status: 409 });
+
+    if (!FULL_ACCESS_ROLES.includes(role)) {
+      const driverSnap = await db.collection(`organizations/${orgId}/drivers`).where("linkedUid", "==", user.uid).limit(1).get();
+      if (driverSnap.empty) return NextResponse.json({ error: "Linked driver record not found." }, { status: 403 });
+      const tripSnap = await db.doc(`organizations/${orgId}/trips/${noteSnap.data()?.tripId}`).get();
+      if (!tripSnap.exists || tripSnap.data()?.driverId !== driverSnap.docs[0].id) return NextResponse.json({ error: "This delivery is not assigned to you." }, { status: 403 });
+    }
+
     const evidence = ((noteSnap.data()?.evidenceRefs ?? []) as DeliveryEvidenceRef[]).find((item) => item.id === evidenceId);
     if (!evidence || evidence.status === "replaced") return NextResponse.json({ error: "Evidence is not available." }, { status: 404 });
     if (!evidence.url) return NextResponse.json({ error: "Evidence file URL is missing." }, { status: 404 });
-
     const upstream = await fetch(evidence.url, { cache: "no-store" });
     if (!upstream.ok || !upstream.body) return NextResponse.json({ error: "Evidence file could not be retrieved. Please retry." }, { status: 502 });
     const headers = new Headers();
