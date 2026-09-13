@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { tripsRepo, tripMetricsRepo, trucksRepo } from "@/lib/firebase/modules";
 import type { Trip, Truck } from "@/types/core";
 import type { TripMetrics } from "@/types/fleet";
+import { LocationCapturePanel } from "@/components/location/LocationCapturePanel";
 
 export default function FleetIntelligencePage() {
   const { activeOrg } = useWorkspace();
@@ -80,6 +81,7 @@ export default function FleetIntelligencePage() {
     <section className="panel"><div className="section-header"><div><h2 className="section-title">Trip intelligence register</h2><p className="section-sub">Persisted measurements only.</p></div><span className="badge blue">{metrics.length} measured trips</span></div>
       {metrics.length ? <div className="list">{metrics.slice(0, 25).map(m => <div className="list-row" key={m.id}><div><strong>{m.truckRegistration} · {m.tripId.slice(0, 8)}</strong><div className="muted">{m.loadedKm + m.emptyKm} km total · {m.routeProgressPct}% progress · variance {m.routeVarianceKm.toFixed(1)} km</div></div><div className="text-right"><strong>{m.revenueAmount.toLocaleString()}</strong><div className="muted">{m.fuelCost.toLocaleString()} fuel</div></div></div>)}</div> : <div className="notice blue">No trip measurements have been recorded yet.</div>}
     </section>
+    {selectedTrip && <LocationCapturePanel orgId={activeOrg.id} truckId={selectedTrip.truckId} tripId={selectedTrip.id} />}
     <section className="panel"><h2 className="section-title">Fleet coverage</h2><p className="section-sub">{trucks.length} live trucks are available for measurement. GPS/live positioning remains a separate integration and is not represented as live until a provider is connected.</p></section>
   </div>;
 }
