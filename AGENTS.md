@@ -143,6 +143,10 @@ The project has `build`, `start` and `lint` scripts. Run the actual available ve
 - Finance/workshop UI action implementation: `9fbd8216ef4060ef8677ae5261bc7d7ce8a6b9b7`
 - Control-pass documentation: `434f3c683d936e879b743aac57b6f085042d9b15`
 - Workspace invites + driver PWA checkpoint: `f847e9b01acc0ef8529225bec638af2079c14ec3`
+- Firebase Admin lazy-initialization/build compatibility: `e036dcff361b0d05c76f304297266c60024f068b`
+- Invitation typing/build fix: `3dc39e5bf18717765d4c8f245ce4b23d2e5b6dbd`
+- Application recovery fallback: `7c1ce07ad71b8c288b19c3d41b2eab008d168428`
+- Driver/team action recovery: `30fdd647fa53b5abb39e9226ce70fbaa7eda4e08`
 
 The latest application code checkpoint above must be verified in Vercel before calling deployment green.
 
@@ -269,6 +273,25 @@ Implementation rules:
 - No Firebase UID is required when the owner first enters the person's email.
 - No Firebase Storage, new auth provider or weakened membership rule is introduced.
 - Transactional email delivery is not fabricated; the current workflow persists the invitation and performs automatic email matching at Google sign-in. A real mail provider can be added later without changing membership semantics.
+
+## Application failure and escalation standard
+
+The application must fail **honestly and recoverably**, not silently and not by replacing missing data with fabricated values.
+
+When a route, repository read, mutation, upload, API call or integration fails:
+
+1. Preserve the user's existing data; do not reset or fabricate records to make the screen look healthy.
+2. Show a clear, human-readable failure state at the point of failure where practical.
+3. Provide **Try again** or an equivalent safe recovery action when the operation is retryable.
+4. Explain what the user should do next: retry once, then report the issue to the responsible Translend developer/workspace administrator if it persists.
+5. Where useful, expose/copy a compact diagnostic report containing the error message, optional digest and timestamp. Never expose secrets, tokens, credentials or private business records in the diagnostic output.
+6. Route-level failures are caught by `src/app/error.tsx`; catastrophic application failures have `src/app/global-error.tsx`.
+7. Driver and Team workflows must surface loading, success and failure states rather than leaving a dead button or blank screen.
+8. API routes must return an appropriate non-2xx status and a safe human-readable `error` message for expected failures.
+9. Unsupported external integrations must say that the integration is not configured rather than pretending the feature is live.
+10. Escalation must be generic/configuration-safe: do not invent a developer name, email address or support channel. If a real support contact is later configured, it may be wired into this recovery pattern.
+
+This standard applies across the existing v19 engine as it is touched or audited. Do not rewrite every existing component merely to add cosmetic error handling; prioritize user-blocking workflows, shared infrastructure and newly modified surfaces, and preserve the real business behavior.
 
 ## Current product completion direction
 
