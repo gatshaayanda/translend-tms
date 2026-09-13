@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `d6116edb581020f18b09d5fbe77302945d566abe`
+- Current application checkpoint: `f5414635131575df3469aa5262f021f0e089146d`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -76,9 +76,9 @@ Still to expand: richer permission testing, company settings/defaults, invitatio
 ### 11. Reporting / Exports / Intelligence — OPERATIONAL PASS IMPLEMENTED
 Added an org-scoped Reports & Intelligence route with LIVE-derived operational, fleet/compliance, finance, customer, fuel, workshop and inspection reporting. Reports are derived from persisted Firestore truth; no fake values. Current selected report exports CSV, and browser Print/PDF is supported through the native print dialog. Reports are available from the primary application navigation.
 
-Current extension pass: POD readiness is now treated as a first-class operational report surface alongside jobs, fleet, finance and customers. The reporting UI may continue to gain richer date filters, trend charts, drill-down links, scheduled reports, server-side large-data exports and dedicated PDF generation.
+Current extension pass: **POD readiness is now a first-class report and KPI**. The Reports surface now shows POD items needing attention, exposes a dedicated POD readiness table, includes required-vs-approved evidence counts and rejected evidence state, supports CSV export of the POD report, and has a manual Refresh control. The refresh callback is stabilized for React effect dependencies.
 
-Still to expand: richer time-series trend charts, scheduled reports, server-side large-data exports, dedicated PDF generation and deeper drill-down links into source records.
+Still to expand: richer time-series trend charts, date/filter controls, scheduled reports, server-side large-data exports, dedicated PDF generation and deeper drill-down links into source records.
 
 ### 12. Full End-to-End + HTML Compliance — FINAL
 Validate `job → trip → delivery → POD → invoice → payment → journal → reports`, then verify real CRUD, failure/retry, offline/sync/conflicts, permissions/multi-user, mobile driver workflow, location permission, map/provider states and every important HTML/reference control mapped to a real route/data/mutation/state or an honest unsupported/configuration state.
@@ -87,7 +87,7 @@ Validate `job → trip → delivery → POD → invoice → payment → journal 
 
 GitHub `v19-authoritative` remains the active source of truth and development continues normally. Vercel Free currently reports `Resource is limited - try again in 24 hours (more than 100, code: "api-deployments-free-per-day")`, so repeated deployment attempts must be avoided until the quota resets. This is a deployment-capacity limitation, not evidence of a code failure. Accumulate coherent verified changes on GitHub, then make a deliberate Vercel deployment/promotion when capacity returns. Never claim the latest GitHub commit is live production until deployment status confirms it.
 
-Latest known checkpoint `d6116edb581020f18b09d5fbe77302945d566abe` fixes the Admin-vs-client Firebase Timestamp type mismatch in UploadThing evidence creation. The commit is pushed to `v19-authoritative`; Vercel had accepted it for deployment before the daily deployment quota was exhausted.
+Latest verified development commits include `d6116edb581020f18b09d5fbe77302945d566abe` for the UploadThing Admin/client Timestamp bridge and `f5414635131575df3469aa5262f021f0e089146d` for the Reports/POD readiness extension. Both are pushed to `v19-authoritative`.
 
 ## External capability boundaries
 
@@ -111,8 +111,8 @@ Preserve data; show clear failures; retry when safe; explain next action; avoid 
 
 Do not repeatedly ask for approval for obvious safe next steps.
 
-## Verification note for checkpoint d6116ed
-The authoritative branch is pushed through the GitHub contents API. A local `npm ci && npm run build` attempt was previously blocked by the execution environment because outbound DNS/network access to GitHub was unavailable, so this checkpoint must **not** be described as locally build-verified or Vercel-green. The latest Vercel limitation is the Free-plan daily deployment quota described above, not a confirmed build failure.
+## Verification note for checkpoint f541463
+The authoritative branch is pushed through the GitHub contents API. A local `npm ci && npm run build` attempt was previously blocked by the execution environment because outbound DNS/network access to GitHub was unavailable, so this checkpoint must **not** be described as locally build-verified or Vercel-green. The latest Vercel limitation is the Free-plan daily deployment quota described above, not a confirmed build failure. The Reports extension was reviewed through the GitHub commit diff; runtime/build verification still awaits an environment with dependency/network access or the next available Vercel deployment.
 
 ## Explicit non-goals
 
