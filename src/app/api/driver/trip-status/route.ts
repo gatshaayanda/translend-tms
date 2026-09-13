@@ -1,31 +1,27 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import type { TripStatus } from "@/types/core";
 
 const DRIVER_STATUS_FLOW: TripStatus[] = ["planned", "en_route_pickup", "loading", "in_transit", "unloading", "completed"];
 
-async function auth(request: Request) {
-  const header = request.headers.get("authorization");
-  if (!header?.startsWith("Bearer ")) throw new Error("Authentication required.");
-  return adminAuth.verifyIdToken(header.slice(7));
-}
-
 export async function POST(request: Request) {
   try {
-    const user = await auth(request);
+    const header = request.headers.get("authorization");
+    if (!header?.startsWith("Bearer ")) throw new Error("Authentication required.");
+    const user = await getAdminAuth().verifyIdToken(header.slice(7));
     const body = await request.json();
     const orgId = String(body.orgId ?? "");
     const tripId = String(body.tripId ?? "");
     const requestedStatus = String(body.status ?? "") as TripStatus;
     if (!orgId || !tripId || !DRIVER_STATUS_FLOW.includes(requestedStatus)) return NextResponse.json({ error: "Trip and valid status are required." }, { status: 400 });
-
-    const member = await adminDb.doc(`organizations/${orgId}/members/${user.uid}`).get();
+    const db = getAdminDb();
+    const member = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
     if (!member.exists || member.data()?.status !== "active" || member.data()?.role !== "driver") return NextResponse.json({ error: "Driver access required." }, { status: 403 });
-    const driverSnap = await adminDb.collection(`organizations/${orgId}/drivers`).where("linkedUid", "==", user.uid).limit(1).get();
+    const driverSnap = await db.collection(`organizations/${orgId}/drivers`).where("linkedUid", "==", user.uid).limit(1).get();
     if (driverSnap.empty) return NextResponse.json({ error: "Your account is not linked to a driver record." }, { status: 403 });
     const driverId = driverSnap.docs[0].id;
-    const tripRef = adminDb.doc(`organizations/${orgId}/trips/${tripId}`);
+    const tripRef = db.doc(`organizations/${orgId}/trips/${tripId}`);
     const trip = await tripRef.get();
     if (!trip.exists || trip.data()?.driverId !== driverId) return NextResponse.json({ error: "This trip is not assigned to you." }, { status: 403 });
     const current = trip.data()?.status as TripStatus;
