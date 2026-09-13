@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { driversRepo, tripsRepo } from "@/lib/firebase/modules";
 import type { Driver, Trip, TripStatus } from "@/types/core";
 import { LocationCapturePanel } from "@/components/location/LocationCapturePanel";
+import { DriverDeliveryPanel } from "@/components/v19/DriverDeliveryPanel";
 
 const FLOW: TripStatus[] = ["planned", "en_route_pickup", "loading", "in_transit", "unloading", "completed"];
 const LABELS: Record<TripStatus, string> = {
@@ -282,15 +282,7 @@ export default function MyTripPage() {
 
       <LocationCapturePanel orgId={activeOrg.id} truckId={trip.truckId} tripId={trip.id} />
 
-      <section className="panel">
-        <div className="section-header">
-          <div>
-            <h2 className="section-title">Delivery & POD</h2>
-            <p className="section-sub">Use the existing delivery workflow for arrival, departure, acknowledgement, evidence and exceptions.</p>
-          </div>
-          <Link className="btn-primary" href={`/${activeOrg.id}/deliveries?tripId=${encodeURIComponent(trip.id)}`}>Open delivery workflow</Link>
-        </div>
-      </section>
+      <DriverDeliveryPanel orgId={activeOrg.id} tripId={trip.id} />
 
       <section className="panel">
         <div className="section-header">
