@@ -247,3 +247,10 @@ For each phase: inspect current HEAD → inspect existing domain → extend curr
 - Do not claim live truck positions until real driver GPS points or telematics events exist.
 
 Current location checkpoint: browser GPS capture + normalized telematics ingestion foundation are in the authoritative app. Map rendering remains provider-gated so no API key or billing configuration is fabricated.
+
+
+## PWA and collaboration next checkpoint
+- PWA baseline is now native: manifest, standalone metadata, service-worker registration and custom offline fallback. Keep live Firestore mutations network-dependent unless an explicit offline mutation queue with conflict handling is designed.
+- Do not cache authenticated Firestore business responses blindly in the service worker. Cache the shell/fallback first; Firestore already manages client persistence separately where enabled.
+- Current inviteMember(uid...) is an internal member-assignment helper, not a complete email invitation system. A real invite must be email/token based before the invitee has a Firebase UID, then accepted only after authentication and verified server-side.
+- Preferred collaboration flow: Owner/Operations Manager chooses email + role → pending invite with random token and expiry → transactional email/link → invitee signs in → server verifies token/email/expiry → membership created atomically → invite marked accepted. Do not let a client self-create membership from a token by weakening Firestore rules.
