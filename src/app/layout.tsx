@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { PwaBootstrap } from "@/components/pwa/PwaBootstrap";
 
 export const metadata: Metadata = {
   title: "Translend TMS · Truck Division",
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
+        <PwaBootstrap />
       </body>
     </html>
   );
