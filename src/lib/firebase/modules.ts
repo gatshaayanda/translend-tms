@@ -19,7 +19,7 @@ async function postFinanceAction(orgId: string, action: string, body: Record<str
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(String(payload.error ?? "Finance action failed."));
-  return payload as { ok: true; message?: string; invoiceId?: string; invoiceNumber?: string; fuelLogId?: string; journalEntryId?: string };
+  return payload as { ok: true; message?: string; invoiceId?: string; invoiceNumber?: string; fuelLogId?: string; journalEntryId?: string; paymentId?: string };
 }
 
 export const customersRepo = createRepository<Customer>("customers");
@@ -37,7 +37,28 @@ export const truckLocationEventsRepo = createRepository<TruckLocationEvent>("tru
 export const maintenanceSchedulesRepo = createRepository<MaintenanceSchedule>("maintenanceSchedules");
 export const vehicleInspectionsRepo = createRepository<VehicleInspection>("vehicleInspections");
 export const tyreRecordsRepo = createRepository<TyreRecord>("tyreRecords");
-export const invoicePaymentsRepo = createRepository<InvoicePayment>("invoicePayments");
+
+const invoicePaymentsBaseRepo = createRepository<InvoicePayment>("invoicePayments");
+export const invoicePaymentsRepo = {
+  ...invoicePaymentsBaseRepo,
+  create: async (
+    orgId: string,
+    _uid: string,
+    data: Omit<InvoicePayment, "id" | "orgId" | "environment" | "createdAt" | "createdBy" | "updatedAt" | "updatedBy" | "deletedAt">,
+    _environment: "LIVE" | "DEMO" | "SEED" | "FIXTURE" = "LIVE",
+  ) => {
+    if (_environment !== "LIVE") throw new Error("Invoice payment creation is available only for LIVE records.");
+    const result = await postFinanceAction(orgId, "invoice_payment", {
+      invoiceId: data.invoiceId,
+      amount: data.amount,
+      reference: data.reference,
+      method: data.method,
+    });
+    if (!result.paymentId) throw new Error("Payment was created without a payment id.");
+    return result.paymentId;
+  },
+};
+
 export const supplierBillsRepo = createRepository<SupplierBill>("supplierBills");
 export const chartAccountsRepo = createRepository<ChartAccount>("chartAccounts");
 export const accountingPeriodsRepo = createRepository<AccountingPeriod>("accountingPeriods");
