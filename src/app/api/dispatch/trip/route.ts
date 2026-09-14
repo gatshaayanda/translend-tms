@@ -23,8 +23,12 @@ export async function POST(request: Request) {
     const jobId = String(body.jobId ?? "");
     const truckId = String(body.truckId ?? "");
     const driverId = String(body.driverId ?? "");
+    const idempotencyKey = String(body.idempotencyKey ?? "");
     if (!orgId || !jobId || !truckId || !driverId) {
       throw new ApiError(400, "Job, truck, and driver are required.");
+    }
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      throw new ApiError(400, "A dispatch idempotency key is required.");
     }
 
     const db = getAdminDb();
@@ -34,14 +38,26 @@ export async function POST(request: Request) {
       throw new ApiError(403, "Dispatch access required.");
     }
 
+    const receiptRef = db.doc(`organizations/${orgId}/operationReceipts/dispatch_${idempotencyKey}`);
     const jobRef = db.doc(`organizations/${orgId}/jobs/${jobId}`);
     const truckRef = db.doc(`organizations/${orgId}/trucks/${truckId}`);
     const driverRef = db.doc(`organizations/${orgId}/drivers/${driverId}`);
     const tripRef = db.collection(`organizations/${orgId}/trips`).doc();
     let driverLinkedUid: string | null = null;
     let jobNumber = jobId;
+    let existingTripId: string | null = null;
 
     await db.runTransaction(async (tx) => {
+      const receiptSnap = await tx.get(receiptRef);
+      if (receiptSnap.exists) {
+        const receipt = receiptSnap.data()!;
+        if (receipt.operation !== "dispatch" || receipt.jobId !== jobId || receipt.truckId !== truckId || receipt.driverId !== driverId) {
+          throw new ApiError(409, "This dispatch key was already used for different dispatch data.");
+        }
+        existingTripId = typeof receipt.tripId === "string" ? receipt.tripId : null;
+        return;
+      }
+
       const [jobSnap, truckSnap, driverSnap] = await Promise.all([
         tx.get(jobRef),
         tx.get(truckRef),
@@ -62,9 +78,6 @@ export async function POST(request: Request) {
       if (job.deletedAt || truck.deletedAt || driver.deletedAt) {
         throw new ApiError(409, "One of the selected records is no longer active.");
       }
-      // The job, truck and driver are all read in the same transaction that writes
-      // their state. A concurrent dispatch therefore conflicts and is re-evaluated
-      // against the new status instead of creating a second assignment.
       if (job.status !== "confirmed") throw new ApiError(409, "Only a confirmed job can be dispatched.");
       if (truck.status !== "available") throw new ApiError(409, "The selected truck is no longer available.");
       if (driver.status !== "available") throw new ApiError(409, "The selected driver is no longer available.");
@@ -98,6 +111,17 @@ export async function POST(request: Request) {
       tx.update(jobRef, { status: "dispatched", updatedAt: now, updatedBy: user.uid });
       tx.update(truckRef, { status: "on_trip", assignedDriverId: driverId, updatedAt: now, updatedBy: user.uid });
       tx.update(driverRef, { status: "on_trip", assignedTruckId: truckId, updatedAt: now, updatedBy: user.uid });
+      tx.set(receiptRef, {
+        operation: "dispatch",
+        idempotencyKey,
+        orgId,
+        jobId,
+        truckId,
+        driverId,
+        tripId: tripRef.id,
+        createdAt: now,
+        createdBy: user.uid,
+      });
 
       recordAuditEvent({
         orgId,
@@ -107,13 +131,13 @@ export async function POST(request: Request) {
         entityType: "trip",
         entityId: tripRef.id,
         summary: `Dispatched ${jobNumber} to truck ${truckId} and driver ${driverId}.`,
-        metadata: { jobId, truckId, driverId },
+        metadata: { jobId, truckId, driverId, idempotencyKey },
         transaction: tx,
       });
     });
 
-    // Notification delivery is outside the business transaction: a transient
-    // notification failure must never make a successful dispatch look retryable.
+    if (existingTripId) return NextResponse.json({ ok: true, tripId: existingTripId, replayed: true });
+
     if (driverLinkedUid) {
       try {
         await notifyUsers({
