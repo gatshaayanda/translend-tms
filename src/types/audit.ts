@@ -1,7 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 import type { BaseRecord } from "@/types/core";
 
-export type AuditAction = "create" | "update" | "status_change" | "upload" | "approve" | "reject" | "complete" | "resolve" | "reverse";
+export type AuditAction = "create" | "update" | "status_change" | "upload" | "approve" | "reject" | "complete" | "resolve" | "reverse" | "arrive" | "depart" | "acknowledge";
 
 export interface AuditEvent extends BaseRecord {
   actorUid: string;
