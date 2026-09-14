@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 import { enableOfflinePersistence, waitForOfflineWrites } from "@/lib/firebase/client";
 import { syncQueuedDriverActions } from "@/lib/offline/driverActionQueue";
 
@@ -36,6 +38,7 @@ export function PwaBootstrap() {
 
     const onBeforeInstall = (event: Event) => { event.preventDefault(); setInstallEvent(event as InstallPromptEvent); };
     const onConnectionChange = () => { void syncNow(); };
+    const unsubscribeAuth = onAuthStateChanged(auth, () => { if (navigator.onLine) void syncNow(); });
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("online", onConnectionChange);
@@ -50,6 +53,7 @@ export function PwaBootstrap() {
     });
 
     return () => {
+      unsubscribeAuth();
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("online", onConnectionChange);
       window.removeEventListener("offline", onConnectionChange);
