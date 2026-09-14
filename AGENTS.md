@@ -3,7 +3,7 @@
 ## Authoritative project
 - Repository: `gatshaayanda/translend-tms`
 - Branch: `v19-authoritative`
-- Current checkpoint: `aed66e8b705435e63e5e4c0090726391fc63e7c9`
+- Current checkpoint: `6b8eed892ea4011d12c516effe8a8db6a0fd9a3f`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance-receipt transport.
@@ -57,6 +57,13 @@ Use `diff().affectedKeys()`/`unchangedKeys()` for field-level protection. Never 
 Accounting-period validation was previously performed with an ordinary Firestore read inside server transactions. That check was not part of the transaction's read set, so period closure could race a posting.
 
 Fixed: accounting-period queries are now read through the active Firestore transaction. Supplier-bill journal entries also retain the `supplierBillId` linkage. Finance errors now distinguish 401/403/400/404/409/500 classes instead of collapsing everything into one response status.
+
+### Job integrity and dispatch concurrency
+Job creation was relying too heavily on UI validation. A client could otherwise attempt to create a confirmed Job with an invalid customer reference, mismatched customer name, non-positive rate, negative weight or reversed dates. A dispatched Job could also have its customer/rate/scheduling fields edited directly after assignment.
+
+Fixed: Firestore Job-create rules now require a LIVE, non-deleted Customer in the same workspace, matching `customerName`, positive rate, non-negative weight and ordered timestamps. Sensitive Job fields remain editable while the Job is confirmed but are locked once it is dispatched; status remains server-controlled. The dispatch API now returns correct 401/403/404/409/500 semantics instead of collapsing business conflicts into 400. Dispatch already uses one transaction over Job + Truck + Driver, so concurrent attempts conflict and re-evaluate against the latest state rather than creating a second assignment.
+
+Prevention: validate business references and money/date invariants at the authorization boundary, not only in forms. Once dispatch has consumed a Job, protect the commercial identity and schedule from ordinary client edits.
 
 ## Offline/reliability checklist
 For every driver/field action:
