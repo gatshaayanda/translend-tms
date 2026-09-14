@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 
-const OPS_ROLES = new Set(["owner", "operations_manager", "finance"]);
+const ACCOUNTING_ROLES = new Set(["owner", "finance"]);
 
 async function context(request: Request, orgId: string) {
   const header = request.headers.get("authorization");
@@ -10,8 +10,8 @@ async function context(request: Request, orgId: string) {
   const user = await getAdminAuth().verifyIdToken(header.slice(7));
   const db = getAdminDb();
   const member = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
-  if (!member.exists || member.data()?.status !== "active" || !OPS_ROLES.has(String(member.data()?.role))) throw new Error("Accounting access required.");
-  return { user, db };
+  if (!member.exists || member.data()?.status !== "active" || !ACCOUNTING_ROLES.has(String(member.data()?.role))) throw new Error("Accounting access required.");
+  return { user, role: String(member.data()?.role), db };
 }
 
 async function openPeriod(db: Firestore, orgId: string, at: Timestamp) {
@@ -22,13 +22,35 @@ async function openPeriod(db: Firestore, orgId: string, at: Timestamp) {
   }) ?? null;
 }
 
+function audit(base: { orgId: string; uid: string; role: string }, action: string, entityType: string, entityId: string, summary: string, metadata: Record<string, string | number | boolean | null> = {}) {
+  const now = Timestamp.now();
+  return {
+    orgId: base.orgId,
+    environment: "LIVE",
+    createdAt: now,
+    createdBy: base.uid,
+    updatedAt: now,
+    updatedBy: base.uid,
+    deletedAt: null,
+    actorUid: base.uid,
+    actorRole: base.role,
+    action,
+    entityType,
+    entityId,
+    summary,
+    metadata,
+    occurredAt: now,
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const orgId = String(body.orgId ?? "");
     const action = String(body.action ?? "");
     if (!orgId || !action) return NextResponse.json({ error: "Organisation and accounting action are required." }, { status: 400 });
-    const { user, db } = await context(request, orgId);
+    const { user, role, db } = await context(request, orgId);
+    const actor = { orgId, uid: user.uid, role };
 
     if (action === "invoice_payment") {
       const invoiceId = String(body.invoiceId ?? "");
@@ -41,6 +63,7 @@ export async function POST(request: Request) {
       if (!invoiceSnap.exists || invoiceSnap.data()?.environment !== "LIVE") return NextResponse.json({ error: "Live invoice not found." }, { status: 404 });
       const invoice = invoiceSnap.data()!;
       const existing = await db.collection(`organizations/${orgId}/invoicePayments`).where("invoiceId", "==", invoiceId).where("environment", "==", "LIVE").where("deletedAt", "==", null).get();
+      if (existing.docs.some((d) => String(d.data().reference ?? "").trim().toLowerCase() === reference.toLowerCase())) return NextResponse.json({ error: "A payment with this reference is already recorded for this invoice." }, { status: 409 });
       const paid = existing.docs.reduce((sum, d) => sum + Number(d.data().amount || 0), 0);
       const outstanding = Math.max(0, Number(invoice.amount || 0) - paid);
       if (amount > outstanding) return NextResponse.json({ error: `Payment exceeds the outstanding balance of ${invoice.currency} ${outstanding.toFixed(2)}.` }, { status: 409 });
@@ -48,12 +71,14 @@ export async function POST(request: Request) {
       if (!await openPeriod(db, orgId, paidAt)) return NextResponse.json({ error: "No open accounting period covers the payment date." }, { status: 409 });
       const paymentRef = db.collection(`organizations/${orgId}/invoicePayments`).doc();
       const journalRef = db.collection(`organizations/${orgId}/journalEntries`).doc();
+      const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
       const fullyPaid = paid + amount >= Number(invoice.amount || 0);
       const batch = db.batch();
       const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
       batch.set(paymentRef, { ...base, invoiceId, invoiceNumber: invoice.invoiceNumber, customerId: invoice.customerId, customerName: invoice.customerName, amount, currency: invoice.currency, paidAt, reference, method });
       batch.update(invoiceRef, { status: fullyPaid ? "paid" : "issued", paidAt: fullyPaid ? paidAt : null, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
       batch.set(journalRef, { ...base, entryDate: paidAt, transactionType: "Customer payment", reference, amount, description: `Payment received for ${invoice.invoiceNumber}`, debitAccount: "Cash at bank", creditAccount: "Accounts Receivable" });
+      batch.set(auditRef, audit(actor, "create", "invoicePayment", paymentRef.id, `${fullyPaid ? "Full" : "Partial"} payment posted for ${invoice.invoiceNumber}.`, { invoiceId, amount, reference, fullyPaid }));
       await batch.commit();
       return NextResponse.json({ ok: true, message: fullyPaid ? "Invoice fully paid and posted." : "Partial payment posted." });
     }
@@ -64,14 +89,18 @@ export async function POST(request: Request) {
       const amount = Number(body.amount);
       const dueAt = new Date(String(body.dueAt ?? ""));
       if (!supplier || !reference || !Number.isFinite(amount) || amount <= 0 || Number.isNaN(dueAt.getTime())) return NextResponse.json({ error: "Supplier, reference, positive amount and due date are required." }, { status: 400 });
+      const duplicate = await db.collection(`organizations/${orgId}/supplierBills`).where("environment", "==", "LIVE").where("reference", "==", reference).where("supplier", "==", supplier).where("deletedAt", "==", null).limit(1).get();
+      if (!duplicate.empty) return NextResponse.json({ error: "A supplier bill with this supplier and reference already exists." }, { status: 409 });
       const createdAt = Timestamp.now();
       if (!await openPeriod(db, orgId, createdAt)) return NextResponse.json({ error: "No open accounting period covers the bill date." }, { status: 409 });
       const billRef = db.collection(`organizations/${orgId}/supplierBills`).doc();
       const journalRef = db.collection(`organizations/${orgId}/journalEntries`).doc();
+      const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
       const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
       const batch = db.batch();
       batch.set(billRef, { ...base, supplierPOId: body.supplierPOId ? String(body.supplierPOId) : null, supplier, reference, amount, currency: String(body.currency ?? "BWP"), dueAt: Timestamp.fromDate(dueAt), status: "open", paidAt: null });
       batch.set(journalRef, { ...base, entryDate: createdAt, transactionType: "Supplier bill", reference, amount, description: `Supplier bill from ${supplier}`, debitAccount: "Operating Expense", creditAccount: "Accounts Payable" });
+      batch.set(auditRef, audit(actor, "create", "supplierBill", billRef.id, `Supplier bill ${reference} created.`, { supplier, reference, amount }));
       await batch.commit();
       return NextResponse.json({ ok: true, message: "Supplier bill created and posted to Accounts Payable." });
     }
@@ -83,17 +112,24 @@ export async function POST(request: Request) {
       let debitAccount = String(body.debitAccount ?? "").trim();
       let creditAccount = String(body.creditAccount ?? "").trim();
       if (action === "reverse_journal") {
+        if (!sourceId) return NextResponse.json({ error: "Source journal entry is required for a reversal." }, { status: 400 });
         const source = await db.doc(`organizations/${orgId}/journalEntries/${sourceId}`).get();
         if (!source.exists || source.data()?.environment !== "LIVE") return NextResponse.json({ error: "Source journal entry not found." }, { status: 404 });
         const data = source.data()!;
+        if (data.reversedEntryId || data.reversedById) return NextResponse.json({ error: "This journal entry has already been reversed." }, { status: 409 });
         debitAccount = String(data.creditAccount); creditAccount = String(data.debitAccount);
       }
       if (!Number.isFinite(amount) || amount <= 0 || !debitAccount || !creditAccount || debitAccount === creditAccount || (!description && action === "manual_journal")) return NextResponse.json({ error: "A positive amount, two different accounts and a description are required." }, { status: 400 });
       const entryDate = Timestamp.now();
       if (!await openPeriod(db, orgId, entryDate)) return NextResponse.json({ error: "No open accounting period covers the journal date." }, { status: 409 });
       const ref = db.collection(`organizations/${orgId}/journalEntries`).doc();
+      const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
       const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
-      await ref.set({ ...base, entryDate, transactionType: action === "reverse_journal" ? "Reversal" : "Manual journal", reference: action === "reverse_journal" ? `REV-${sourceId.slice(0, 8).toUpperCase()}` : `JRN-${ref.id.slice(0, 8).toUpperCase()}`, amount, description: description || `Reversal of ${sourceId}`, debitAccount, creditAccount, reversedEntryId: action === "reverse_journal" ? sourceId : null });
+      const batch = db.batch();
+      batch.set(ref, { ...base, entryDate, transactionType: action === "reverse_journal" ? "Reversal" : "Manual journal", reference: action === "reverse_journal" ? `REV-${sourceId.slice(0, 8).toUpperCase()}` : `JRN-${ref.id.slice(0, 8).toUpperCase()}`, amount, description: description || `Reversal of ${sourceId}`, debitAccount, creditAccount, reversedEntryId: action === "reverse_journal" ? sourceId : null });
+      batch.set(auditRef, audit(actor, action === "reverse_journal" ? "reverse" : "create", "journalEntry", ref.id, action === "reverse_journal" ? `Journal ${sourceId.slice(0, 8)} reversed.` : "Manual journal posted.", { sourceId: sourceId || null, amount, debitAccount, creditAccount }));
+      if (action === "reverse_journal") batch.update(db.doc(`organizations/${orgId}/journalEntries/${sourceId}`), { reversedById: ref.id, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      await batch.commit();
       return NextResponse.json({ ok: true, message: action === "reverse_journal" ? "Reversal journal posted." : "Balanced journal entry posted." });
     }
 
