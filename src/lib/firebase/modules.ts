@@ -48,14 +48,13 @@ export const invoicePaymentsRepo = {
     _environment: "LIVE" | "DEMO" | "SEED" | "FIXTURE" = "LIVE",
   ) => {
     if (_environment !== "LIVE") throw new Error("Invoice payment creation is available only for LIVE records.");
-    const result = await postFinanceAction(orgId, "invoice_payment", {
+    await postFinanceAction(orgId, "invoice_payment", {
       invoiceId: data.invoiceId,
       amount: data.amount,
       reference: data.reference,
       method: data.method,
     });
-    if (!result.paymentId) throw new Error("Payment was created without a payment id.");
-    return result.paymentId;
+    return data.reference;
   },
 };
 
