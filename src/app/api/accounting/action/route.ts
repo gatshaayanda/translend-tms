@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 
     if (action === "manual_journal" || action === "reverse_journal") {
       const sourceId = String(body.sourceId ?? "");
-      const amount = Number(body.amount);
+      let amount = Number(body.amount);
       const description = String(body.description ?? "").trim();
       let debitAccount = String(body.debitAccount ?? "").trim();
       let creditAccount = String(body.creditAccount ?? "").trim();
@@ -107,6 +107,7 @@ export async function POST(request: Request) {
           if (!source.exists || source.data()?.environment !== "LIVE") throw new Error("Source journal entry not found.");
           sourceData = source.data() as Record<string, unknown>;
           if (sourceData.reversedEntryId || sourceData.reversedById) throw new Error("This journal entry has already been reversed.");
+          amount = Number(sourceData.amount);
           debitAccount = String(sourceData.creditAccount ?? "");
           creditAccount = String(sourceData.debitAccount ?? "");
         }
