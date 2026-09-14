@@ -25,8 +25,46 @@ A screen, button, Firestore document, offline banner or successful UI state is n
 - GPS/telematics: provider boundary exists; no fake locations or background-tracking claims.
 - Finance: invoice/payment/journal/fuel/supplier-bill server actions exist; finance stays online/server-controlled.
 - Reporting: LIVE Firestore-derived reporting exists.
+- **Canonical branded documents:** Translend Tax Invoice and Delivery Note are now an explicit product requirement. Printable documents must be generated from authoritative LIVE customer/job/delivery/POD/finance records and must preserve the supplied Translend document semantics and branding rather than producing generic invoice/POD templates.
 
-Still not claimed complete: full tax/VAT configuration, credit/debit notes, bank reconciliation, payroll/settlement, richer scheduled/export reporting, and provider-dependent email/push/telematics/map capabilities.
+Still not claimed complete: exact final printable Tax Invoice/Delivery Note template implementation and verification, full tax/VAT configuration, credit/debit notes, bank reconciliation, payroll/settlement, richer scheduled/export reporting, and provider-dependent email/push/telematics/map capabilities.
+
+## Canonical Translend printable documents
+The supplied Nicolaus M. Nshoya / Translend examples are the reference business documents for v19. Treat them as functional requirements, not merely visual inspiration.
+
+### Tax Invoice must support
+- Translend Proprietary Limited identity and physical/postal address fields.
+- Invoice date and unique invoice number.
+- Client reference / PO number.
+- Delivery Note number(s) linked to the invoice.
+- Issued-by, email and contact fields.
+- Customer physical/postal address and contact person/contact details.
+- Invoice notes covering the 48-hour claims/discrepancy window, load-measurement basis, VAT treatment, delivery acknowledgement by site representative signature/company stamp, and applicable vehicle/reference wording.
+- Line items with date, description, quantity, unit price and BWP amount.
+- Payment terms including E.O.M. and balance due.
+- Translend bank/payment details and invoice reference.
+- Totals/VAT presentation must come from authoritative finance data; never hard-code amounts into a document.
+
+### Delivery Note must support
+- Delivery Note number, date and time.
+- Company/supplied-to identity.
+- Delivery location.
+- Order number / POD reference.
+- Vehicle registration and driver name.
+- Loading point.
+- Delivered material/description, arrival, departure and quantity.
+- Driver and foreman acknowledgement/signature fields where applicable.
+- Received-by name, signature and cell/contact.
+- Standard receipt/discrepancy wording stating that shortages, damages or discrepancies should be noted at delivery.
+- Delivery Note must remain linked to the live Job, Trip and POD/evidence record.
+
+### Document integrity rules
+- Printable documents are downstream projections of authoritative records; they must not become a second source of truth.
+- Invoice delivery-note references must resolve to real records in the same workspace/customer/job chain.
+- A document must never silently invent, blank, or stale-copy customer, vehicle, driver, quantities, prices or financial totals when authoritative data exists.
+- Generated documents must preserve immutable document numbering/version semantics after issue; corrections should use controlled finance/operational workflows rather than silently rewriting issued records.
+- Document generation must be permission-controlled and auditable.
+- Verify print/PDF layout, pagination, BWP formatting, dates, signatures/evidence placeholders, and customer-facing wording against the canonical supplied examples.
 
 ## v19 hardening lessons
 ### Firebase Storage
@@ -107,6 +145,6 @@ Current hardening status:
 - **Truck management:** fixed in latest HEAD with Edit + server-controlled Retire; retirement is blocked server-side for trucks carrying an active trip. Needs production verification.
 
 After management/identity QA is closed and verified, continue the connected real-world chain:
-`owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting`.
+`owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting → canonical printable documents`.
 
 Finance must be validated as a connected consequence of completed POD, not treated as complete because finance server actions merely exist.
