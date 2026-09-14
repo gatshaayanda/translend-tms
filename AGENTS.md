@@ -23,7 +23,8 @@ A screen, button, Firestore document, offline banner or successful UI state is n
 - Offline operational work: Firestore persistence covers supported owner/operations data already loaded into the browser; durable IndexedDB action queue also covers safe server-controlled trip corrections and dispatch, with automatic replay and blocked terminal failures. Offline dispatch is transactionally idempotent. This is not a claim that the entire TMS is offline-capable.
 - Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
 - Fleet inspections/defects/work orders/offline replay: hardened path exists.
-- GPS/location: browser GPS capture exists for the active driver workflow. The initial permission request is deliberately made directly through the Start button's geolocation call path; an asynchronous Permissions API preflight is not placed in front of that request, avoiding loss of the browser user-gesture context. Blocked/denied errors receive an actionable recovery message, and tracking is not shown until a successful position is received. Background location is not claimed.
+- GPS/location: browser GPS capture exists for the active driver workflow. The initial permission request is deliberately made directly through the Start button's geolocation call path; an asynchronous Permissions API preflight is not placed in front of that request. GPS points are now persisted through the authenticated `/api/driver/location` server workflow instead of relying on a direct client Firestore create, so valid owner/operations/driver sessions are checked server-side and a client-side Firestore permission mismatch cannot masquerade as a GPS-save failure. Driver writes are additionally constrained to the linked driver's assigned truck/trip. Tracking is not shown until a successful position is received. Background location is not claimed.
+- PWA/offline UI: offline persistence and automatic queue replay remain active, but there is no persistent online/offline sync-status banner. Normal sync states are deliberately silent so the product surface is not covered by a misleading cached/offline message. The install affordance remains available when the browser supplies it.
 - Finance: invoice/payment/journal/fuel/supplier-bill server actions exist; finance stays online/server-controlled.
 - Reporting: LIVE Firestore-derived reporting exists.
 - **Canonical branded documents:** Translend Tax Invoice and Delivery Note are now an explicit product requirement. Printable documents must be generated from authoritative LIVE customer/job/delivery/POD/finance records and must preserve the supplied Translend document semantics and branding rather than producing generic invoice/POD templates.
@@ -81,7 +82,7 @@ All Firestore transaction reads/queries must finish before writes. Delivery exce
 UploadThing evidence finalization is transactional, keyed by file key for idempotency, updates linked records together and audits inside the transaction.
 
 ### Client Firestore security
-Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted. Historical truck location events are append-only.
+Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted. Historical truck location events are append-only. Browser GPS persistence now uses the server-controlled location route so location authorization is explicit and consistent with the authenticated workspace session.
 
 ### Finance concurrency
 Accounting-period checks are inside the transaction read set. Supplier-bill journal entries retain `supplierBillId`. Finance errors distinguish 401/403/400/404/409/500.
@@ -102,7 +103,10 @@ Customer management now exposes Edit and Archive. Customer archive is routed thr
 Truck management now exposes Edit and Retire. Truck edit only changes descriptive vehicle fields; server-controlled status/assignment fields are not edited by the register. Retire is routed through `/api/operations/archive-record`, which requires an authorized operational role, checks for active trips server-side, and then soft-deletes the truck. Never rely only on a disabled UI button to protect an active operational assignment.
 
 ### Browser GPS permission QA
-Location capture is a browser capability and cannot programmatically override a user/browser/site-level denial. The actual permission request must remain directly on the Start button's synchronous geolocation call path; do not put an awaited Permissions API query in front of it because that can cause Chromium to reject the request as no longer user-gesture initiated. Denied/blocked errors must give site-settings recovery guidance. Reject insecure contexts, avoid entering TRACKING before the first successful position, and do not claim background GPS tracking. GPS writes continue to use the authoritative Firestore location-event path.
+Location capture is a browser capability and cannot programmatically override a user/browser/site-level denial. The actual permission request must remain directly on the Start button's synchronous geolocation call path; do not put an awaited Permissions API query in front of it because that can cause Chromium to reject the request as no longer user-gesture initiated. Denied/blocked errors must give site-settings recovery guidance. Reject insecure contexts, avoid entering TRACKING before the first successful position, and do not claim background GPS tracking. After a successful browser position, persistence goes through `/api/driver/location`; that route verifies the Firebase ID token, active workspace membership, allowed role, LIVE truck, and linked-driver assignment where applicable before creating the append-only event.
+
+### PWA banner UI QA
+Offline persistence/replay is product infrastructure, not a reason to cover the application with a permanent status strip. `PwaBootstrap` must keep service-worker registration, Firestore persistence and automatic queue replay, but must not render normal `starting`, `syncing`, `ready`, `synced`, or ordinary `offline` status as a persistent page banner. Actionable workflow errors should be surfaced by the workflow that needs the user's attention. Do not remove the underlying offline queue/persistence just to remove the banner.
 
 ## Offline/reliability checklist
 For every offline-capable owner/operations or driver action:
@@ -120,7 +124,7 @@ For every offline-capable owner/operations or driver action:
 - Firestore-backed owner/operations reads and supported CRUD benefit from Firestore IndexedDB persistence after the relevant data has been loaded/cached by the browser.
 - Server-controlled trip corrections can be entered offline from the Trips register and are durably queued with an idempotency key for automatic replay.
 - Owner/operations Dispatch → Trip can be entered offline; the request is durably queued and the server requires the same idempotency key on replay. The dispatch transaction records the key and resulting trip ID before any notification is sent, preventing duplicate trips after a lost response.
-- The offline banner must describe **offline changes/work**, not imply that only driver actions are supported.
+- The offline UI must not imply that only driver actions are supported; normal online operation should have no persistent sync banner.
 - Finance/accounting mutations remain explicitly online/server-authoritative until they receive their own safe offline/idempotency design. Do not fake offline financial success.
 - Archive/retire operations are not considered offline-complete merely because the queue type can represent the endpoint; they still require caller integration and deliberate idempotency/replay verification before being marketed as offline-safe.
 
@@ -157,7 +161,8 @@ Current hardening status:
 - **Customer management:** fixed in latest HEAD with Edit + server-controlled Archive. Needs production verification.
 - **Truck management:** fixed in latest HEAD with Edit + server-controlled Retire; retirement is blocked server-side for trucks carrying an active trip. Needs production verification.
 - **Offline owner/operations:** queue covers owner trip corrections and dispatch, with dispatch idempotency protection. Needs production offline/reconnect verification; this is not a claim that all owner/finance workflows work offline.
-- **Driver GPS permission:** permission/request flow hardened in latest HEAD; the permission request now stays directly on the Start button's geolocation call path rather than awaiting a Permissions API preflight first. Needs production verification on the actual driver device/browser, including first-time allow, previously denied site permission, insecure-context handling, and reconnect/write behavior.
+- **Driver GPS permission:** request flow is hardened and GPS persistence now uses `/api/driver/location` with server-side workspace/role/truck checks. Needs production verification on the actual driver device/browser, including first-time allow, previously denied site permission, insecure-context handling, and successful event write.
+- **PWA sync banner:** removed from the bootstrap UI while preserving service-worker registration, Firestore persistence and queue replay. Needs production verification in both browser and installed PWA so stale cached UI is not mistaken for current source.
 
 After management/identity QA is closed and verified, continue the connected real-world chain:
 `owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting → canonical printable documents`.
