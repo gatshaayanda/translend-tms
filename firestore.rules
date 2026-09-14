@@ -9,6 +9,14 @@ service cloud.firestore {
     function canEditOperations(orgId) { return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager']; }
     function canEditFinance(orgId) { return isOrgMember(orgId) && memberRole(orgId) in ['owner', 'finance']; }
     function isOwner(orgId) { return isOrgMember(orgId) && memberRole(orgId) == 'owner'; }
+    function preservesRecordEnvelope() {
+      return request.resource.data.orgId == resource.data.orgId
+        && request.resource.data.environment == resource.data.environment
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.deletedAt == resource.data.deletedAt
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
 
     match /users/{uid} { allow read, write: if isSignedIn() && request.auth.uid == uid; }
     match /workspaceInvites/{inviteId} { allow read, write: if false; }
@@ -23,8 +31,6 @@ service cloud.firestore {
       match /members/{memberUid} {
         allow read: if isSignedIn() && ((memberUid == request.auth.uid && resource.data.uid == request.auth.uid && resource.data.status == 'active') || isOrgMember(orgId));
         allow create: if isSignedIn() && ((memberUid == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.orgId == orgId && request.resource.data.role == 'owner' && request.resource.data.status == 'active') || canManageMembers(orgId));
-        // Membership identity, role and status are security-sensitive. All member mutations
-        // are controlled by the server-side team actions; clients cannot self-edit membership.
         allow update: if canManageMembers(orgId) && memberUid != request.auth.uid;
         allow delete: if false;
       }
@@ -34,32 +40,27 @@ service cloud.firestore {
         allow update: if isOrgMember(orgId) && resource.data.recipientUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt', 'updatedAt', 'updatedBy']);
         allow create, delete: if false;
       }
+      match /auditEvents/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
+      match /mutationReceipts/{docId} { allow read, create, update, delete: if false; }
 
-      match /auditEvents/{docId} {
-        allow read: if isOrgMember(orgId);
-        allow create, update, delete: if false;
-      }
-
-      match /customers/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId) || canEditFinance(orgId); allow delete: if false; }
-      match /trucks/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /drivers/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /jobs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /trips/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /deliveries/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /deliveryNotes/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /deliveryExceptions/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /fuelLogs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /workOrders/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /supplierPOs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /invoices/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
-      // Financial transaction records are written only through authenticated server actions,
-      // which apply open-period checks, validation, duplicate protection and audit logging.
+      match /customers/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId) || canEditFinance(orgId); allow update: if (canEditOperations(orgId) || canEditFinance(orgId)) && preservesRecordEnvelope(); allow delete: if false; }
+      match /trucks/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /drivers/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /jobs/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /trips/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /deliveries/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /deliveryNotes/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /deliveryExceptions/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /fuelLogs/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /workOrders/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /supplierPOs/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /invoices/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditFinance(orgId); allow update: if canEditFinance(orgId) && preservesRecordEnvelope(); allow delete: if false; }
       match /journalEntries/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
-      match /truckLocationEvents/{docId} { allow read: if isOrgMember(orgId); allow create, update: if isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'driver']; allow delete: if false; }
-      match /tripMetrics/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /maintenanceSchedules/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /vehicleInspections/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /tyreRecords/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
+      match /truckLocationEvents/{docId} { allow read: if isOrgMember(orgId); allow create: if isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'driver']; allow update: if isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'driver'] && preservesRecordEnvelope(); allow delete: if false; }
+      match /tripMetrics/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /maintenanceSchedules/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /vehicleInspections/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
+      match /tyreRecords/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
       match /invoicePayments/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
       match /supplierBills/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
       match /chartAccounts/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
