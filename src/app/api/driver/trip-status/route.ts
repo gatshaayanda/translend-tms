@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { recordAuditEvent } from "@/lib/audit/server";
 import type { TripStatus } from "@/types/core";
 
 const DRIVER_STATUS_FLOW: TripStatus[] = ["planned", "en_route_pickup", "loading", "in_transit", "unloading", "completed"];
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     const member = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
     if (!member.exists || member.data()?.status !== "active" || member.data()?.role !== "driver") return NextResponse.json({ error: "Driver access required." }, { status: 403 });
+    const actorRole = String(member.data()?.role ?? "driver");
     const driverSnap = await db.collection(`organizations/${orgId}/drivers`).where("linkedUid", "==", user.uid).limit(1).get();
     if (driverSnap.empty) return NextResponse.json({ error: "Your account is not linked to a driver record." }, { status: 403 });
     const driverId = driverSnap.docs[0].id;
@@ -29,15 +31,21 @@ export async function POST(request: Request) {
     const nextIndex = DRIVER_STATUS_FLOW.indexOf(requestedStatus);
     if (nextIndex !== currentIndex + 1) return NextResponse.json({ error: "Trip status can only move forward one step at a time." }, { status: 409 });
 
-    const patch: Record<string, unknown> = { status: requestedStatus, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid };
-    if (requestedStatus === "in_transit" && !trip.data()?.actualStart) patch.actualStart = FieldValue.serverTimestamp();
-    if (requestedStatus === "completed") patch.actualEnd = FieldValue.serverTimestamp();
-
     await db.runTransaction(async (tx) => {
       const latest = await tx.get(tripRef);
       if (!latest.exists || latest.data()?.driverId !== driverId) throw new Error("This trip is no longer assigned to you.");
-      if (latest.data()?.status !== current) throw new Error("The trip changed before this update. Refresh and try again.");
+      const latestStatus = latest.data()?.status as TripStatus;
+      if (latestStatus !== current) throw new Error("The trip changed before this update. Refresh and try again.");
+
+      const patch: Record<string, unknown> = {
+        status: requestedStatus,
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: user.uid,
+      };
+      if (requestedStatus === "in_transit" && !latest.data()?.actualStart) patch.actualStart = FieldValue.serverTimestamp();
+      if (requestedStatus === "completed") patch.actualEnd = FieldValue.serverTimestamp();
       tx.update(tripRef, patch);
+
       if (requestedStatus === "completed") {
         const data = latest.data()!;
         const now = FieldValue.serverTimestamp();
@@ -45,7 +53,20 @@ export async function POST(request: Request) {
         tx.update(db.doc(`organizations/${orgId}/drivers/${data.driverId}`), { status: "available", assignedTruckId: null, updatedAt: now, updatedBy: user.uid });
         tx.update(db.doc(`organizations/${orgId}/jobs/${data.jobId}`), { status: "completed", updatedAt: now, updatedBy: user.uid });
       }
+
+      recordAuditEvent({
+        orgId,
+        actorUid: user.uid,
+        actorRole,
+        action: "status_change",
+        entityType: "Trip",
+        entityId: tripId,
+        summary: `Driver advanced trip from ${current} to ${requestedStatus}`,
+        metadata: { fromStatus: current, toStatus: requestedStatus, driverId },
+        transaction: tx,
+      });
     });
+
     return NextResponse.json({ ok: true, status: requestedStatus });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Trip update failed." }, { status: 400 });
