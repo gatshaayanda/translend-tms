@@ -48,11 +48,14 @@ export async function enqueueDriverAction(
 ): Promise<string> {
   const db = await openDb();
   const id = newDriverActionId();
+  const idempotencyKey = typeof action.payload.idempotencyKey === "string" && action.payload.idempotencyKey
+    ? action.payload.idempotencyKey
+    : id;
   const record: QueuedDriverAction = {
     ...action,
     id,
     createdAt: Date.now(),
-    payload: { ...action.payload, idempotencyKey: id },
+    payload: { ...action.payload, idempotencyKey },
     attempts: 0,
     lastError: null,
     state: "pending",
