@@ -18,12 +18,12 @@ A screen, button, Firestore document, offline banner or successful UI state is n
 
 ## Current state
 - Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist; customer, driver and truck management surfaces expose practical correction/retirement controls and remain subject to production verification.
-- Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented; dispatch now requires an idempotency key and records a replay receipt so an offline/lost-response replay cannot create a second trip.
+- Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented; dispatch requires an idempotency key and records a replay receipt so an offline/lost-response replay cannot create a second trip.
 - Delivery/POD: required POD gating, evidence review/replacement, exceptions and completion validation exist.
-- Offline operational work: Firestore persistence covers supported owner/operations data already loaded into the browser; durable IndexedDB action queue now also covers safe server-controlled trip corrections and dispatch, with automatic replay and blocked terminal failures. Offline dispatch is transactionally idempotent. This is not a claim that the entire TMS is offline-capable.
+- Offline operational work: Firestore persistence covers supported owner/operations data already loaded into the browser; durable IndexedDB action queue also covers safe server-controlled trip corrections and dispatch, with automatic replay and blocked terminal failures. Offline dispatch is transactionally idempotent. This is not a claim that the entire TMS is offline-capable.
 - Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
 - Fleet inspections/defects/work orders/offline replay: hardened path exists.
-- GPS/telematics: provider boundary exists; no fake locations or background-tracking claims.
+- GPS/location: browser GPS capture exists for the active driver workflow. Permission handling now explicitly checks browser support/security/permission state, triggers the initial location request from the Start button, gives an actionable blocked-permission message, and only enters tracking after a successful position is received. Background location is not claimed.
 - Finance: invoice/payment/journal/fuel/supplier-bill server actions exist; finance stays online/server-controlled.
 - Reporting: LIVE Firestore-derived reporting exists.
 - **Canonical branded documents:** Translend Tax Invoice and Delivery Note are now an explicit product requirement. Printable documents must be generated from authoritative LIVE customer/job/delivery/POD/finance records and must preserve the supplied Translend document semantics and branding rather than producing generic invoice/POD templates.
@@ -101,6 +101,9 @@ Customer management now exposes Edit and Archive. Customer archive is routed thr
 ### Truck management QA
 Truck management now exposes Edit and Retire. Truck edit only changes descriptive vehicle fields; server-controlled status/assignment fields are not edited by the register. Retire is routed through `/api/operations/archive-record`, which requires an authorized operational role, checks for active trips server-side, and then soft-deletes the truck. Never rely only on a disabled UI button to protect an active operational assignment.
 
+### Browser GPS permission QA
+Location capture is a browser capability and cannot programmatically override a user/browser/site-level denial. The correct product behavior is to request location from a user gesture, preflight the browser permission when available, reject insecure contexts, avoid entering TRACKING before the first successful position, and provide a clear recovery instruction when the site permission is blocked. Do not claim background GPS tracking. GPS writes continue to use the authoritative Firestore location-event path.
+
 ## Offline/reliability checklist
 For every offline-capable owner/operations or driver action:
 1. Can it be entered offline?
@@ -153,7 +156,8 @@ Current hardening status:
 - **Driver linking:** fixed in latest HEAD; fleet/operations can link a real signed-in account to a Driver record by exact email, and Drivers can be edited. Needs production verification.
 - **Customer management:** fixed in latest HEAD with Edit + server-controlled Archive. Needs production verification.
 - **Truck management:** fixed in latest HEAD with Edit + server-controlled Retire; retirement is blocked server-side for trucks carrying an active trip. Needs production verification.
-- **Offline owner/operations:** queue now covers owner trip corrections and dispatch, with dispatch idempotency protection. Needs production offline/reconnect verification; this is not a claim that all owner/finance workflows work offline.
+- **Offline owner/operations:** queue covers owner trip corrections and dispatch, with dispatch idempotency protection. Needs production offline/reconnect verification; this is not a claim that all owner/finance workflows work offline.
+- **Driver GPS permission:** permission/request flow hardened in latest HEAD; needs production verification on the actual driver device/browser, including first-time allow, previously denied site permission, insecure-context handling, and reconnect/write behavior.
 
 After management/identity QA is closed and verified, continue the connected real-world chain:
 `owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting → canonical printable documents`.
