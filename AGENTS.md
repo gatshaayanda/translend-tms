@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `0e9f9e0b640a904bf471f18b7dd877d01366d98f`
+- Current application checkpoint: `5ce5f932e7edf99d3746673437d5b692034020aa`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -49,7 +49,7 @@ Driver My Trip supports `planned → en_route_pickup → loading → in_transit 
 Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch now permits only `confirmed` jobs, so retrying an already-dispatched request cannot create a second trip; the trip creation, job/truck/driver state changes and dispatch audit event are committed atomically. Assignment notification is deliberately non-authoritative and cannot turn a successful dispatch into a false client failure.
 
 ### 6. Accounting — HARDENED CONTROL PASS
-Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection. Latest hardening: accounting API access is restricted to `owner` and `finance`; invoice payment references are duplicate-protected; supplier bills are duplicate-protected by supplier/reference; reversals are guarded against repeated reversal; payment/bill/journal mutations write immutable audit events in the same Firestore batch as the accounting mutation; journal entries, invoice payments and supplier bills are now read-only to clients and can only be mutated through authenticated server actions.
+Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection. Latest hardening: accounting API access is restricted to `owner` and `finance`; invoice payment references are duplicate-protected inside Firestore transactions; concurrent invoice payments recalculate outstanding balance from transactional reads; supplier bills perform duplicate detection inside a transaction; reversals lock the source journal transactionally and derive reversal amount/accounts from the source rather than trusting client input; payment/bill/journal mutations write immutable audit events in the same transaction as the accounting mutation; journal entries, invoice payments and supplier bills are read-only to clients and can only be mutated through authenticated server actions.
 
 Still not claimed complete: dedicated credit/debit-note domain, full tax/VAT configuration, bank/cash reconciliation and dedicated accounting statement/export workflows.
 
@@ -64,9 +64,9 @@ Persisted org-scoped notification records, recipient-scoped reads, read/unread s
 Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and real push/email providers. Never claim email/push live without a configured provider.
 
 ### 9. Audit / Data Integrity — EXPANDED FOUNDATION / ATOMICITY HARDENING
-Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception creation/resolution, driver delivery exceptions, and driver arrival/departure/receiver acknowledgement write audit events. Accounting payment, supplier-bill, manual-journal and reversal mutations also write audit events atomically with the accounting mutation. The audit helper now supports attaching audit records to a Firestore transaction. Driver delivery lifecycle and exception mutations now commit business state + audit atomically; dispatch commits trip/business state + audit atomically as well.
+Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception creation/resolution, driver delivery exceptions, and driver arrival/departure/receiver acknowledgement write audit events. Accounting payment, supplier-bill, manual-journal and reversal mutations also write audit events atomically with the accounting mutation. The audit helper supports attaching audit records to a Firestore transaction. Driver delivery lifecycle and exception mutations now commit business state + audit atomically; dispatch commits trip/business state + audit atomically; accounting financial mutations now use transactions for concurrency-sensitive duplicate/balance/reversal checks.
 
-Still to expand: audit coverage across all important mutations, stronger idempotency keys, referential/orphan checks, generalized mutation queues and partial-workflow recovery. Accounting duplicate guards still need transaction-level concurrency hardening where concurrent submissions can race.
+Still to expand: audit coverage across all important mutations, stronger generalized idempotency keys, referential/orphan checks, generalized mutation queues and partial-workflow recovery.
 
 ### 10. Workspace / Admin / Permissions — CONTROL PASS COMPLETE
 Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension/restoration, with owner protection, operations-manager limits, audit events and in-app notifications. Added a controlled owner-transfer transaction: current owner transfers ownership to an active member, becomes Operations Manager, organization `ownerUid` is updated atomically, and both parties are notified/audited. Team UI exposes member access controls and owner transfer. Firestore membership rules are hardened so clients cannot self-edit their membership documents; membership mutations remain server-controlled.
@@ -89,7 +89,7 @@ Validate `job → trip → delivery → POD → invoice → payment → journal 
 
 ## Current deployment window
 
-GitHub `v19-authoritative` remains the active source of truth and development continues normally. The previous Vercel Free daily deployment-cap message means repeated deployment attempts must be avoided while that quota is exhausted. This is a deployment-capacity limitation, not evidence of a code failure. Accumulate coherent verified changes on GitHub, then make a deliberate Vercel deployment/promotion when capacity returns. Never claim the latest GitHub commit is live production until deployment status confirms it.
+GitHub `v19-authoritative` remains the active source of truth and development continues normally. The previous Vercel Free daily deployment-cap message means repeated deployment attempts must be avoided while that quota is exhausted. This is a deployment-capacity limitation, not evidence of a code failure. Accumulate coherent changes on GitHub, then make a deliberate Vercel deployment/promotion when capacity returns. Never claim the latest GitHub commit is live production until deployment status confirms it.
 
 The connected Vercel account currently exposes the `adminhub-global` project but does not currently expose a `translend-tms` Vercel project in the connected team listing, so no new deployment was triggered. GitHub remains the authoritative source until the correct Vercel project is available/confirmed.
 
