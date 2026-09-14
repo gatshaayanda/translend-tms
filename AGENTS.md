@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `71b4b3a8c97fed364822bd89adc56a347d1397ee`
+- Current application checkpoint: `9ed12a3b6244c2ae1d5361d798d0335341556589`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -49,7 +49,7 @@ Driver My Trip supports `planned → en_route_pickup → loading → in_transit 
 Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch creates assignment notifications and immutable server audit events.
 
 ### 6. Accounting — HARDENED CONTROL PASS
-Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection. **Latest hardening:** accounting API access is now restricted to `owner` and `finance` (operations managers no longer receive finance mutation access), invoice payment references are duplicate-protected, supplier bills are duplicate-protected by supplier/reference, reversals are guarded against repeated reversal, and payment/bill/journal mutations write immutable audit events in the same Firestore batch as the accounting mutation.
+Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection. Latest hardening: accounting API access is restricted to `owner` and `finance`; invoice payment references are duplicate-protected; supplier bills are duplicate-protected by supplier/reference; reversals are guarded against repeated reversal; payment/bill/journal mutations write immutable audit events in the same Firestore batch as the accounting mutation; **journal entries, invoice payments and supplier bills are now read-only to clients and can only be mutated through authenticated server actions.**
 
 Still not claimed complete: dedicated credit/debit-note domain, full tax/VAT configuration, bank/cash reconciliation and dedicated accounting statement/export workflows.
 
@@ -64,19 +64,19 @@ Persisted org-scoped notification records, recipient-scoped reads, read/unread s
 Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and real push/email providers. Never claim email/push live without a configured provider.
 
 ### 9. Audit / Data Integrity — FOUNDATION IMPLEMENTED
-Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception resolution and driver delivery exceptions write audit events. **Accounting payment, supplier-bill, manual-journal and reversal mutations now also write audit events atomically with the accounting mutation.**
+Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception resolution and driver delivery exceptions write audit events. Accounting payment, supplier-bill, manual-journal and reversal mutations also write audit events atomically with the accounting mutation.
 
 Still to expand: audit coverage across all important mutations, stronger idempotency keys, referential/orphan checks, concurrency protection, generalized mutation queues and partial-workflow recovery.
 
 ### 10. Workspace / Admin / Permissions — CONTROL PASS COMPLETE
-Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension/restoration, with owner protection, operations-manager limits, audit events and in-app notifications. Added a controlled owner-transfer transaction: current owner transfers ownership to an active member, becomes Operations Manager, organization `ownerUid` is updated atomically, and both parties are notified/audited. Team UI exposes member access controls and owner transfer. **Firestore membership rules are hardened so clients cannot self-edit their membership documents; membership mutations remain server-controlled.**
+Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension/restoration, with owner protection, operations-manager limits, audit events and in-app notifications. Added a controlled owner-transfer transaction: current owner transfers ownership to an active member, becomes Operations Manager, organization `ownerUid` is updated atomically, and both parties are notified/audited. Team UI exposes member access controls and owner transfer. Firestore membership rules are hardened so clients cannot self-edit their membership documents; membership mutations remain server-controlled.
 
 Still to expand: richer permission testing, company settings/defaults, invitation cancellation/resend controls and real transactional email when configured.
 
 ### 11. Reporting / Exports / Intelligence — OPERATIONAL PASS IMPLEMENTED
 Added an org-scoped Reports & Intelligence route with LIVE-derived operational, fleet/compliance, finance, customer, fuel, workshop and inspection reporting. Reports are derived from persisted Firestore truth; no fake values. Current selected report exports CSV, and browser Print/PDF is supported through the native print dialog. Reports are available from the primary application navigation.
 
-Current extension pass: **POD readiness is a first-class report and KPI**. The Reports surface shows POD items needing attention, exposes a dedicated POD readiness table, includes required-vs-approved evidence counts and rejected evidence state, supports CSV export of the POD report, and has a manual Refresh control. The refresh callback is stabilized for React effect dependencies. **Report drill-down navigation is now present** for Jobs, Deliveries, Invoicing, Journal, Balance Sheet, Cash Flow, Fuel & Workshop, Fleet Intelligence and Control Tower so a report signal can lead directly to its authoritative source workflow.
+Current extension pass: POD readiness is a first-class report and KPI. The Reports surface shows POD items needing attention, exposes a dedicated POD readiness table, includes required-vs-approved evidence counts and rejected evidence state, supports CSV export of the POD report, and has a manual Refresh control. The refresh callback is stabilized for React effect dependencies. Report drill-down navigation is now present for Jobs, Deliveries, Invoicing, Journal, Balance Sheet, Cash Flow, Fuel & Workshop, Fleet Intelligence and Control Tower so a report signal can lead directly to its authoritative source workflow.
 
 Still to expand: richer time-series trend charts, date/filter controls, scheduled reports, server-side large-data exports and dedicated PDF generation.
 
@@ -87,7 +87,7 @@ Validate `job → trip → delivery → POD → invoice → payment → journal 
 
 GitHub `v19-authoritative` remains the active source of truth and development continues normally. The previous Vercel Free daily deployment-cap message means repeated deployment attempts must be avoided while that quota is exhausted. This is a deployment-capacity limitation, not evidence of a code failure. Accumulate coherent verified changes on GitHub, then make a deliberate Vercel deployment/promotion when capacity returns. Never claim the latest GitHub commit is live production until deployment status confirms it.
 
-The connected Vercel account currently exposes the `adminhub-global` project but does **not** currently expose a `translend-tms` Vercel project in the connected team listing, so no new deployment was triggered. GitHub remains the authoritative source until the correct Vercel project is available/confirmed.
+The connected Vercel account currently exposes the `adminhub-global` project but does not currently expose a `translend-tms` Vercel project in the connected team listing, so no new deployment was triggered. GitHub remains the authoritative source until the correct Vercel project is available/confirmed.
 
 ## External capability boundaries
 
@@ -95,7 +95,7 @@ Driver browser GPS is foreground and permission-based; do not claim background t
 
 ## Firestore safety
 
-Firestore rules are security boundaries, not UI configuration. Preserve workspace membership security; do not weaken rules to fix UI/query problems; verify query shapes against rules/indexes; new domains require types + repository + rules + indexes/query shape + UI workflow; preserve environment/soft-delete conventions; workspaceInvites remain server-controlled; notifications are recipient-readable and only readAt-writable by clients; auditEvents are immutable to clients. Membership documents are not client-self-editable. Accounting mutations are server-controlled and restricted to owner/finance roles.
+Firestore rules are security boundaries, not UI configuration. Preserve workspace membership security; do not weaken rules to fix UI/query problems; verify query shapes against rules/indexes; new domains require types + repository + rules + indexes/query shape + UI workflow; preserve environment/soft-delete conventions; workspaceInvites remain server-controlled; notifications are recipient-readable and only readAt-writable by clients; auditEvents are immutable to clients. Membership documents are not client-self-editable. Accounting mutations are server-controlled and restricted to owner/finance roles; journal entries, invoice payments and supplier bills are client-read/server-write.
 
 ## UploadThing
 
@@ -113,7 +113,7 @@ Do not repeatedly ask for approval for obvious safe next steps.
 
 ## Verification note for current checkpoint
 
-The authoritative branch is pushed through the GitHub contents API. A local `npm ci && npm run build` attempt was previously blocked by the execution environment because outbound DNS/network access to GitHub was unavailable, so this checkpoint must **not** be described as locally build-verified or Vercel-green. The current changes were verified through GitHub file/commit inspection. Runtime/build verification still awaits an environment with dependency/network access or the next available Vercel deployment.
+The authoritative branch is pushed through the GitHub contents API. A local `npm ci && npm run build` attempt was previously blocked by the execution environment because outbound DNS/network access to GitHub was unavailable, so this checkpoint must not be described as locally build-verified or Vercel-green. The current changes were verified through GitHub file/commit inspection. Runtime/build verification still awaits an environment with dependency/network access or the next available Vercel deployment.
 
 ## Explicit non-goals
 
