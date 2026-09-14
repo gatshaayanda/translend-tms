@@ -7,7 +7,7 @@ import { enableOfflinePersistence, waitForOfflineWrites } from "@/lib/firebase/c
 import { syncQueuedDriverActions } from "@/lib/offline/driverActionQueue";
 
 type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
-type SyncState = "starting" | "ready" | "offline" | "syncing" | "synced" | "unavailable" | "failed";
+type SyncState = "starting" | "ready" | "offline" | "syncing" | "synced" | "attention" | "unavailable" | "failed";
 
 export function PwaBootstrap() {
   const [installEvent, setInstallEvent] = useState<InstallPromptEvent | null>(null);
@@ -30,7 +30,9 @@ export function PwaBootstrap() {
       try {
         await waitForOfflineWrites();
         const result = await syncQueuedDriverActions();
-        setSyncState(result.pending > 0 ? "ready" : "synced");
+        if (result.blocked > 0) setSyncState("attention");
+        else if (result.pending > 0) setSyncState("ready");
+        else setSyncState("synced");
       } catch {
         setSyncState("ready");
       }
@@ -73,13 +75,14 @@ export function PwaBootstrap() {
     offline: "Offline — driver actions are saved locally and will sync when you reconnect",
     syncing: "Syncing offline actions…",
     synced: "Synced",
+    attention: "Offline actions need attention — reconnect and review the affected workflow",
     unavailable: "Offline storage is not available in this browser",
     failed: "Offline storage could not be enabled",
   }[syncState];
 
   return <>
     {!online && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/10 bg-white px-4 py-3 text-center text-xs font-semibold text-gray-700">{syncLabel}</div>}
-    {online && (syncState === "syncing" || syncState === "ready") && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/10 bg-white px-4 py-2 text-center text-[11px] font-semibold text-gray-600">{syncLabel}</div>}
+    {online && (syncState === "syncing" || syncState === "ready" || syncState === "attention") && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/10 bg-white px-4 py-2 text-center text-[11px] font-semibold text-gray-600">{syncLabel}</div>}
     {online && (syncState === "unavailable" || syncState === "failed") && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/10 bg-white px-4 py-3 text-center text-xs font-semibold text-gray-700">{syncLabel}</div>}
     {installEvent && <button onClick={install} className="fixed bottom-4 right-4 z-40 rounded-full bg-black px-4 py-3 text-xs font-bold text-white shadow-lg">Install Translend</button>}
   </>;
