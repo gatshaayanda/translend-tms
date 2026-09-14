@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         tx.update(actorRef, { role: "operations_manager", updatedAt: now, updatedBy: user.uid });
         tx.update(targetRef, { role: "owner", updatedAt: now, updatedBy: user.uid });
         recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "owner", action: "update", entityType: "organization", entityId: orgId, summary: `Workspace ownership transferred to ${memberUid.slice(0, 8)}.`, metadata: { previousOwnerUid: user.uid, newOwnerUid: memberUid }, transaction: tx });
-        return { action, recipientUids: [memberUid, user.uid], notificationType: "transfer" as const };
+        return { action, targetUid: memberUid, previousOwnerUid: user.uid, notificationType: "transfer" as const };
       }
 
       if (target.role === "owner") throw new Error("The workspace owner cannot be changed by this action.");
@@ -49,14 +49,17 @@ export async function POST(request: Request) {
       else if (action === "suspend") tx.update(targetRef, { status: "suspended", updatedAt: now, updatedBy: user.uid });
       else tx.update(targetRef, { status: "active", updatedAt: now, updatedBy: user.uid });
       recordAuditEvent({ orgId, actorUid: user.uid, actorRole: actor.role, action: "update", entityType: "orgMember", entityId: memberUid, summary: `${action.replaceAll("_", " ")} for workspace member ${memberUid.slice(0, 8)}.`, metadata: { memberUid, action, role: role ?? target.role }, transaction: tx });
-      return { action, recipientUids: [memberUid], notificationType: "member" as const };
+      return { action, targetUid: memberUid, previousOwnerUid: null, notificationType: "member" as const };
     });
 
     if (result.notificationType === "transfer") {
-      await notifyUsers({ orgId, recipientUids: result.recipientUids, type: "driver_reminder", severity: "urgent", title: "Workspace ownership changed", message: "Workspace ownership has been transferred to you; the previous owner is now Operations Manager.", href: `/${orgId}/control-tower`, sourceId: orgId, sourceType: "organization" });
+      await Promise.all([
+        notifyUsers({ orgId, recipientUids: [result.targetUid], type: "driver_reminder", severity: "urgent", title: "Workspace ownership changed", message: "You are now the workspace owner. The previous owner is now Operations Manager.", href: `/${orgId}/control-tower`, sourceId: orgId, sourceType: "organization" }),
+        notifyUsers({ orgId, recipientUids: [result.previousOwnerUid], type: "driver_reminder", severity: "urgent", title: "Workspace ownership changed", message: "Workspace ownership has been transferred to another member. Your role is now Operations Manager.", href: `/${orgId}/control-tower`, sourceId: orgId, sourceType: "organization" }),
+      ]);
     } else {
       const notificationAction = result.action;
-      await notifyUsers({ orgId, recipientUids: result.recipientUids, type: "driver_reminder", severity: notificationAction === "suspend" ? "urgent" : "info", title: notificationAction === "suspend" ? "Workspace access suspended" : notificationAction === "restore" ? "Workspace access restored" : "Workspace role changed", message: notificationAction === "change_role" ? `Your Translend workspace role is now ${role}.` : notificationAction === "suspend" ? "Your access to this workspace has been suspended." : "Your access to this workspace has been restored.", href: `/${orgId}/control-tower`, sourceId: memberUid, sourceType: "orgMember" });
+      await notifyUsers({ orgId, recipientUids: [result.targetUid], type: "driver_reminder", severity: notificationAction === "suspend" ? "urgent" : "info", title: notificationAction === "suspend" ? "Workspace access suspended" : notificationAction === "restore" ? "Workspace access restored" : "Workspace role changed", message: notificationAction === "change_role" ? `Your Translend workspace role is now ${role}.` : notificationAction === "suspend" ? "Your access to this workspace has been suspended." : "Your access to this workspace has been restored.", href: `/${orgId}/control-tower`, sourceId: result.targetUid, sourceType: "orgMember" });
     }
     return NextResponse.json({ ok: true, action: result.action });
   } catch (error) {
