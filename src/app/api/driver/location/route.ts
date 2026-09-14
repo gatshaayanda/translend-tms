@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
-import type { OrgRole, TelemetryStatus } from "@/types/location";
+import type { OrgRole } from "@/types/core";
+import type { TelemetryStatus } from "@/types/location";
 
-const ALLOWED_ROLES = ["owner", "operations_manager", "dispatcher", "fleet_manager", "driver"] as const;
-type AllowedRole = (typeof ALLOWED_ROLES)[number];
+const ALLOWED_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager", "driver"];
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const truckRef = db.doc(`organizations/${orgId}/trucks/${truckId}`);
     const [memberSnap, truckSnap] = await Promise.all([memberRef.get(), truckRef.get()]);
     if (!memberSnap.exists || memberSnap.data()?.status !== "active") throw new ApiError(403, "Active workspace membership required.");
-    const actorRole = String(memberSnap.data()?.role ?? "") as AllowedRole;
+    const actorRole = String(memberSnap.data()?.role ?? "") as OrgRole;
     if (!ALLOWED_ROLES.includes(actorRole)) throw new ApiError(403, "Location capture is not permitted for this workspace role.");
     if (!truckSnap.exists || truckSnap.data()?.deletedAt != null || truckSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Truck not found.");
 
