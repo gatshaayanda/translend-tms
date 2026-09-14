@@ -13,6 +13,13 @@ import { FleetLiveMap } from "@/components/location/FleetLiveMap";
 
 type Range = "today" | "month" | "last_month" | "quarter" | "year" | "all";
 function start(range: Range) { const d = new Date(), x = new Date(d); if (range === "today") x.setHours(0, 0, 0, 0); else if (range === "month") x.setDate(1), x.setHours(0, 0, 0, 0); else if (range === "last_month") x.setMonth(x.getMonth() - 1, 1), x.setHours(0, 0, 0, 0); else if (range === "quarter") x.setMonth(Math.floor(x.getMonth() / 3) * 3, 1), x.setHours(0, 0, 0, 0); else if (range === "year") x.setMonth(0, 1), x.setHours(0, 0, 0, 0); else x.setFullYear(2000); return x.getTime(); }
+function locationFailureMessage(error: Error) {
+  const code = "code" in error ? String((error as Error & { code?: string }).code ?? "") : "";
+  if (code === "permission-denied" || /permission|insufficient permissions/i.test(error.message)) {
+    return "Location data was denied by the active Firebase rules. The v19 source rules allow active workspace members to read truck locations; if this persists, deploy the authoritative firestore.rules to translend-tms-dcd2a and verify the live app is using that Firebase project.";
+  }
+  return error.message;
+}
 
 export default function FleetIntelligencePage() {
   const { activeOrg } = useWorkspace();
@@ -23,7 +30,7 @@ export default function FleetIntelligencePage() {
   useEffect(() => {
     if (!activeOrg) return;
     const id = activeOrg.id, q = { environment: "LIVE" as const };
-    const unsubscribers = [tripsRepo.subscribe(id, q, setTrips), trucksRepo.subscribe(id, q, setTrucks), tripMetricsRepo.subscribe(id, q, setMetrics), fuelLogsRepo.subscribe(id, q, setFuel), truckLocationEventsRepo.subscribe(id, { ...q, limitTo: 500 }, setLocations, (error) => setLocationError(error.message))];
+    const unsubscribers = [tripsRepo.subscribe(id, q, setTrips), trucksRepo.subscribe(id, q, setTrucks), tripMetricsRepo.subscribe(id, q, setMetrics), fuelLogsRepo.subscribe(id, q, setFuel), truckLocationEventsRepo.subscribe(id, { ...q, limitTo: 500 }, setLocations, (error) => setLocationError(locationFailureMessage(error)))];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [activeOrg]);
 
