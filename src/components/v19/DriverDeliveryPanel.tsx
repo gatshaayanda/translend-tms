@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { deliveryNotesRepo, deliveriesRepo } from "@/lib/firebase/modules";
-import { enqueueDriverAction } from "@/lib/offline/driverActionQueue";
+import { enqueueDriverAction, newDriverActionId } from "@/lib/offline/driverActionQueue";
 import { DeliveryEvidencePanel } from "@/components/deliveries/DeliveryEvidencePanel";
 import type { Delivery, DeliveryExceptionCategory, DeliveryNote } from "@/types/core";
 
@@ -32,7 +32,7 @@ export function DriverDeliveryPanel({ orgId, tripId }: { orgId: string; tripId: 
     if (!user || !note || !delivery || busy) return;
     setBusy(true); setMessage(null);
     const payload = {
-      orgId, deliveryId: delivery.id, deliveryNoteId: note.id, action: actionName,
+      orgId, deliveryId: delivery.id, deliveryNoteId: note.id, action: actionName, idempotencyKey: newDriverActionId(),
       ...(actionName === "acknowledge" ? { name: receiver } : {}),
       ...(actionName === "exception" ? { category, description } : {}),
     };
