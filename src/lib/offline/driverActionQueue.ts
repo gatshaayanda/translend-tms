@@ -4,7 +4,7 @@ export type QueuedDriverAction = {
   id: string;
   createdAt: number;
   orgId: string;
-  endpoint: "/api/driver/trip-status" | "/api/driver/delivery-action";
+  endpoint: "/api/driver/trip-status" | "/api/driver/delivery-action" | "/api/driver/vehicle-action";
   payload: Record<string, unknown>;
   attempts: number;
   lastError: string | null;
@@ -33,7 +33,7 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-function makeId() {
+export function newDriverActionId() {
   return `drv_${Date.now()}_${crypto.randomUUID()}`;
 }
 
@@ -41,7 +41,15 @@ export async function enqueueDriverAction(
   action: Omit<QueuedDriverAction, "id" | "createdAt" | "attempts" | "lastError">
 ): Promise<string> {
   const db = await openDb();
-  const record: QueuedDriverAction = { ...action, id: makeId(), createdAt: Date.now(), attempts: 0, lastError: null };
+  const id = newDriverActionId();
+  const record: QueuedDriverAction = {
+    ...action,
+    id,
+    createdAt: Date.now(),
+    payload: { ...action.payload, idempotencyKey: id },
+    attempts: 0,
+    lastError: null,
+  };
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");
     tx.objectStore(STORE).put(record);
