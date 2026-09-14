@@ -24,10 +24,7 @@ async function openPeriod(db: Firestore, orgId: string, at: Timestamp) {
 
 function audit(base: { orgId: string; uid: string; role: string }, action: string, entityType: string, entityId: string, summary: string, metadata: Record<string, string | number | boolean | null> = {}) {
   const now = Timestamp.now();
-  return {
-    orgId: base.orgId, environment: "LIVE", createdAt: now, createdBy: base.uid, updatedAt: now, updatedBy: base.uid,
-    deletedAt: null, actorUid: base.uid, actorRole: base.role, action, entityType, entityId, summary, metadata, occurredAt: now,
-  };
+  return { orgId: base.orgId, environment: "LIVE", createdAt: now, createdBy: base.uid, updatedAt: now, updatedBy: base.uid, deletedAt: null, actorUid: base.uid, actorRole: base.role, action, entityType, entityId, summary, metadata, occurredAt: now };
 }
 
 export async function POST(request: Request) {
@@ -50,7 +47,7 @@ export async function POST(request: Request) {
       const journalRef = db.collection(`organizations/${orgId}/journalEntries`).doc();
       const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
       const paidAt = Timestamp.now();
-      const result = await db.runTransaction(async (tx) => {
+      const fullyPaid = await db.runTransaction(async (tx) => {
         const invoiceSnap = await tx.get(invoiceRef);
         if (!invoiceSnap.exists || invoiceSnap.data()?.environment !== "LIVE") throw new Error("Live invoice not found.");
         const invoice = invoiceSnap.data()!;
@@ -60,15 +57,15 @@ export async function POST(request: Request) {
         const outstanding = Math.max(0, Number(invoice.amount || 0) - paid);
         if (amount > outstanding) throw new Error(`Payment exceeds the outstanding balance of ${invoice.currency} ${outstanding.toFixed(2)}.`);
         if (!await openPeriod(db, orgId, paidAt)) throw new Error("No open accounting period covers the payment date.");
-        const fullyPaid = paid + amount >= Number(invoice.amount || 0);
+        const complete = paid + amount >= Number(invoice.amount || 0);
         const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
         tx.set(paymentRef, { ...base, invoiceId, invoiceNumber: invoice.invoiceNumber, customerId: invoice.customerId, customerName: invoice.customerName, amount, currency: invoice.currency, paidAt, reference, method });
-        tx.update(invoiceRef, { status: fullyPaid ? "paid" : "issued", paidAt: fullyPaid ? paidAt : null, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+        tx.update(invoiceRef, { status: complete ? "paid" : "issued", paidAt: complete ? paidAt : null, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
         tx.set(journalRef, { ...base, entryDate: paidAt, transactionType: "Customer payment", reference, amount, description: `Payment received for ${invoice.invoiceNumber}`, debitAccount: "Cash at bank", creditAccount: "Accounts Receivable" });
-        tx.set(auditRef, audit(actor, "create", "invoicePayment", paymentRef.id, `${fullyPaid ? "Full" : "Partial"} payment posted for ${invoice.invoiceNumber}.`, { invoiceId, amount, reference, fullyPaid }));
-        return fullyPaid;
+        tx.set(auditRef, audit(actor, "create", "invoicePayment", paymentRef.id, `${complete ? "Full" : "Partial"} payment posted for ${invoice.invoiceNumber}.`, { invoiceId, amount, reference, fullyPaid: complete }));
+        return complete;
       });
-      return NextResponse.json({ ok: true, message: result ? "Invoice fully paid and posted." : "Partial payment posted." });
+      return NextResponse.json({ ok: true, message: fullyPaid ? "Invoice fully paid and posted." : "Partial payment posted." });
     }
 
     if (action === "supplier_bill") {
@@ -103,15 +100,15 @@ export async function POST(request: Request) {
       const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
       const entryDate = Timestamp.now();
       await db.runTransaction(async (tx) => {
-        let sourceData: FirebaseFirestore.DocumentData | undefined;
+        let sourceData: Record<string, unknown> | undefined;
         if (action === "reverse_journal") {
           if (!sourceId) throw new Error("Source journal entry is required for a reversal.");
           const source = await tx.get(db.doc(`organizations/${orgId}/journalEntries/${sourceId}`));
           if (!source.exists || source.data()?.environment !== "LIVE") throw new Error("Source journal entry not found.");
-          sourceData = source.data();
-          if (sourceData?.reversedEntryId || sourceData?.reversedById) throw new Error("This journal entry has already been reversed.");
-          debitAccount = String(sourceData?.creditAccount ?? "");
-          creditAccount = String(sourceData?.debitAccount ?? "");
+          sourceData = source.data() as Record<string, unknown>;
+          if (sourceData.reversedEntryId || sourceData.reversedById) throw new Error("This journal entry has already been reversed.");
+          debitAccount = String(sourceData.creditAccount ?? "");
+          creditAccount = String(sourceData.debitAccount ?? "");
         }
         if (!Number.isFinite(amount) || amount <= 0 || !debitAccount || !creditAccount || debitAccount === creditAccount || (!description && action === "manual_journal")) throw new Error("A positive amount, two different accounts and a description are required.");
         if (!await openPeriod(db, orgId, entryDate)) throw new Error("No open accounting period covers the journal date.");
