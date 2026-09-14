@@ -18,8 +18,9 @@ A screen, button, Firestore document, offline banner or successful UI state is n
 
 ## Current state
 - Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist; customer, driver and truck management surfaces expose practical correction/retirement controls and remain subject to production verification.
-- Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented.
+- Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented; dispatch now requires an idempotency key and records a replay receipt so an offline/lost-response replay cannot create a second trip.
 - Delivery/POD: required POD gating, evidence review/replacement, exceptions and completion validation exist.
+- Offline operational work: Firestore persistence covers supported owner/operations data already loaded into the browser; durable IndexedDB action queue now also covers safe server-controlled trip corrections and dispatch, with automatic replay and blocked terminal failures. Offline dispatch is transactionally idempotent. This is not a claim that the entire TMS is offline-capable.
 - Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
 - Fleet inspections/defects/work orders/offline replay: hardened path exists.
 - GPS/telematics: provider boundary exists; no fake locations or background-tracking claims.
@@ -86,7 +87,7 @@ Server-controlled Trip/Delivery/finance/exception collections are client-write d
 Accounting-period checks are inside the transaction read set. Supplier-bill journal entries retain `supplierBillId`. Finance errors distinguish 401/403/400/404/409/500.
 
 ### Job integrity and dispatch concurrency
-Job creation validates same-workspace customer references, commercial/date invariants and positive rates. Dispatched Job commercial identity/schedule are protected. Dispatch uses one transaction over Job + Truck + Driver and handles concurrency conflicts correctly.
+Job creation validates same-workspace customer references, commercial/date invariants and positive rates. Dispatched Job commercial identity/schedule are protected. Dispatch uses one transaction over Job + Truck + Driver and handles concurrency conflicts correctly. Dispatch also requires an idempotency key and persists an operation receipt in the same transaction as the trip/job/truck/driver mutation.
 
 ### Operational trip corrections
 Production QA exposed that an owner could advance a trip but had no correction path. The Trips register and My Trip view now expose adjacent correction. `/api/driver/trip-status` enforces one-step movement in either direction, audits from/to status and direction, and safely reopens completed truck/driver/job state. No arbitrary status jumping.
@@ -101,15 +102,24 @@ Customer management now exposes Edit and Archive. Customer archive is routed thr
 Truck management now exposes Edit and Retire. Truck edit only changes descriptive vehicle fields; server-controlled status/assignment fields are not edited by the register. Retire is routed through `/api/operations/archive-record`, which requires an authorized operational role, checks for active trips server-side, and then soft-deletes the truck. Never rely only on a disabled UI button to protect an active operational assignment.
 
 ## Offline/reliability checklist
-For every driver/field action:
+For every offline-capable owner/operations or driver action:
 1. Can it be entered offline?
-2. Is it durably queued?
-3. Does UI show local-save state?
-4. Does reconnect replay automatically?
+2. Is it durably queued or covered by Firestore persistence?
+3. Does UI show local-save/queued state?
+4. Does reconnect replay automatically where server action is involved?
 5. Can a lost response duplicate the mutation?
 6. Does a terminal server rejection become blocked/attention-required?
-7. Can the visited workflow reload offline?
+7. Can the visited workflow reload offline from cached data/app shell?
 8. Does replay survive another network loss without infinite retry?
+
+### Offline contract
+- The PWA shell is real service-worker caching, not a static offline message.
+- Firestore-backed owner/operations reads and supported CRUD benefit from Firestore IndexedDB persistence after the relevant data has been loaded/cached by the browser.
+- Server-controlled trip corrections can be entered offline from the Trips register and are durably queued with an idempotency key for automatic replay.
+- Owner/operations Dispatch → Trip can be entered offline; the request is durably queued and the server requires the same idempotency key on replay. The dispatch transaction records the key and resulting trip ID before any notification is sent, preventing duplicate trips after a lost response.
+- The offline banner must describe **offline changes/work**, not imply that only driver actions are supported.
+- Finance/accounting mutations remain explicitly online/server-authoritative until they receive their own safe offline/idempotency design. Do not fake offline financial success.
+- Archive/retire operations are not considered offline-complete merely because the queue type can represent the endpoint; they still require caller integration and deliberate idempotency/replay verification before being marketed as offline-safe.
 
 Firestore transactions are not offline-capable, so money/state-changing server transactions require an explicit online boundary and safe retry/idempotency design. Do not blindly make finance mutations offline.
 
@@ -143,6 +153,7 @@ Current hardening status:
 - **Driver linking:** fixed in latest HEAD; fleet/operations can link a real signed-in account to a Driver record by exact email, and Drivers can be edited. Needs production verification.
 - **Customer management:** fixed in latest HEAD with Edit + server-controlled Archive. Needs production verification.
 - **Truck management:** fixed in latest HEAD with Edit + server-controlled Retire; retirement is blocked server-side for trucks carrying an active trip. Needs production verification.
+- **Offline owner/operations:** queue now covers owner trip corrections and dispatch, with dispatch idempotency protection. Needs production offline/reconnect verification; this is not a claim that all owner/finance workflows work offline.
 
 After management/identity QA is closed and verified, continue the connected real-world chain:
 `owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting → canonical printable documents`.
