@@ -1,177 +1,97 @@
-# START HERE — AI PROJECT CONTEXT
+# START HERE — Translend TMS · Truck Division v19
 
 ## Authoritative project
-
-This is **Translend TMS · Truck Division v19**.
-
 - Repository: `gatshaayanda/translend-tms`
-- Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `d6871bafdacccdb35aff1b18542fc2b9aeb2b5d7`
+- Branch: `v19-authoritative`
+- Current checkpoint: `a0ad36609aecabe4720506a3e56225a8d5a6a1ac`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
-- UploadThing = POD/evidence and finance receipt transport.
-- Never introduce Firebase Storage for new POD/evidence or receipts.
-- Never replace Firebase with Supabase or another backend.
-- Never reuse older AdminHub/PurePress/Translend generations as implementation sources.
+- UploadThing = POD/evidence and finance-receipt transport.
+- Never introduce Firebase Storage for POD/evidence/receipts.
+- Never replace Firebase with Supabase/another backend.
+- GitHub/current HEAD outranks remembered chat context and old patches.
 
-Git/GitHub are the source of truth. Current repository state outranks remembered chat context or older patches.
+## Product north star
+The real acceptance test is:
+`Job → Dispatch → Trip → Delivery → POD/evidence → Invoice → Payment → Journal → Reporting`
 
-## Product architecture
+A screen, button, Firestore document, offline banner or successful UI state is not proof that the business operation works. Trace the real mutation, authorization, atomicity, retry/idempotency, audit and reporting consequences.
 
-`FACE + SHELL + ENGINE + PRODUCT DATA = PRODUCT`
+## Current state
+- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations.
+- Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented.
+- Delivery/POD: required POD gating, evidence review/replacement, exceptions and completion validation exist.
+- Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
+- Fleet inspections/defects/work orders/offline replay: hardened path exists.
+- GPS/telematics: provider boundary exists; no fake locations or background-tracking claims.
+- Finance: invoice/payment/journal/fuel/supplier-bill server actions exist; finance stays online/server-controlled.
+- Reporting: LIVE Firestore-derived reporting exists.
 
-- FACE = HTML/Figma/screenshots/copy/layout/interaction reference.
-- SHELL = AdminHub-style app frame, responsive UI and PWA utilities.
-- ENGINE = auth, workspace, Firestore, repositories, APIs, security, uploads, business logic and CRUD.
-- PRODUCT DATA = real persisted customer/operational records.
+Still not claimed complete: full tax/VAT configuration, credit/debit notes, bank reconciliation, payroll/settlement, richer scheduled/export reporting, and provider-dependent email/push/telematics/map capabilities.
 
-Wire real data when it exists. Missing domains say **Database still being configured** rather than inventing values. Missing domains required for real actions are added coherently as types + repository + rules + indexes/query shape + UI workflow. Never create fixtures merely to make screens look complete. Never iframe or serve raw HTML as the application.
+## v19 hardening lessons
+### 1. Firebase Storage must stay removed
+`src/lib/firebase/storage.ts` was dead legacy code. `getFirebase()` intentionally returns only `{ app, auth, db }` because v19 uses UploadThing for POD/evidence/receipts. The stale helper caused the build failure by destructuring a removed `storage` property.
 
-## Core operational chain
+Prevention: search the whole repository for `@/lib/firebase/storage`, `uploadPodFile`, `getStorage`, `firebase/storage`, and `storageBucket` before touching Firebase client configuration. Never reintroduce Firebase Storage just to satisfy TypeScript.
 
-`Job → Dispatch → Trip → Delivery → Delivery Note → Arrival → Departure → Receiver acknowledgement → Evidence/POD → Exceptions → Invoice → Payment → Journal → Financial reporting`
+### 2. Server-controlled mutations must actually be server-controlled
+The audit found admin Delivery UI code performing arrival/departure/acknowledgement as separate direct Firestore updates. That could leave Delivery and Delivery Note half-updated. It also created Delivery + Delivery Note with multiple client writes.
 
-The north-star acceptance test is one real transport job completing that entire chain with correct state, audit and reporting outcomes.
+Fixed: `/api/deliveries/workflow-action` now transactionally handles delivery creation and admin arrival/departure/acknowledgement, and the admin Delivery page uses that boundary. Firestore client rules now deny direct Delivery/Trip state writes and allow only explicitly editable Delivery Note fields.
 
-## Development programme status
+Prevention: any mutation that changes two linked business records must be traced to one transaction/batch/server workflow. Do not accept two sequential `repo.update()` calls as atomic.
 
-### 1. Foundation — STRONG
-Company/workspace, authenticated users/roles, customers, trucks and drivers are persisted LIVE records with workspace scoping and real CRUD foundations.
+### 3. UploadThing finalization must be atomic and replay-safe
+Evidence upload previously updated Delivery and Delivery Note with separate writes. Concurrent/repeated callbacks could also produce version drift.
 
-### 2. Job → Dispatch → Trip → Delivery — HARDENED CORE
-Real job creation, confirmation, dispatch, assignment, trip execution and delivery lifecycle exist. Dispatch prevents double booking and commits trip/job/truck/driver state atomically. Driver trip progression is server-authorized and transactionally audited. Completion releases the truck/driver and completes the linked job.
+Fixed: UploadThing evidence finalization now uses a Firestore transaction, treats an existing file key as idempotent, updates both records together, and audits inside the transaction. Notifications remain non-authoritative and occur after commit.
 
-### 3. POD / Evidence — HARDENED
-UploadThing evidence transport, required-POD semantics, replacement/version metadata, approval/rejection, authenticated evidence access, exception linkage, completion gating, retry queue, missing-POD queue and audit coverage are implemented. Delivery completion, evidence review and exception resolution use atomic server transactions. Offline POD files/actions use browser persistence until they can sync.
+Prevention: file transport success is not business success. The callback must atomically finalize every authoritative record and tolerate callback replay.
 
-### 4. Finance → Invoice → Payment → Journal — HARDENED CONTROL / CONNECTED BILLING
-Finance mutations are server-controlled. Invoice raising validates completed POD + Job + Customer + positive Job rate + open accounting period and creates Invoice + AR/Haulage Revenue journal + audit atomically. Payment, supplier bill, manual journal, reversal and fuel expense actions have transaction boundaries and duplicate/concurrency controls.
+### 4. Client Firestore rules must protect authoritative fields
+Previous rules preserved the record envelope but still allowed ordinary clients to change business-sensitive fields such as status/assignment/evidence/finance state.
 
-Still not claimed complete: dedicated credit/debit notes, full tax/VAT configuration, bank/cash reconciliation, dedicated accounting statement/export workflows and settlement/payroll modules.
+Fixed: client creates now validate `orgId`, LIVE environment, actor/creator and soft-delete envelope. Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted to editable fields.
 
-### 5. Fleet / GPS / Telematics — FOUNDATION + REAL PROVIDER BOUNDARY
-Fleet map consumes real `truckLocationEvents` only. GPS/telematics ingestion is provider-neutral, authenticated, mapped to Translend trucks, validated, idempotent and stale-event protected. Browser GPS is foreground/permission-based. No background tracking or fabricated locations are claimed. External map/telematics credentials remain configuration boundaries.
+Firestore rules are security boundaries, not UI configuration. Use `diff().affectedKeys()`/`unchangedKeys()` for field-level protection. Do not weaken rules to fix a permission error.
 
-### 6. Driver mobile workflow — HARDENED + OFFLINE FIELD OPERATION
-Driver My Trip supports trip progression, delivery milestones, POD, exceptions, inspections, defects, work-order handoff, maintenance/tyre visibility and location capture.
+### 5. Error contracts matter
+Mandatory status semantics: 401 authentication, 403 authorization, 400 invalid input, 404 missing resource, 409 state/concurrency conflict, 500 unexpected server failure. Avoid catch-all 400/401 responses because they break retry/recovery semantics.
 
-**Important correction:** offline was previously treated as complete when only Firestore persistence/PWA state had been implemented. That was insufficient. The driver field workflow now has a durable IndexedDB mutation queue for:
-- trip status
-- delivery arrival/departure/receiver acknowledgement/exception
-- vehicle inspections
-- vehicle defects/work-order creation
-- POD/evidence upload retry
+## Offline/reliability checklist
+For every driver/field action:
+1. Can it be entered offline?
+2. Is it durably queued?
+3. Does UI show local-save state?
+4. Does reconnect replay automatically?
+5. Can a lost response duplicate the mutation?
+6. Does a terminal server rejection become blocked/attention-required?
+7. Can the visited workflow reload offline?
+8. Does replay survive another network loss without infinite retry?
 
-Queued server mutations carry idempotency keys and are replayed after reconnect/auth readiness. The server records replay receipts transactionally so a successful request whose response is lost cannot be applied twice. Online and offline driver mutations use the same idempotency contract.
+Firestore transactions are not offline-capable, so money/state-changing server transactions require an explicit online boundary and safe retry/idempotency design. Do not blindly make finance mutations offline.
 
-The queue now distinguishes retryable transport/server failures from terminal 4xx validation/authorization/state conflicts. Terminal rejected actions remain stored as **blocked** rather than silently retrying forever, and the PWA surfaces that attention state.
+## Finance checklist
+Always trace:
+`completed POD → invoice → payment → AR/Cash journal → reporting`
 
-The PWA service worker now caches previously visited application routes and Next static assets so an already-opened driver workflow can actually reload while offline. It still does not claim arbitrary first-ever navigation offline.
+Check duplicate invoice/payment/reference, customer/job/POD linkage, positive amount, open accounting period, overpayment, supplier bill linkage, journal balance, reversal integrity, audit, concurrency and lost-response behavior.
 
-Firestore native persistence still handles cached reads and supported direct Firestore writes; full offline proof of every admin CRUD surface remains a QA obligation. Finance mutations intentionally remain online/server-controlled because replaying money movements without a deliberate accounting idempotency/period design would be unsafe.
+Never let a client directly create accounting records. Prefer one server transaction for operational + accounting state that must succeed together.
 
-### 7. Reliability / Data Integrity — ACTIVE HARDENING
-Major business transactions are atomic and audit-backed. Driver server actions return meaningful HTTP classes. Replay-safe mutation receipts protect offline/server retries. Firestore rules preserve the immutable record envelope (`orgId`, environment, creator, creation timestamp, soft-delete state) during client updates and block client access to server-only mutation receipts.
+## Fleet/TMS benchmark
+Current fleet references consistently treat dispatch, mobile driver workflows, offline field operation, ePOD, inspections, maintenance/work orders, fuel/cost control, visibility and reporting as connected workflows. Use current Trimble/Fleetio/Samsara references as behavioral benchmarks, not feature-cloning instructions.
 
-The driver vehicle inspection path requires an explicit odometer value instead of silently converting an empty reading into zero. Trip driver/truck lookup has an explicit Firestore composite index so the transactional inspection/defect path does not depend on an undeclared index.
+## Deployment/verification
+Required sequence when tooling is available:
+`inspect HEAD → typecheck → lint → build → affected-workflow verification → AGENTS update → commit → push → Vercel status`
 
-Remaining reliability targets: broader mutation audit coverage, generalized idempotency beyond driver actions, referential/orphan checks, conflict-resolution UX, offline admin CRUD proof, partial-workflow recovery and stronger concurrency test coverage.
+Never call a deployment green without actual status evidence.
 
-### 8. Workspace / Admin / Permissions — CONTROL PASS
-Server-controlled member role/suspension/restoration and owner transfer are transactionally audited. Membership documents are not client-self-editable. Accounting remains owner/finance restricted; operational mutations use workspace roles.
+Current connected Vercel account exposes only the `adminhub-global` project, not a dedicated `translend-tms` project. The GitHub Vercel check currently reports a Vercel **build-rate-limit** failure rather than the original TypeScript Storage error. Do not repeatedly trigger deployments while the Hobby quota is exhausted and do not claim the current commit is deployed.
 
-Still to expand: richer permission test matrix, company defaults/settings, invitation cancellation/resend and real transactional email when configured.
+## Required workflow for future agents
+`read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace real business mutation paths → inspect rules/indexes/config → compare with current TMS behavior → deliberately attack retry/offline/concurrency/security edges → fix root cause → inspect diff → run verification available → update AGENTS.md → commit/push → inspect deployment status → report exact SHA/status`
 
-### 9. Notifications — FOUNDATION
-Persisted org-scoped notification records, recipient-scoped reads, read/unread state, shell notification center, driver assignment, POD upload/rejection and delivery-exception notifications exist. Notification delivery is non-authoritative and never converts a committed business mutation into a failure.
-
-Still to expand: ageing alerts, route variance, maintenance/inspection alerts, finance due dates, driver reminders, escalation rules, preferences and real push/email providers.
-
-### 10. Reporting / Intelligence — OPERATIONAL PASS
-Reports are derived from LIVE Firestore truth. Current reporting covers operations, fleet/compliance, customers, invoices, supplier bills, journal activity, fuel, workshop, inspections, POD readiness and control-tower views. CSV and browser Print/PDF are available. Drill-down links lead to authoritative workflows.
-
-Still to expand: richer trend charts, date/filter controls, scheduled reports, server-side large-data exports and dedicated PDF generation.
-
-## QA-prevention rules — learned from missed issues
-
-Before declaring a workflow complete, do not only inspect whether a screen exists. Exercise the mutation path under the conditions a real transport operator will hit.
-
-### Offline checklist
-For every driver field action ask:
-1. Can the driver enter it with no connection?
-2. Is the action durably stored locally?
-3. Does the UI immediately acknowledge that it is saved locally?
-4. Does reconnect replay it automatically?
-5. Can a lost response/retry create a duplicate?
-6. Does a server rejection remain visible with a useful next action?
-7. Can the actual application shell reload offline after it has been visited?
-8. Does a blocked action stop infinite automatic retries while remaining recoverable/visible?
-
-Competitor/reference evidence supports this standard: Firebase documents offline cache/write synchronization, and current fleet products explicitly support offline inspections and mobile field workflows. Firestore transactions are not offline-capable, while batched/direct writes can be persisted offline; therefore transaction-backed business actions need explicit queues rather than a connectivity banner alone.
-
-### Security/integrity checklist
-For every client-writable collection verify:
-- workspace path and `orgId` cannot drift;
-- environment cannot be changed by an ordinary client update;
-- `createdAt`/`createdBy` cannot be rewritten;
-- soft-delete state cannot be resurrected casually;
-- business-sensitive state changes use a server transaction where necessary;
-- audit records are immutable to clients;
-- query constraints actually satisfy Firestore rules;
-- no broad rule accidentally overrides a restrictive rule;
-- every compound query used by a server transaction has an index or known Firestore-supported query plan.
-
-Firestore rules are not filters: a query must itself satisfy the rule constraints. Field-level protection should use `diff().affectedKeys()`/`unchangedKeys()` where appropriate.
-
-### Error-contract checklist
-HTTP errors must distinguish at least authentication (401), authorization (403), invalid input (400), missing resource (404), state/concurrency conflict (409), and unexpected server failure (500). Do not return 400/401 for every exception because this destroys retry and support semantics.
-
-### Location checklist
-A location/map failure must be diagnostic, not just `Missing or insufficient permissions`. Verify:
-- authoritative `firestore.rules` is deployed;
-- active app uses the intended Firebase project (`translend-tms-dcd2a`);
-- active workspace membership exists and is active;
-- query shape matches rules/indexes;
-- location provider/configuration is clearly separated from Firestore permission failures.
-
-Never weaken rules to hide a permission failure.
-
-### Driver/fleet reference checklist
-Current TMS/fleet references consistently treat dispatch, tracking/visibility, mobile driver workflows, ePOD/POD, inspections, maintenance/work orders, fuel/cost control, notifications and reporting as connected operating workflows. The product should therefore be judged by business completion and recovery, not by the number of routes/screens.
-
-Reference checks used during v19 hardening included Firebase Firestore offline/transaction guidance and current Trimble, Fleetio and Samsara fleet/TMS capabilities. These references are benchmarks, not instructions to clone enterprise-only features.
-
-## External capability boundaries
-
-- Driver browser GPS is foreground and permission-based; do not claim background tracking.
-- Automatic fleet telematics requires a real provider.
-- Maps/routing may require a real provider/key.
-- Invitations, notifications and reports must not claim email/push/scheduled delivery without a configured provider.
-- UploadThing remains the evidence/receipt transport. Never add Firebase Storage for these new domains.
-
-## Firestore safety
-
-Firestore rules are security boundaries, not UI configuration. Preserve workspace membership security. Do not weaken rules to fix UI/query problems. Verify query shapes against rules/indexes. New domains require types + repository + rules + indexes/query shape + UI workflow. Preserve environment/soft-delete conventions. Workspace invites remain server-controlled. Notifications are recipient-readable and only their read-state fields are client-writable. Audit events and mutation receipts are server-only. Accounting mutations are server-controlled and restricted to owner/finance roles.
-
-## Verification tooling
-
-`package.json` exposes:
-- `npm run typecheck`
-- `npm run lint`
-- `npm run build`
-
-Authoritative sequence: `npm run typecheck → npm run lint → npm run build` when dependency/network access is available. Never report green without actual evidence. Local dependency/build verification has previously been blocked by outbound network/DNS constraints.
-
-## Deployment
-
-GitHub `v19-authoritative` is the source of truth. Never claim a GitHub commit is live production until Vercel deployment status confirms it. Previous Vercel Free daily deployment-cap messages mean repeated deployment attempts should be avoided while quota is exhausted. The connected Vercel account previously did not expose the correct `translend-tms` project, so deployment status must be checked deliberately when capacity/project access is available.
-
-## Required workflow for every future pass
-
-`read AGENTS.md → confirm branch → inspect HEAD/recent commits → inspect actual route/component/data flow → compare against current product/reference expectations → inspect rules + indexes + offline behavior → implement the root fix, not only the visible symptom → inspect diff → typecheck/lint/build where available → verify affected workflows → update AGENTS.md → commit → push → report exact SHA and verification evidence`
-
-Do not stop at analysis when a safe implementation step can be completed. Do not ask for approval for obvious safe hardening.
-
-## Explicit non-goals
-
-Do NOT rebuild authentication, replace Firebase/Firestore, replace UploadThing, introduce Firebase Storage for new POD/evidence/receipts, weaken Firestore rules casually, reuse old project generations, discard working CRUD/delivery workflows, create a raw HTML/iframe application, fabricate live data, claim integrations are live without real providers, or add enterprise features merely for parity when they do not move the actual transport business flow forward.
+Do not reset, revert, branch away, or reuse an older generation. Do not stop at a theoretical issue when a safe root fix can be made. Do not invent data, weaken security, or paper over compiler/runtime failures.
