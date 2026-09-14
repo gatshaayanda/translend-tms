@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `c1b7c2c28cac96064d89960e62e6a16d136fdf29`
+- Current application checkpoint: `868ab475563fdfa0101b99d53e5758a24c4ab78e`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
