@@ -59,6 +59,41 @@ export async function POST(request: Request) {
       tx.update(tripRef, patch);
 
       const data = latestData;
+      if (requestedStatus === "unloading" && data.jobId) {
+        const existing = await tx.get(db.collection(`organizations/${orgId}/deliveries`).where("environment", "==", "LIVE").where("tripId", "==", tripId).where("deletedAt", "==", null));
+        if (existing.empty) {
+          const jobRef = db.doc(`organizations/${orgId}/jobs/${data.jobId}`);
+          const jobSnap = await tx.get(jobRef);
+          if (jobSnap.exists && jobSnap.data()?.environment === "LIVE") {
+            const job = jobSnap.data()!;
+            const customerId = String(job.customerId ?? data.customerId ?? "");
+            if (customerId) {
+              const customerSnap = await tx.get(db.doc(`organizations/${orgId}/customers/${customerId}`));
+              if (customerSnap.exists && customerSnap.data()?.environment === "LIVE") {
+                const deliveryRef = db.collection(`organizations/${orgId}/deliveries`).doc();
+                const noteRef = db.collection(`organizations/${orgId}/deliveryNotes`).doc();
+                const now = FieldValue.serverTimestamp();
+                tx.set(deliveryRef, {
+                  orgId, environment: "LIVE", createdAt: now, createdBy: user.uid, updatedAt: now, updatedBy: user.uid, deletedAt: null,
+                  tripId, jobId: data.jobId, status: "pending", deliveredAt: null, receivedByName: "", podFileUrl: null, signatureUrl: null,
+                  exceptionReason: null, deliveryNoteId: noteRef.id, arrivalAt: null, arrivalBy: null, departureAt: null, departureBy: null,
+                  acknowledgements: [], evidenceRefs: [], exceptionIds: [], podState: "not_started",
+                });
+                tx.set(noteRef, {
+                  orgId, environment: "LIVE", createdAt: now, createdBy: user.uid, updatedAt: now, updatedBy: user.uid, deletedAt: null,
+                  noteReference: `DN-${deliveryRef.id.slice(0, 8).toUpperCase()}`, noteDateTime: Timestamp.now(), jobId: data.jobId, tripId,
+                  deliveryId: deliveryRef.id, suppliedTo: "", customerName: String(customerSnap.data()?.name ?? ""), vehicleRegistration: data.truckRegistration ?? "", deliveryLocation: "",
+                  driverId: data.driverId, driverName: data.driverName, orderReference: null, podReference: null, loadingPoint: null,
+                  receivedByName: "", receivedByRole: null, notes: "", materialLines: [{ id: crypto.randomUUID(), description: "", materialCode: null, quantity: 0, unit: "", expectedQuantity: null, notes: "" }],
+                  arrivalAt: null, arrivalBy: null, departureAt: null, departureBy: null, acknowledgements: [], evidenceRefs: [], exceptionIds: [], podState: "not_started",
+                });
+                recordAuditEvent({ orgId, actorUid: user.uid, actorRole, action: "create", entityType: "delivery", entityId: deliveryRef.id, summary: `Automatically created delivery record for trip ${tripId.slice(0, 8)} entering unloading.`, metadata: { tripId, deliveryNoteId: noteRef.id, customerId }, transaction: tx });
+              }
+            }
+          }
+        }
+      }
+
       if (current !== "completed" && requestedStatus === "completed") {
         const now = FieldValue.serverTimestamp();
         tx.update(db.doc(`organizations/${orgId}/trucks/${data.truckId}`), { status: "available", assignedDriverId: null, updatedAt: now, updatedBy: user.uid });
