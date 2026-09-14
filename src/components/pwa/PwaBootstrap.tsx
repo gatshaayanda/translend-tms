@@ -11,12 +11,14 @@ type SyncState = "starting" | "ready" | "offline" | "syncing" | "synced" | "atte
 
 export function PwaBootstrap() {
   const [installEvent, setInstallEvent] = useState<InstallPromptEvent | null>(null);
-  const [online, setOnline] = useState(true);
-  const [syncState, setSyncState] = useState<SyncState>("starting");
+  const [online, setOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [syncState, setSyncState] = useState<SyncState>(() => typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "starting");
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => undefined); }, { once: true });
+      const register = () => { void navigator.serviceWorker.register("/sw.js").catch(() => undefined); };
+      if (document.readyState === "complete") register();
+      else window.addEventListener("load", register, { once: true });
     }
 
     const syncNow = async () => {
@@ -70,12 +72,12 @@ export function PwaBootstrap() {
   };
 
   const syncLabel = {
-    starting: "Preparing offline support…",
-    ready: "Offline actions waiting to sync",
-    offline: "Offline — driver actions are saved locally and will sync when you reconnect",
-    syncing: "Syncing offline actions…",
-    synced: "Synced",
-    attention: "Offline actions need attention — reconnect and review the affected workflow",
+    starting: "Preparing offline work…",
+    ready: "Offline changes waiting to sync",
+    offline: "Offline — cached data and supported work remain available. Changes are saved locally and will sync when you reconnect.",
+    syncing: "Syncing offline changes…",
+    synced: "Offline changes synced",
+    attention: "Some offline changes need attention — reconnect and review the affected workflow",
     unavailable: "Offline storage is not available in this browser",
     failed: "Offline storage could not be enabled",
   }[syncState];
