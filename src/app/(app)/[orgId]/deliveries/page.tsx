@@ -42,6 +42,18 @@ const ACK_ROLES: Array<{ role: DeliveryAcknowledgementRole; label: string }> = [
   { role: "receiver", label: "Receiver" },
 ];
 
+async function postDeliveryWorkflowAction(user: NonNullable<ReturnType<typeof useAuth>["user"]>, body: Record<string, unknown>) {
+  const token = await user.getIdToken();
+  const response = await fetch("/api/deliveries/workflow-action", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(String(payload.error ?? "Delivery workflow action failed."));
+  return payload as { ok: true; deliveryId?: string; deliveryNoteId?: string };
+}
+
 export default function DeliveriesPage() {
   const { activeOrg } = useWorkspace();
   const { user } = useAuth();
@@ -105,59 +117,9 @@ export default function DeliveriesPage() {
     setCreatingDelivery(true);
     setError(null);
     try {
-      const deliveryPayload: Omit<Delivery, keyof BaseRecord> = {
-        tripId: trip.id,
-        jobId: trip.jobId,
-        status: "pending",
-        deliveredAt: null,
-        receivedByName: "",
-        podFileUrl: null,
-        signatureUrl: null,
-        exceptionReason: null,
-        deliveryNoteId: null,
-        arrivalAt: null,
-        arrivalBy: null,
-        departureAt: null,
-        departureBy: null,
-        acknowledgements: [],
-        evidenceRefs: [],
-        exceptionIds: [],
-        podState: "not_started",
-      };
-
-      const deliveryId = await deliveriesRepo.create(activeOrg.id, user.uid, deliveryPayload, "LIVE");
-      const notePayload: Omit<DeliveryNote, keyof BaseRecord> = {
-        noteReference: `DN-${deliveryId.slice(0, 8).toUpperCase()}`,
-        noteDateTime: Timestamp.now(),
-        jobId: trip.jobId,
-        tripId: trip.id,
-        deliveryId,
-        suppliedTo: "",
-        customerName: "",
-        vehicleRegistration: trip.truckRegistration,
-        deliveryLocation: "",
-        driverId: trip.driverId,
-        driverName: trip.driverName,
-        orderReference: null,
-        podReference: null,
-        loadingPoint: null,
-        receivedByName: "",
-        receivedByRole: null,
-        notes: "",
-        materialLines: [EMPTY_LINE()],
-        arrivalAt: null,
-        arrivalBy: null,
-        departureAt: null,
-        departureBy: null,
-        acknowledgements: [],
-        evidenceRefs: [],
-        exceptionIds: [],
-        podState: "not_started",
-      };
-      const noteId = await deliveryNotesRepo.create(activeOrg.id, user.uid, notePayload, "LIVE");
-      await deliveriesRepo.update(activeOrg.id, user.uid, deliveryId, { deliveryNoteId: noteId });
-
-      const created = await deliveryNotesRepo.getById(activeOrg.id, noteId);
+      const result = await postDeliveryWorkflowAction(user, { orgId: activeOrg.id, action: "create", tripId: trip.id });
+      if (!result.deliveryNoteId) throw new Error("Delivery was created without a Delivery Note id.");
+      const created = await deliveryNotesRepo.getById(activeOrg.id, result.deliveryNoteId);
       if (created) setDeliveryNotes((current) => [created, ...current.filter((n) => n.id !== created.id)]);
       setTripTarget(null);
       if (created) setNoteTarget(created);
@@ -248,6 +210,7 @@ export default function DeliveriesPage() {
         <DeliveryNoteDialog
           orgId={activeOrg.id}
           userId={user.uid}
+          user={user}
           note={noteTarget}
           delivery={deliveries?.find((item) => item.id === noteTarget.deliveryId) ?? null}
           onClose={() => setNoteTarget(null)}
@@ -275,9 +238,10 @@ function ConfirmDialog({ trip, busy, onClose, onConfirm }: { trip: Trip; busy: b
   );
 }
 
-function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, onError }: {
+function DeliveryNoteDialog({ orgId, userId, user, note, delivery, onClose, onSaved, onError }: {
   orgId: string;
   userId: string;
+  user: NonNullable<ReturnType<typeof useAuth>["user"]>;
   note: DeliveryNote;
   delivery: Delivery | null;
   onClose: () => void;
@@ -305,26 +269,24 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
   const addLine = () => setDraft((current) => ({ ...current, materialLines: [...current.materialLines, EMPTY_LINE()] }));
   const removeLine = (lineId: string) => setDraft((current) => ({ ...current, materialLines: current.materialLines.filter((line) => line.id !== lineId) }));
 
-  const persistDelivery = async (patch: Partial<Delivery>) => {
-    if (!deliveryDraft) return null;
-    await deliveriesRepo.update(orgId, userId, deliveryDraft.id, patch);
-    const updated = await deliveriesRepo.getById(orgId, deliveryDraft.id);
-    if (!updated) throw new Error("Delivery was updated but could not be reloaded.");
-    setDeliveryDraft(updated);
-    return updated;
+  const reloadWorkflow = async () => {
+    if (!deliveryDraft) return;
+    const [updatedNote, updatedDelivery] = await Promise.all([
+      deliveryNotesRepo.getById(orgId, draft.id),
+      deliveriesRepo.getById(orgId, deliveryDraft.id),
+    ]);
+    if (!updatedNote || !updatedDelivery) throw new Error("Workflow action succeeded but the records could not be reloaded.");
+    setDraft(updatedNote);
+    setDeliveryDraft(updatedDelivery);
+    onSaved(updatedNote, updatedDelivery);
   };
 
   const markArrival = async () => {
     if (!deliveryDraft || deliveryDraft.arrivalAt) return;
     setSaving(true);
     try {
-      const now = Timestamp.now();
-      const updated = await persistDelivery({ arrivalAt: now, arrivalBy: userId });
-      await deliveryNotesRepo.update(orgId, userId, draft.id, { arrivalAt: now, arrivalBy: userId });
-      const updatedNote = await deliveryNotesRepo.getById(orgId, draft.id);
-      if (!updatedNote) throw new Error("Arrival was saved but the Delivery Note could not be reloaded.");
-      setDraft(updatedNote);
-      onSaved(updatedNote, updated);
+      await postDeliveryWorkflowAction(user, { orgId, action: "arrive", deliveryId: deliveryDraft.id, deliveryNoteId: draft.id });
+      await reloadWorkflow();
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to record arrival.");
     } finally {
@@ -336,13 +298,8 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
     if (!deliveryDraft || deliveryDraft.departureAt || !deliveryDraft.arrivalAt) return;
     setSaving(true);
     try {
-      const now = Timestamp.now();
-      const updated = await persistDelivery({ departureAt: now, departureBy: userId });
-      await deliveryNotesRepo.update(orgId, userId, draft.id, { departureAt: now, departureBy: userId });
-      const updatedNote = await deliveryNotesRepo.getById(orgId, draft.id);
-      if (!updatedNote) throw new Error("Departure was saved but the Delivery Note could not be reloaded.");
-      setDraft(updatedNote);
-      onSaved(updatedNote, updated);
+      await postDeliveryWorkflowAction(user, { orgId, action: "depart", deliveryId: deliveryDraft.id, deliveryNoteId: draft.id });
+      await reloadWorkflow();
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to record departure.");
     } finally {
@@ -355,14 +312,8 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
     if (!name || draft.acknowledgements.some((ack) => ack.role === role)) return;
     setSaving(true);
     try {
-      const acknowledgement = { uid: userId, role, name, acknowledgedAt: Timestamp.now(), acknowledgedBy: userId };
-      const acknowledgements = [...draft.acknowledgements, acknowledgement];
-      await deliveryNotesRepo.update(orgId, userId, draft.id, { acknowledgements, receivedByName: role === "receiver" ? name : draft.receivedByName, receivedByRole: role === "receiver" ? role : draft.receivedByRole });
-      if (deliveryDraft) await persistDelivery({ acknowledgements, receivedByName: role === "receiver" ? name : deliveryDraft.receivedByName });
-      const updatedNote = await deliveryNotesRepo.getById(orgId, draft.id);
-      if (!updatedNote) throw new Error("Acknowledgement was saved but the Delivery Note could not be reloaded.");
-      setDraft(updatedNote);
-      onSaved(updatedNote, deliveryDraft);
+      await postDeliveryWorkflowAction(user, { orgId, action: "acknowledge", deliveryId: deliveryDraft?.id, deliveryNoteId: draft.id, role, name });
+      await reloadWorkflow();
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to record acknowledgement.");
     } finally {
@@ -459,31 +410,9 @@ function DeliveryNoteDialog({ orgId, userId, note, delivery, onClose, onSaved, o
           </div>
         </section>
 
-        <DeliveryEvidencePanel
-          orgId={orgId}
-          note={draft}
-          onSaved={handleEvidenceSaved}
-          onError={onError}
-        />
-
-        <DeliveryExceptionPanel
-          orgId={orgId}
-          userId={userId}
-          note={draft}
-          delivery={deliveryDraft}
-          onSaved={handleExceptionSaved}
-          onError={onError}
-        />
-
-        <DeliveryWorkflowStatus
-          orgId={orgId}
-          userId={userId}
-          note={draft}
-          delivery={deliveryDraft}
-          onSaved={handleWorkflowSaved}
-          onError={onError}
-        />
-
+        <DeliveryEvidencePanel orgId={orgId} note={draft} onSaved={handleEvidenceSaved} onError={onError} />
+        <DeliveryExceptionPanel orgId={orgId} userId={userId} note={draft} delivery={deliveryDraft} onSaved={handleExceptionSaved} onError={onError} />
+        <DeliveryWorkflowStatus orgId={orgId} userId={userId} note={draft} delivery={deliveryDraft} onSaved={handleWorkflowSaved} onError={onError} />
         <Field label="Notes"><textarea className="input" rows={3} value={draft.notes} onChange={(e) => update("notes", e.target.value)} /></Field>
       </div>
 
