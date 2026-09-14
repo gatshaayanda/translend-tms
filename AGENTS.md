@@ -17,7 +17,7 @@
 A screen, button, Firestore document, offline banner or successful UI state is not proof that the business operation works. Trace the real mutation, authorization, atomicity, retry/idempotency, audit and reporting consequences.
 
 ## Current state
-- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations.
+- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist in the repository, but management UI must be verified before calling them complete.
 - Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented.
 - Delivery/POD: required POD gating, evidence review/replacement, exceptions and completion validation exist.
 - Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
@@ -70,9 +70,16 @@ Fixed: accounting-period queries are now read through the active Firestore trans
 ### Job integrity and dispatch concurrency
 Job creation was relying too heavily on UI validation. A client could otherwise attempt to create a confirmed Job with an invalid customer reference, mismatched customer name, non-positive rate, negative weight or reversed dates. A dispatched Job could also have its customer/rate/scheduling fields edited directly after assignment.
 
-Fixed: Firestore Job-create rules now require a LIVE, non-deleted Customer in the same workspace, matching `customerName`, positive rate, non-negative weight and ordered timestamps. Sensitive Job fields remain editable while the Job is confirmed but are locked once it is dispatched; status remains server-controlled. The dispatch API now returns correct 401/403/404/409/500 semantics instead of collapsing business conflicts into 400. Dispatch already uses one transaction over Job + Truck + Driver, so concurrent attempts conflict and re-evaluate against the latest state rather than creating a second assignment.
+Fixed: Firestore Job-create rules now require a LIVE, non-deleted Customer in the same workspace, matching `customerName`, positive rate, non-negative weight and ordered timestamps. Sensitive Job fields remain editable while the Job is confirmed but are locked once the Job is dispatched; status remains server-controlled. The dispatch API now returns correct 401/403/404/409/500 semantics instead of collapsing business conflicts into 400. Dispatch already uses one transaction over Job + Truck + Driver, so concurrent attempts conflict and re-evaluate against the latest state rather than creating a second assignment.
 
 Prevention: validate business references and money/date invariants at the authorization boundary, not only in forms. Once dispatch has consumed a Job, protect the commercial identity and schedule from ordinary client edits.
+
+### Operational trip corrections
+Production QA exposed that an owner could advance a trip but had no way to correct an accidentally recorded milestone. This is not acceptable for real operational use because test or human error becomes permanent history.
+
+Fixed in `0fede9a` + `056087d`: adjacent trip status changes can now be explicitly corrected by authorized operational roles, and linked drivers can also move their assigned trip one adjacent step in either direction. Every correction is audited with from/to status and direction. Completion reversal restores the trip's truck/driver to `on_trip` and the job to `in_progress`; completion still remains an explicit operational state, not a generic arbitrary status edit.
+
+Prevention: operational status must remain sequential and auditable, but authorized actors need an explicit correction path. Never implement irreversible forward-only UI when a legitimate field correction is required.
 
 ## Offline/reliability checklist
 For every driver/field action:
@@ -109,15 +116,14 @@ Current connected Vercel account exposes only the `adminhub-global` project, not
 
 Do not reset, revert, branch away, or reuse an older generation. Do not stop at a theoretical issue when a safe root fix can be made. Do not invent data, weaken security, or paper over compiler/runtime failures.
 
-
 ## Production QA checkpoint — 2026-09-14
-The deployed production checkpoint `df7fbd7` was manually QA-tested before the later `3649f4b` head could deploy. Treat the following observed gaps as real until fixed and re-verified; do not describe CRUD foundations or deeper workflows as user-usable when the UI cannot reach them.
+The deployed production checkpoint `df7fbd7` was manually QA-tested before later HEAD could deploy. Observed gaps were:
 
-1. **Customers/Trucks/Drivers:** production UI exposes create and list, but no visible edit or archive/delete actions. Repository helpers already provide `update` and `softDelete`; wire safe management UI and respect protected operational fields.
-2. **Workspace selection:** WorkspaceContext currently auto-selects the first resolved organization. Multi-workspace users need a deliberate chooser/switcher and persisted last-active workspace; invitation acceptance must not silently strand another accessible workspace.
-3. **Driver identity linkage:** driver invite/member acceptance and Driver.business record linkage are separate. A driver can sign in successfully and still hit “not linked”. Provide a visible authorized fleet/operations linking flow and prevent ambiguous email/UID matches. The end-to-end path must be: invite → sign in → workspace membership → authorized link to exactly one Driver record → My Trip.
-4. **Trip progression:** latest head still intentionally enforces forward-only one-step progression. Do not silently weaken operational state integrity. If correction is needed, add an explicit audited exception/correction path rather than generic backward state mutation.
-5. **QA priority:** fix the earlier blockers before claiming deeper delivery/finance workflows are reachable by a normal user. Production QA observations outrank theoretical feature descriptions.
+1. **Customers/Trucks/Drivers:** production UI exposes create/list but no visible edit/archive actions. Repository helpers already provide `update` and `softDelete`. This remains a priority until the UI is wired and verified.
+2. **Workspace selection:** WorkspaceContext auto-selected the first resolved organization. Multi-workspace users need deliberate chooser/switcher and persisted last-active workspace. This remains a priority; do not change the existing single-workspace flow unnecessarily.
+3. **Driver identity linkage:** driver invite/member acceptance and Driver business-record linkage are separate. A driver can sign in and still hit “not linked”. A visible authorized fleet/operations linking flow is required. End-to-end target: invite → sign in → membership → link exactly one Driver record → My Trip.
+4. **Trip correction:** QA exposed missing owner correction. This is now fixed in the latest HEAD with adjacent forward/backward controls for owners/operations and linked drivers, backed by an audited server route. Re-verify after deployment.
+5. **Connected workflow priority:** after the above blockers, continue through driver coordination → delivery/POD → invoice → payment/owed money → journal/reporting. Do not treat finance as complete merely because server actions exist.
 
 Required verification after these fixes:
-`owner multi-workspace → choose/switch workspace → create customer/truck/driver → edit → archive where allowed → invite driver → driver signs in → link/claim → assign trip → forward progression → explicit correction/exception path`.
+`owner multi-workspace → choose/switch workspace → create customer/truck/driver → edit → archive where allowed → invite driver → driver signs in → link/claim → assign trip → forward progression → explicit correction → delivery/POD → invoice → payment/owed → journal/reporting`.
