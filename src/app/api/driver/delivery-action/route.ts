@@ -29,16 +29,24 @@ export async function POST(request: Request) {
     const tripSnap = await db.doc(`organizations/${orgId}/trips/${note.tripId}`).get();
     if (!tripSnap.exists || tripSnap.data()?.driverId !== driverId) return NextResponse.json({ error: "This delivery is not assigned to you." }, { status: 403 });
     const now = Timestamp.now();
+
     if (action === "arrive") {
+      if (delivery.arrivalAt || note.arrivalAt) return NextResponse.json({ error: "Arrival has already been recorded." }, { status: 409 });
       await Promise.all([deliveryRef.update({ arrivalAt: now, arrivalBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid }), noteRef.update({ arrivalAt: now, arrivalBy: user.uid, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid })]);
+      await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "driver", action: "arrive", entityType: "delivery", entityId: deliveryId, summary: `Driver recorded arrival for Delivery Note ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryNoteId } });
     } else if (action === "depart") {
-      if (!note.arrivalAt) return NextResponse.json({ error: "Mark arrival before departure." }, { status: 409 });
+      if (!note.arrivalAt || !delivery.arrivalAt) return NextResponse.json({ error: "Mark arrival before departure." }, { status: 409 });
+      if (delivery.departureAt || note.departureAt) return NextResponse.json({ error: "Departure has already been recorded." }, { status: 409 });
       await Promise.all([deliveryRef.update({ departureAt: now, departureBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid }), noteRef.update({ departureAt: now, departureBy: user.uid, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid })]);
+      await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "driver", action: "depart", entityType: "delivery", entityId: deliveryId, summary: `Driver recorded departure for Delivery Note ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryNoteId } });
     } else if (action === "acknowledge") {
       const name = String(body.name ?? "").trim();
       if (!name) return NextResponse.json({ error: "Receiver name is required." }, { status: 400 });
+      if (!delivery.arrivalAt || !note.arrivalAt) return NextResponse.json({ error: "Mark arrival before receiver acknowledgement." }, { status: 409 });
+      if (Array.isArray(note.acknowledgements) && note.acknowledgements.some((item: { role?: string }) => item.role === "receiver")) return NextResponse.json({ error: "Receiver acknowledgement has already been recorded." }, { status: 409 });
       const acknowledgement = { role: "receiver", name, uid: user.uid, acknowledgedAt: now };
       await Promise.all([deliveryRef.update({ acknowledgements: FieldValue.arrayUnion(acknowledgement), receivedByName: name, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid }), noteRef.update({ acknowledgements: FieldValue.arrayUnion(acknowledgement), receivedByName: name, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid })]);
+      await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "driver", action: "acknowledge", entityType: "delivery", entityId: deliveryId, summary: `Receiver acknowledgement recorded for Delivery Note ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryNoteId, receiverName: name } });
     } else {
       const category = String(body.category ?? "other") as DeliveryExceptionCategory; const description = String(body.description ?? "").trim();
       if (!CATEGORIES.includes(category) || !description) return NextResponse.json({ error: "Valid exception category and description are required." }, { status: 400 });
