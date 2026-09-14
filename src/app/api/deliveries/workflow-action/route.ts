@@ -14,7 +14,12 @@ export async function POST(request: Request) {
   try {
     const authorization = request.headers.get("authorization");
     if (!authorization?.startsWith("Bearer ")) throw new ApiError(401, "Authentication required.");
-    const user = await getAdminAuth().verifyIdToken(authorization.slice(7).trim());
+    let user;
+    try {
+      user = await getAdminAuth().verifyIdToken(authorization.slice(7).trim());
+    } catch {
+      throw new ApiError(401, "Invalid authentication token.");
+    }
     const body = await request.json();
     const orgId = String(body.orgId ?? "");
     const action = String(body.action ?? "") as Action;
@@ -145,11 +150,11 @@ export async function POST(request: Request) {
       const exception = exceptionSnap.data()!;
       if (exception.deliveryId !== deliveryId || exception.deliveryNoteId !== deliveryNoteId) throw new ApiError(409, "Exception is not linked to this delivery.");
       if (exception.status !== "open") throw new ApiError(409, "This delivery exception is already closed.");
+      const remainingSnap = await tx.get(db.collection(`organizations/${orgId}/deliveryExceptions`).where("deliveryId", "==", deliveryId));
+      const hasOpen = remainingSnap.docs.some((doc) => doc.id !== exceptionId && doc.data().status === "open");
       const status = action === "resolve_exception" ? "resolved" : "void";
       const resolutionNotes = String(body.resolutionNotes ?? "").trim();
       tx.update(exceptionRef, { status, resolutionNotes: resolutionNotes || null, resolvedBy: user.uid, resolvedAt: now, updatedAt: now, updatedBy: user.uid });
-      const remainingSnap = await tx.get(db.collection(`organizations/${orgId}/deliveryExceptions`).where("deliveryId", "==", deliveryId));
-      const hasOpen = remainingSnap.docs.some((doc) => doc.id !== exceptionId && doc.data().status === "open");
       if (!hasOpen) {
         tx.update(deliveryRef, { status: delivery.status === "exception" ? "pending" : delivery.status, updatedAt: now, updatedBy: user.uid });
         tx.update(noteRef, { updatedAt: now, updatedBy: user.uid });
