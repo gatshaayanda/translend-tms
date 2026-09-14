@@ -17,7 +17,7 @@
 A screen, button, Firestore document, offline banner or successful UI state is not proof that the business operation works. Trace the real mutation, authorization, atomicity, retry/idempotency, audit and reporting consequences.
 
 ## Current state
-- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist in the repository, but management UI must be verified before calling them complete.
+- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist; customer, driver and truck management surfaces now expose practical correction/retirement controls and remain subject to production verification.
 - Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented.
 - Delivery/POD: required POD gating, evidence review/replacement, exceptions and completion validation exist.
 - Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
@@ -77,17 +77,20 @@ Prevention: validate business references and money/date invariants at the author
 ### Operational trip corrections
 Production QA exposed that an owner could advance a trip but had no way to correct an accidentally recorded milestone. This is not acceptable for real operational use because test or human error becomes permanent history.
 
-Fixed in `0fede9a` + `056087d`: adjacent trip status changes can now be explicitly corrected by authorized operational roles, and linked drivers can also move their assigned trip one adjacent step in either direction. Every correction is audited with from/to status and direction. Completion reversal restores the trip's truck/driver to `on_trip` and the job to `in_progress`; completion still remains an explicit operational state, not a generic arbitrary status edit.
+Fixed: adjacent trip status changes are exposed in the Trips register and My Trip view. The driver API enforces one-step movement in either direction, audits from/to status and direction, and safely reopens completed operational state when a completion correction is made. Owners/operations have an explicit adjacent correction path in the register.
 
 Prevention: operational status must remain sequential and auditable, but authorized actors need an explicit correction path. Never implement irreversible forward-only UI when a legitimate field correction is required.
 
 ### Workspace and driver identity QA
 Production QA found that multiple workspaces were silently selecting the first organization and that a signed-in invited driver could remain unlinked to the Driver business record.
 
-Fixed in the latest hardening pass: multi-workspace accounts now stop at an explicit workspace chooser unless a valid last-active workspace exists; the chosen workspace is persisted locally. Fleet/operations users now have a visible Driver "Link account" action, backed by `/api/fleet/link-driver`, which requires active authorized membership and an exact Driver-record email match to a real Firebase account. Drivers also have an Edit path. The link operation rejects ambiguous reuse of one account across multiple Driver records.
+Fixed: multi-workspace accounts now stop at an explicit workspace chooser unless a valid last-active workspace exists; the chosen workspace is persisted locally. Fleet/operations users now have a visible Driver "Link account" action, backed by `/api/fleet/link-driver`, which requires active authorized membership and an exact Driver-record email match to a real Firebase account. Drivers also have an Edit path. The link operation rejects ambiguous reuse of one account across multiple Driver records.
 
 ### Customer management QA
 Production QA found Customer was create/list only. The customer register now exposes Edit and Archive controls, with archive blocked when open jobs exist. The existing repository soft-delete path is used rather than destructive deletion.
+
+### Truck management QA
+Production QA found Truck management was create/list only. The Fleet register now exposes Edit and safe Retire controls. Retire uses the repository soft-delete path and is blocked while the truck has an active trip, preventing an operational assignment from being hidden or broken. Truck status can be corrected through the edit path without physically deleting the record.
 
 ## Offline/reliability checklist
 For every driver/field action:
@@ -132,9 +135,9 @@ Current hardening status:
 - **Workspace choice:** fixed in latest HEAD; multi-org accounts require an explicit chooser unless a valid last-active workspace is available. Needs production verification.
 - **Driver linking:** fixed in latest HEAD; fleet/operations can link a real signed-in account to a Driver record by exact email, and Drivers can be edited. Needs production verification.
 - **Customer management:** fixed in latest HEAD with Edit + Archive. Needs production verification.
-- **Truck management:** **still outstanding** — existing Fleet page still needs visible Edit + safe Archive/retire controls. Do not call Truck RUD complete yet.
+- **Truck management:** fixed in latest HEAD with visible Edit + safe Retire controls; retirement is blocked for trucks carrying an active trip. Needs production verification.
 
-After Truck management is closed and verified, continue the connected real-world chain:
+After management/identity QA is closed and verified, continue the connected real-world chain:
 `owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting`.
 
 Finance must be validated as a connected consequence of completed POD, not treated as complete because finance server actions merely exist.
