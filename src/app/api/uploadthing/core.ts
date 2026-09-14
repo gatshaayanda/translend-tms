@@ -58,16 +58,35 @@ export const ourFileRouter = {
     return { uid: user.uid, orgId: input.orgId, role, deliveryId: input.deliveryId, deliveryNoteId: input.deliveryNoteId, kind: input.kind, required: input.required, replacesEvidenceId: input.replacesEvidenceId ?? null };
   }).onUploadComplete(async ({ metadata, file }) => {
     const uploadedAt = Timestamp.now(); const db = getAdminDb();
-    const [deliverySnap, noteSnap] = await Promise.all([db.doc(`organizations/${metadata.orgId}/deliveries/${metadata.deliveryId}`).get(), db.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`).get()]);
-    if (!deliverySnap.exists || !noteSnap.exists) throw new UploadThingError("Delivery record disappeared before evidence was finalized.");
-    const existing = ((noteSnap.data()?.evidenceRefs ?? []) as DeliveryEvidenceRef[]).map((item) => ({ ...item })); const previous = metadata.replacesEvidenceId ? existing.find((item) => item.id === metadata.replacesEvidenceId) : null;
-    const version = previous ? (previous.version ?? 1) + 1 : Math.max(0, ...existing.filter((item) => item.kind === metadata.kind).map((item) => item.version ?? 1)) + 1;
-    if (previous) previous.status = "replaced";
-    const evidence: DeliveryEvidenceRef = { id: file.key, key: file.key, url: file.ufsUrl, kind: metadata.kind, uploadedBy: metadata.uid, uploadedAt: uploadedAt as unknown as DeliveryEvidenceRef["uploadedAt"], required: metadata.required, status: "active", version, replacesEvidenceId: previous?.id ?? null, reviewedBy: null, reviewedAt: null, rejectionReason: null };
-    const nextRefs = [...existing.filter((item) => item.id !== evidence.id), evidence];
-    await Promise.all([db.doc(`organizations/${metadata.orgId}/deliveries/${metadata.deliveryId}`).update({ evidenceRefs: nextRefs, podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid }), db.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`).update({ evidenceRefs: nextRefs, podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid })]);
-    await notifyOrgRoles({ orgId: metadata.orgId, roles: ["owner", "operations_manager", "dispatcher"], type: "missing_pod", severity: "info", title: "Delivery evidence uploaded", message: `${metadata.kind.toUpperCase()} evidence was uploaded for delivery ${metadata.deliveryNoteId.slice(0, 8)} and is ready for review.`, href: `/${metadata.orgId}/deliveries`, sourceId: metadata.deliveryId, sourceType: "delivery" });
-    await recordAuditEvent({ orgId: metadata.orgId, actorUid: metadata.uid, actorRole: metadata.role, action: "upload", entityType: "deliveryEvidence", entityId: file.key, summary: `Uploaded ${metadata.kind} evidence for delivery ${metadata.deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryId: metadata.deliveryId, deliveryNoteId: metadata.deliveryNoteId, version } });
+    const deliveryRef = db.doc(`organizations/${metadata.orgId}/deliveries/${metadata.deliveryId}`);
+    const noteRef = db.doc(`organizations/${metadata.orgId}/deliveryNotes/${metadata.deliveryNoteId}`);
+    let applied = false;
+    let version = 1;
+    await db.runTransaction(async (tx) => {
+      const [deliverySnap, noteSnap] = await Promise.all([tx.get(deliveryRef), tx.get(noteRef)]);
+      if (!deliverySnap.exists || !noteSnap.exists) throw new UploadThingError("Delivery record disappeared before evidence was finalized.");
+      const delivery = deliverySnap.data()!; const note = noteSnap.data()!;
+      if (delivery.deliveryNoteId !== metadata.deliveryNoteId || note.deliveryId !== metadata.deliveryId) throw new UploadThingError("Delivery and Delivery Note do not match.");
+      const existing = ((note.evidenceRefs ?? []) as DeliveryEvidenceRef[]).map((item) => ({ ...item }));
+      const sameFile = existing.find((item) => item.id === file.key);
+      if (sameFile) {
+        version = sameFile.version ?? 1;
+        return;
+      }
+      const previous = metadata.replacesEvidenceId ? existing.find((item) => item.id === metadata.replacesEvidenceId && (item.status ?? "active") !== "replaced") : null;
+      version = previous ? (previous.version ?? 1) + 1 : Math.max(0, ...existing.filter((item) => item.kind === metadata.kind).map((item) => item.version ?? 1)) + 1;
+      if (previous) previous.status = "replaced";
+      const evidence: DeliveryEvidenceRef = { id: file.key, key: file.key, url: file.ufsUrl, kind: metadata.kind, uploadedBy: metadata.uid, uploadedAt: uploadedAt as unknown as DeliveryEvidenceRef["uploadedAt"], required: metadata.required, status: "active", version, replacesEvidenceId: previous?.id ?? null, reviewedBy: null, reviewedAt: null, rejectionReason: null };
+      const nextRefs = [...existing.filter((item) => item.id !== evidence.id), evidence];
+      tx.update(deliveryRef, { evidenceRefs: nextRefs, podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid });
+      tx.update(noteRef, { evidenceRefs: nextRefs, podState: "incomplete", updatedAt: uploadedAt, updatedBy: metadata.uid });
+      recordAuditEvent({ orgId: metadata.orgId, actorUid: metadata.uid, actorRole: metadata.role, action: "upload", entityType: "deliveryEvidence", entityId: file.key, summary: `Uploaded ${metadata.kind} evidence for delivery ${metadata.deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryId: metadata.deliveryId, deliveryNoteId: metadata.deliveryNoteId, version }, transaction: tx });
+      applied = true;
+    });
+
+    if (applied) {
+      await notifyOrgRoles({ orgId: metadata.orgId, roles: ["owner", "operations_manager", "dispatcher"], type: "missing_pod", severity: "info", title: "Delivery evidence uploaded", message: `${metadata.kind.toUpperCase()} evidence was uploaded for delivery ${metadata.deliveryNoteId.slice(0, 8)} and is ready for review.`, href: `/${metadata.orgId}/deliveries`, sourceId: metadata.deliveryId, sourceType: "delivery" });
+    }
     return { uploadedBy: metadata.uid, organizationId: metadata.orgId, role: metadata.role, deliveryId: metadata.deliveryId, deliveryNoteId: metadata.deliveryNoteId, url: file.ufsUrl, key: file.key, kind: metadata.kind, version };
   }),
   financeReceipt: f({ image: { maxFileSize: "8MB", maxFileCount: 1 }, pdf: { maxFileSize: "8MB", maxFileCount: 1 } }).input(fuelReceiptInput).middleware(async ({ req, input }) => {
