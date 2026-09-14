@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { maintenanceSchedulesRepo, tyreRecordsRepo } from "@/lib/firebase/modules";
 import type { MaintenanceSchedule, TyreRecord } from "@/types/workshop";
 import { useAuth } from "@/contexts/AuthContext";
+import { enqueueDriverAction, newDriverActionId } from "@/lib/offline/driverActionQueue";
 
 export function DriverVehiclePanel({ orgId, truckId }: { orgId: string; truckId: string }) {
   const { user } = useAuth();
@@ -29,13 +30,26 @@ export function DriverVehiclePanel({ orgId, truckId }: { orgId: string; truckId:
   }, [orgId, truckId]);
 
   const submit = async (action: "inspection" | "defect") => {
-    if (!user || busy || !navigator.onLine) { setMessage("Reconnect before sending a vehicle action."); return; }
+    if (!user || busy) return;
     if (action === "inspection" && !findings.trim()) { setMessage("Add inspection findings, even when the vehicle passes."); return; }
     if (action === "defect" && !defect.trim()) { setMessage("Describe the defect before reporting it."); return; }
     setBusy(true); setMessage(null);
+    const payload = {
+      orgId,
+      truckId,
+      action,
+      idempotencyKey: newDriverActionId(),
+      ...(action === "inspection" ? { inspectionType, result: inspectionResult, odometerKm: Number(odometer || 0), findings } : { description: defect, priority }),
+    };
     try {
+      if (!navigator.onLine) {
+        await enqueueDriverAction({ orgId, endpoint: "/api/driver/vehicle-action", payload });
+        setMessage(action === "inspection" ? "Inspection saved offline. It will sync automatically when the connection returns." : "Defect saved offline. It will sync automatically when the connection returns.");
+        setFindings(""); setDefect("");
+        return;
+      }
       const token = await user.getIdToken();
-      const response = await fetch("/api/driver/vehicle-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ orgId, truckId, action, ...(action === "inspection" ? { inspectionType, result: inspectionResult, odometerKm: Number(odometer || 0), findings } : { description: defect, priority }) }) });
+      const response = await fetch("/api/driver/vehicle-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Vehicle action failed.");
       setMessage(action === "inspection" ? `Inspection recorded${data.workOrderCreated ? " and a maintenance work order was opened." : "."}` : "Defect reported and a maintenance work order was opened.");
