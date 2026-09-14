@@ -29,15 +29,20 @@ export async function POST(request: Request) {
     const tripSnap = await db.doc(`organizations/${orgId}/trips/${note.tripId}`).get();
     if (!tripSnap.exists || tripSnap.data()?.driverId !== driverId) return NextResponse.json({ error: "This delivery is not assigned to you." }, { status: 403 });
     const now = Timestamp.now();
+    const batch = db.batch();
 
     if (action === "arrive") {
       if (delivery.arrivalAt || note.arrivalAt) return NextResponse.json({ error: "Arrival has already been recorded." }, { status: 409 });
-      await Promise.all([deliveryRef.update({ arrivalAt: now, arrivalBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid }), noteRef.update({ arrivalAt: now, arrivalBy: user.uid, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid })]);
+      batch.update(deliveryRef, { arrivalAt: now, arrivalBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      batch.update(noteRef, { arrivalAt: now, arrivalBy: user.uid, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      await batch.commit();
       await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "driver", action: "status_change", entityType: "delivery", entityId: deliveryId, summary: `Driver recorded arrival for Delivery Note ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryNoteId, transition: "arrival_recorded" } });
     } else if (action === "depart") {
       if (!note.arrivalAt || !delivery.arrivalAt) return NextResponse.json({ error: "Mark arrival before departure." }, { status: 409 });
       if (delivery.departureAt || note.departureAt) return NextResponse.json({ error: "Departure has already been recorded." }, { status: 409 });
-      await Promise.all([deliveryRef.update({ departureAt: now, departureBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid }), noteRef.update({ departureAt: now, departureBy: user.uid, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid })]);
+      batch.update(deliveryRef, { departureAt: now, departureBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      batch.update(noteRef, { departureAt: now, departureBy: user.uid, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      await batch.commit();
       await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "driver", action: "status_change", entityType: "delivery", entityId: deliveryId, summary: `Driver recorded departure for Delivery Note ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryNoteId, transition: "departure_recorded" } });
     } else if (action === "acknowledge") {
       const name = String(body.name ?? "").trim();
@@ -45,14 +50,18 @@ export async function POST(request: Request) {
       if (!delivery.arrivalAt || !note.arrivalAt) return NextResponse.json({ error: "Mark arrival before receiver acknowledgement." }, { status: 409 });
       if (Array.isArray(note.acknowledgements) && note.acknowledgements.some((item: { role?: string }) => item.role === "receiver")) return NextResponse.json({ error: "Receiver acknowledgement has already been recorded." }, { status: 409 });
       const acknowledgement = { role: "receiver", name, uid: user.uid, acknowledgedAt: now };
-      await Promise.all([deliveryRef.update({ acknowledgements: FieldValue.arrayUnion(acknowledgement), receivedByName: name, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid }), noteRef.update({ acknowledgements: FieldValue.arrayUnion(acknowledgement), receivedByName: name, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid })]);
+      batch.update(deliveryRef, { acknowledgements: FieldValue.arrayUnion(acknowledgement), receivedByName: name, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      batch.update(noteRef, { acknowledgements: FieldValue.arrayUnion(acknowledgement), receivedByName: name, podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      await batch.commit();
       await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "driver", action: "status_change", entityType: "delivery", entityId: deliveryId, summary: `Receiver acknowledgement recorded for Delivery Note ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryNoteId, transition: "receiver_acknowledged", receiverName: name } });
     } else {
       const category = String(body.category ?? "other") as DeliveryExceptionCategory; const description = String(body.description ?? "").trim();
       if (!CATEGORIES.includes(category) || !description) return NextResponse.json({ error: "Valid exception category and description are required." }, { status: 400 });
       const exceptionRef = db.collection(`organizations/${orgId}/deliveryExceptions`).doc();
-      await exceptionRef.create({ orgId, environment: "LIVE", createdAt: now, createdBy: user.uid, updatedAt: now, updatedBy: user.uid, deletedAt: null, deliveryNoteId, deliveryId, category, description, reportedBy: user.uid, reportedAt: now, status: "open", evidenceRefs: [], resolutionNotes: null, resolvedBy: null, resolvedAt: null });
-      await Promise.all([deliveryRef.update({ exceptionIds: FieldValue.arrayUnion(exceptionRef.id), podState: "incomplete", status: "exception", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid }), noteRef.update({ exceptionIds: FieldValue.arrayUnion(exceptionRef.id), podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid })]);
+      batch.create(exceptionRef, { orgId, environment: "LIVE", createdAt: now, createdBy: user.uid, updatedAt: now, updatedBy: user.uid, deletedAt: null, deliveryNoteId, deliveryId, category, description, reportedBy: user.uid, reportedAt: now, status: "open", evidenceRefs: [], resolutionNotes: null, resolvedBy: null, resolvedAt: null });
+      batch.update(deliveryRef, { exceptionIds: FieldValue.arrayUnion(exceptionRef.id), podState: "incomplete", status: "exception", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      batch.update(noteRef, { exceptionIds: FieldValue.arrayUnion(exceptionRef.id), podState: "incomplete", updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+      await batch.commit();
       await notifyOrgRoles({ orgId, roles: ["owner", "operations_manager", "dispatcher"], type: "exception", severity: "urgent", title: "Delivery exception reported", message: `${category.replaceAll("_", " ")}: ${description}`, href: `/${orgId}/deliveries`, sourceId: deliveryId, sourceType: "delivery" });
       await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "driver", action: "create", entityType: "deliveryException", entityId: exceptionRef.id, summary: `Driver reported ${category.replaceAll("_", " ")} on delivery ${deliveryNoteId.slice(0, 8)}.`, metadata: { deliveryId, deliveryNoteId, category } });
     }
