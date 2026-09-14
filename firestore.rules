@@ -52,14 +52,16 @@ service cloud.firestore {
       match /workOrders/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /supplierPOs/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /invoices/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
-      match /journalEntries/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
+      // Financial transaction records are written only through authenticated server actions,
+      // which apply open-period checks, validation, duplicate protection and audit logging.
+      match /journalEntries/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
       match /truckLocationEvents/{docId} { allow read: if isOrgMember(orgId); allow create, update: if isOrgMember(orgId) && memberRole(orgId) in ['owner', 'operations_manager', 'dispatcher', 'fleet_manager', 'driver']; allow delete: if false; }
       match /tripMetrics/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /maintenanceSchedules/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /vehicleInspections/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
       match /tyreRecords/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditOperations(orgId); allow delete: if false; }
-      match /invoicePayments/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
-      match /supplierBills/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
+      match /invoicePayments/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
+      match /supplierBills/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
       match /chartAccounts/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
       match /accountingPeriods/{docId} { allow read: if isOrgMember(orgId); allow create, update: if canEditFinance(orgId); allow delete: if false; }
     }
