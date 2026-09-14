@@ -8,6 +8,13 @@ const COLLECTIONS = [
   "maintenanceSchedules", "vehicleInspections", "invoices", "supplierPOs", "supplierBills", "invoicePayments", "journalEntries",
 ] as const;
 
+type ReportRecord = {
+  id: string;
+  environment?: string;
+  deletedAt?: unknown;
+  [key: string]: unknown;
+};
+
 class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -21,6 +28,10 @@ function serialize(value: unknown): unknown {
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, serialize(item)]));
   }
   return value;
+}
+
+function toReportRecord(id: string, data: Record<string, unknown>): ReportRecord {
+  return { id, ...data };
 }
 
 export async function GET(request: Request) {
@@ -41,7 +52,7 @@ export async function GET(request: Request) {
     const data = Object.fromEntries(COLLECTIONS.map((name, index) => [
       name,
       snapshots[index].docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .map((doc): ReportRecord => toReportRecord(doc.id, doc.data() as Record<string, unknown>))
         .filter((record) => record.environment === "LIVE" && record.deletedAt == null)
         .map(serialize),
     ]));
