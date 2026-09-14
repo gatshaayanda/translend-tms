@@ -3,7 +3,7 @@
 ## Authoritative project
 - Repository: `gatshaayanda/translend-tms`
 - Branch: `v19-authoritative`
-- Current checkpoint: `6b8eed892ea4011d12c516effe8a8db6a0fd9a3f`
+- Current checkpoint: `2e42da0c6f97c2c6af972a6a4b1a88cd0f6c9d2e`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance-receipt transport.
@@ -41,6 +41,13 @@ Fixed: `/api/deliveries/workflow-action` transactionally handles delivery creati
 
 Prevention: mutations changing two linked business records must use one transaction/batch/server workflow.
 
+### Transaction read ordering
+Delivery exception resolution contained a Firestore transaction read-after-write: it updated the exception and then queried remaining exceptions. Firestore transactions require reads before writes; leaving this sequence would make a legitimate exception resolution fail at runtime and look retryable.
+
+Fixed: remaining exception state is read before the exception/delivery writes. The transaction now decides whether the delivery can leave `exception` before committing any write.
+
+Prevention: in every Firestore transaction, finish all reads/queries first, then perform writes. When reviewing a transaction, explicitly look for any `tx.get(...)` after `tx.update(...)`/`tx.set(...)`.
+
 ### Atomic/replay-safe evidence
 UploadThing evidence finalization previously updated Delivery and Delivery Note separately and could drift under callback replay/concurrency.
 
@@ -50,6 +57,8 @@ Fixed: evidence finalization is transactional, keyed by the UploadThing file key
 Previous rules protected the record envelope but still allowed clients to change sensitive status/assignment/evidence/finance fields.
 
 Fixed: client creates validate `orgId`, LIVE environment, actor/creator and soft-delete envelope. Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted.
+
+Historical truck location events are now append-only: clients may create location events but cannot edit or delete an existing telemetry record.
 
 Use `diff().affectedKeys()`/`unchangedKeys()` for field-level protection. Never weaken rules to hide permission failures.
 
