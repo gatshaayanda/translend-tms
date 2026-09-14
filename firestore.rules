@@ -93,10 +93,10 @@ service cloud.firestore {
       match /deliveryExceptions/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
 
       match /fuelLogs/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
-      match /invoices/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
-      match /journalEntries/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
-      match /invoicePayments/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
-      match /supplierBills/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
+      match /invoices/{docId} { allow read: if canEditFinance(orgId); allow create, update, delete: if false; }
+      match /journalEntries/{docId} { allow read: if canEditFinance(orgId); allow create, update, delete: if false; }
+      match /invoicePayments/{docId} { allow read: if canEditFinance(orgId); allow create, update, delete: if false; }
+      match /supplierBills/{docId} { allow read: if canEditFinance(orgId); allow create, update, delete: if false; }
 
       match /workOrders/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId) && validClientCreate(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
       match /supplierPOs/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId) && validClientCreate(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope(); allow delete: if false; }
