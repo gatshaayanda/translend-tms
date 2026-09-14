@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { deliveryNotesRepo, deliveriesRepo } from "@/lib/firebase/modules";
+import { enqueueDriverAction } from "@/lib/offline/driverActionQueue";
 import { DeliveryEvidencePanel } from "@/components/deliveries/DeliveryEvidencePanel";
 import type { Delivery, DeliveryExceptionCategory, DeliveryNote } from "@/types/core";
 
@@ -29,15 +30,22 @@ export function DriverDeliveryPanel({ orgId, tripId }: { orgId: string; tripId: 
 
   const action = async (actionName: "arrive" | "depart" | "acknowledge" | "exception") => {
     if (!user || !note || !delivery || busy) return;
-    if (!navigator.onLine) return setMessage("You are offline. This delivery action has not been sent.");
     setBusy(true); setMessage(null);
+    const payload = {
+      orgId, deliveryId: delivery.id, deliveryNoteId: note.id, action: actionName,
+      ...(actionName === "acknowledge" ? { name: receiver } : {}),
+      ...(actionName === "exception" ? { category, description } : {}),
+    };
     try {
+      if (!navigator.onLine) {
+        await enqueueDriverAction({ orgId, endpoint: "/api/driver/delivery-action", payload });
+        setMessage("Saved offline. This delivery action will sync automatically when the connection returns.");
+        if (actionName === "acknowledge") setReceiver("");
+        if (actionName === "exception") setDescription("");
+        return;
+      }
       const token = await user.getIdToken();
-      const response = await fetch("/api/driver/delivery-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({
-        orgId, deliveryId: delivery.id, deliveryNoteId: note.id, action: actionName,
-        ...(actionName === "acknowledge" ? { name: receiver } : {}),
-        ...(actionName === "exception" ? { category, description } : {}),
-      })});
+      const response = await fetch("/api/driver/delivery-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Delivery update failed.");
       setDescription(""); await load(); setMessage("Delivery action recorded.");
