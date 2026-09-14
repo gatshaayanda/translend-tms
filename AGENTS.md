@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `9ed12a3b6244c2ae1d5361d798d0335341556589`
+- Current application checkpoint: `b7f436248c73fec6ee15278c491ed1c06165187c`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -49,7 +49,7 @@ Driver My Trip supports `planned → en_route_pickup → loading → in_transit 
 Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch creates assignment notifications and immutable server audit events.
 
 ### 6. Accounting — HARDENED CONTROL PASS
-Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection. Latest hardening: accounting API access is restricted to `owner` and `finance`; invoice payment references are duplicate-protected; supplier bills are duplicate-protected by supplier/reference; reversals are guarded against repeated reversal; payment/bill/journal mutations write immutable audit events in the same Firestore batch as the accounting mutation; **journal entries, invoice payments and supplier bills are now read-only to clients and can only be mutated through authenticated server actions.**
+Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection. Latest hardening: accounting API access is restricted to `owner` and `finance`; invoice payment references are duplicate-protected; supplier bills are duplicate-protected by supplier/reference; reversals are guarded against repeated reversal; payment/bill/journal mutations write immutable audit events in the same Firestore batch as the accounting mutation; journal entries, invoice payments and supplier bills are now read-only to clients and can only be mutated through authenticated server actions.
 
 Still not claimed complete: dedicated credit/debit-note domain, full tax/VAT configuration, bank/cash reconciliation and dedicated accounting statement/export workflows.
 
@@ -82,6 +82,10 @@ Still to expand: richer time-series trend charts, date/filter controls, schedule
 
 ### 12. Full End-to-End + HTML Compliance — FINAL
 Validate `job → trip → delivery → POD → invoice → payment → journal → reports`, then verify real CRUD, failure/retry, offline/sync/conflicts, permissions/multi-user, mobile driver workflow, location permission, map/provider states and every important HTML/reference control mapped to a real route/data/mutation/state or an honest unsupported/configuration state.
+
+## Verification tooling
+
+`package.json` now exposes an explicit `typecheck` script (`tsc --noEmit`) alongside build and lint, so the authoritative verification sequence is `npm run typecheck → npm run lint → npm run build` when dependency/network access is available.
 
 ## Current deployment window
 
