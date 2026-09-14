@@ -32,6 +32,7 @@ export function DriverVehiclePanel({ orgId, truckId }: { orgId: string; truckId:
   const submit = async (action: "inspection" | "defect") => {
     if (!user || busy) return;
     if (action === "inspection" && !findings.trim()) { setMessage("Add inspection findings, even when the vehicle passes."); return; }
+    if (action === "inspection" && (!odometer.trim() || !Number.isFinite(Number(odometer)) || Number(odometer) < 0)) { setMessage("Enter the current odometer reading before recording an inspection."); return; }
     if (action === "defect" && !defect.trim()) { setMessage("Describe the defect before reporting it."); return; }
     setBusy(true); setMessage(null);
     const payload = {
@@ -39,7 +40,7 @@ export function DriverVehiclePanel({ orgId, truckId }: { orgId: string; truckId:
       truckId,
       action,
       idempotencyKey: newDriverActionId(),
-      ...(action === "inspection" ? { inspectionType, result: inspectionResult, odometerKm: Number(odometer || 0), findings } : { description: defect, priority }),
+      ...(action === "inspection" ? { inspectionType, result: inspectionResult, odometerKm: Number(odometer), findings } : { description: defect, priority }),
     };
     try {
       if (!navigator.onLine) {
@@ -52,7 +53,7 @@ export function DriverVehiclePanel({ orgId, truckId }: { orgId: string; truckId:
       const response = await fetch("/api/driver/vehicle-action", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Vehicle action failed.");
-      setMessage(action === "inspection" ? `Inspection recorded${data.workOrderCreated ? " and a maintenance work order was opened." : "."}` : "Defect reported and a maintenance work order was opened.");
+      setMessage(data.duplicate ? "This vehicle action was already recorded." : action === "inspection" ? `Inspection recorded${data.workOrderCreated ? " and a maintenance work order was opened." : "."}` : "Defect reported and a maintenance work order was opened.");
       setFindings(""); setDefect("");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Vehicle action failed."); } finally { setBusy(false); }
   };
