@@ -15,23 +15,8 @@ export interface BrowserGpsPoint {
   capturedAt: Date;
 }
 
-type PermissionState = "granted" | "denied" | "prompt";
-
-function permissionErrorMessage(state?: PermissionState) {
-  if (state === "denied") {
-    return "Location permission is blocked for this site. Open the browser site permissions, allow Location for Translend, then press Start location again.";
-  }
-  return "Location permission was not granted. Allow Location for Translend when the browser asks, then press Start location again.";
-}
-
-async function getGeolocationPermission(): Promise<PermissionState | null> {
-  if (!("permissions" in navigator) || !navigator.permissions?.query) return null;
-  try {
-    const result = await navigator.permissions.query({ name: "geolocation" as PermissionName });
-    return result.state as PermissionState;
-  } catch {
-    return null;
-  }
+function permissionErrorMessage() {
+  return "Location permission could not be granted. If Chrome says this site cannot ask for permission, close any browser bubbles or overlays, then allow Location for Translend in the site settings and press Start location again.";
 }
 
 export function startBrowserGpsWatch(
@@ -63,18 +48,20 @@ export function startBrowserGpsWatch(
     return 2 * r * Math.asin(Math.sqrt(x));
   };
 
+  const toPoint = (position: GeolocationPosition): BrowserGpsPoint => ({
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    accuracyMeters: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+    speedKph: position.coords.speed == null ? null : position.coords.speed * 3.6,
+    headingDegrees: position.coords.heading == null ? null : position.coords.heading,
+    capturedAt: new Date(position.timestamp),
+  });
+
   const beginWatch = () => {
     if (stopped || watchId !== null) return;
     watchId = navigator.geolocation.watchPosition(
       (position) => {
-        const point: BrowserGpsPoint = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracyMeters: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
-          speedKph: position.coords.speed == null ? null : position.coords.speed * 3.6,
-          headingDegrees: position.coords.heading == null ? null : position.coords.heading,
-          capturedAt: new Date(position.timestamp),
-        };
+        const point = toPoint(position);
         const now = point.capturedAt.getTime();
         const movedEnough = !lastPoint || distanceMeters(lastPoint, point) >= minDistanceMeters;
         const waitedEnough = now - lastSavedAt >= minIntervalMs;
@@ -84,7 +71,7 @@ export function startBrowserGpsWatch(
           onPoint(point);
         }
       },
-      (error) => onError(permissionErrorMessage(error.code === 1 ? "denied" : undefined)),
+      () => onError(permissionErrorMessage()),
       {
         enableHighAccuracy: options.enableHighAccuracy ?? true,
         timeout: 20_000,
@@ -93,43 +80,27 @@ export function startBrowserGpsWatch(
     );
   };
 
-  void (async () => {
-    const permission = await getGeolocationPermission();
-    if (stopped) return;
-    if (permission === "denied") {
-      onError(permissionErrorMessage("denied"));
-      return;
-    }
-
-    // Explicitly request one position first. This gives Chrome/Android/iOS a
-    // real user gesture initiated permission request before the long-lived watch.
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (stopped) return;
-        const point: BrowserGpsPoint = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracyMeters: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
-          speedKph: position.coords.speed == null ? null : position.coords.speed * 3.6,
-          headingDegrees: position.coords.heading == null ? null : position.coords.heading,
-          capturedAt: new Date(position.timestamp),
-        };
-        lastPoint = point;
-        lastSavedAt = point.capturedAt.getTime();
-        onPoint(point);
-        beginWatch();
-      },
-      (error) => {
-        if (stopped) return;
-        onError(permissionErrorMessage(error.code === 1 ? "denied" : undefined));
-      },
-      {
-        enableHighAccuracy: options.enableHighAccuracy ?? true,
-        timeout: 20_000,
-        maximumAge: 30_000,
-      },
-    );
-  })();
+  // Do not await a Permissions API preflight here. The browser permission
+  // request must stay directly on the call path initiated by the Start button.
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      if (stopped) return;
+      const point = toPoint(position);
+      lastPoint = point;
+      lastSavedAt = point.capturedAt.getTime();
+      onPoint(point);
+      beginWatch();
+    },
+    () => {
+      if (stopped) return;
+      onError(permissionErrorMessage());
+    },
+    {
+      enableHighAccuracy: options.enableHighAccuracy ?? true,
+      timeout: 20_000,
+      maximumAge: 30_000,
+    },
+  );
 
   return () => {
     stopped = true;
