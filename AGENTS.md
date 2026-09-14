@@ -17,7 +17,7 @@
 A screen, button, Firestore document, offline banner or successful UI state is not proof that the business operation works. Trace the real mutation, authorization, atomicity, retry/idempotency, audit and reporting consequences.
 
 ## Current state
-- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist; customer, driver and truck management surfaces now expose practical correction/retirement controls and remain subject to production verification.
+- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist; customer, driver and truck management surfaces expose practical correction/retirement controls and remain subject to production verification.
 - Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented.
 - Delivery/POD: required POD gating, evidence review/replacement, exceptions and completion validation exist.
 - Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
@@ -30,67 +30,37 @@ Still not claimed complete: full tax/VAT configuration, credit/debit notes, bank
 
 ## v19 hardening lessons
 ### Firebase Storage
-`src/lib/firebase/storage.ts` was dead legacy code. `getFirebase()` intentionally returns only `{ app, auth, db }` because v19 uses UploadThing for POD/evidence/receipts. The stale helper caused the build failure by destructuring a removed `storage` property.
-
-Prevention: search for `@/lib/firebase/storage`, `uploadPodFile`, `getStorage`, `firebase/storage`, and `storageBucket`. Never reintroduce Firebase Storage just to satisfy TypeScript.
+`src/lib/firebase/storage.ts` was dead legacy code. `getFirebase()` intentionally returns only `{ app, auth, db }` because v19 uses UploadThing for POD/evidence/receipts. Never reintroduce Firebase Storage just to satisfy TypeScript.
 
 ### Atomic delivery mutations
-Admin Delivery code was performing arrival/departure/acknowledgement as separate direct Firestore updates and creating Delivery + Delivery Note with multiple client writes. That could leave linked records half-updated.
-
-Fixed: `/api/deliveries/workflow-action` transactionally handles delivery creation and admin arrival/departure/acknowledgement, and the admin Delivery page uses that boundary. Client rules deny direct Delivery/Trip state writes and allow only explicitly editable Delivery Note fields.
-
-Prevention: mutations changing two linked business records must use one transaction/batch/server workflow.
+`/api/deliveries/workflow-action` transactionally handles delivery creation and admin arrival/departure/acknowledgement. Client rules deny direct Delivery/Trip state writes and allow only explicitly editable Delivery Note fields.
 
 ### Transaction read ordering
-Delivery exception resolution contained a Firestore transaction read-after-write: it updated the exception and then queried remaining exceptions. Firestore transactions require reads before writes; leaving this sequence would make a legitimate exception resolution fail at runtime and look retryable.
-
-Fixed: remaining exception state is read before the exception/delivery writes. The transaction now decides whether the delivery can leave `exception` before committing any write.
-
-Prevention: in every Firestore transaction, finish all reads/queries first, then perform writes. When reviewing a transaction, explicitly look for any `tx.get(...)` after `tx.update(...)`/`tx.set(...)`.
+All Firestore transaction reads/queries must finish before writes. Delivery exception resolution was corrected to follow this rule.
 
 ### Atomic/replay-safe evidence
-UploadThing evidence finalization previously updated Delivery and Delivery Note separately and could drift under callback replay/concurrency.
-
-Fixed: evidence finalization is transactional, keyed by the UploadThing file key for idempotency, updates both records together, and audits inside the transaction. Notifications occur after commit.
+UploadThing evidence finalization is transactional, keyed by file key for idempotency, updates linked records together and audits inside the transaction.
 
 ### Client Firestore security
-Previous rules protected the record envelope but still allowed clients to change sensitive status/assignment/evidence/finance fields.
-
-Fixed: client creates validate `orgId`, LIVE environment, actor/creator and soft-delete envelope. Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted.
-
-Historical truck location events are now append-only: clients may create location events but cannot edit or delete an existing telemetry record.
-
-Use `diff().affectedKeys()`/`unchangedKeys()` for field-level protection. Never weaken rules to hide permission failures.
+Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted. Historical truck location events are append-only.
 
 ### Finance concurrency
-Accounting-period validation was previously performed with an ordinary Firestore read inside server transactions. That check was not part of the transaction's read set, so period closure could race a posting.
-
-Fixed: accounting-period queries are now read through the active Firestore transaction. Supplier-bill journal entries also retain the `supplierBillId` linkage. Finance errors now distinguish 401/403/400/404/409/500 classes instead of collapsing everything into one response status.
+Accounting-period checks are inside the transaction read set. Supplier-bill journal entries retain `supplierBillId`. Finance errors distinguish 401/403/400/404/409/500.
 
 ### Job integrity and dispatch concurrency
-Job creation was relying too heavily on UI validation. A client could otherwise attempt to create a confirmed Job with an invalid customer reference, mismatched customer name, non-positive rate, negative weight or reversed dates. A dispatched Job could also have its customer/rate/scheduling fields edited directly after assignment.
-
-Fixed: Firestore Job-create rules now require a LIVE, non-deleted Customer in the same workspace, matching `customerName`, positive rate, non-negative weight and ordered timestamps. Sensitive Job fields remain editable while the Job is confirmed but are locked once it is dispatched; status remains server-controlled. The dispatch API now returns correct 401/403/404/409/500 semantics instead of collapsing business conflicts into 400. Dispatch already uses one transaction over Job + Truck + Driver, so concurrent attempts conflict and re-evaluate against the latest state rather than creating a second assignment.
-
-Prevention: validate business references and money/date invariants at the authorization boundary, not only in forms. Once dispatch has consumed a Job, protect the commercial identity and schedule from ordinary client edits.
+Job creation validates same-workspace customer references, commercial/date invariants and positive rates. Dispatched Job commercial identity/schedule are protected. Dispatch uses one transaction over Job + Truck + Driver and handles concurrency conflicts correctly.
 
 ### Operational trip corrections
-Production QA exposed that an owner could advance a trip but had no way to correct an accidentally recorded milestone. This is not acceptable for real operational use because test or human error becomes permanent history.
-
-Fixed: adjacent trip status changes are exposed in the Trips register and My Trip view. The driver API enforces one-step movement in either direction, audits from/to status and direction, and safely reopens completed operational state when a completion correction is made. Owners/operations have an explicit adjacent correction path in the register.
-
-Prevention: operational status must remain sequential and auditable, but authorized actors need an explicit correction path. Never implement irreversible forward-only UI when a legitimate field correction is required.
+Production QA exposed that an owner could advance a trip but had no correction path. The Trips register and My Trip view now expose adjacent correction. `/api/driver/trip-status` enforces one-step movement in either direction, audits from/to status and direction, and safely reopens completed truck/driver/job state. No arbitrary status jumping.
 
 ### Workspace and driver identity QA
-Production QA found that multiple workspaces were silently selecting the first organization and that a signed-in invited driver could remain unlinked to the Driver business record.
-
-Fixed: multi-workspace accounts now stop at an explicit workspace chooser unless a valid last-active workspace exists; the chosen workspace is persisted locally. Fleet/operations users now have a visible Driver "Link account" action, backed by `/api/fleet/link-driver`, which requires active authorized membership and an exact Driver-record email match to a real Firebase account. Drivers also have an Edit path. The link operation rejects ambiguous reuse of one account across multiple Driver records.
+Multiple workspaces now require explicit choice unless a valid last-active workspace exists. Fleet/operations users have a visible Driver "Link account" action backed by `/api/fleet/link-driver`, requiring active membership and exact Driver-record email matching. Drivers have an Edit path.
 
 ### Customer management QA
-Production QA found Customer was create/list only. The customer register now exposes Edit and Archive controls, with archive blocked when open jobs exist. The existing repository soft-delete path is used rather than destructive deletion.
+Customer management now exposes Edit and Archive. Customer archive is routed through `/api/operations/archive-record`, where role authorization and open-job checks are enforced server-side before soft deletion. The UI is not trusted as the business control.
 
 ### Truck management QA
-Production QA found Truck management was create/list only. The Fleet register now exposes Edit and safe Retire controls. Retire uses the repository soft-delete path and is blocked while the truck has an active trip, preventing an operational assignment from being hidden or broken. Truck status can be corrected through the edit path without physically deleting the record.
+Truck management now exposes Edit and Retire. Truck edit only changes descriptive vehicle fields; server-controlled status/assignment fields are not edited by the register. Retire is routed through `/api/operations/archive-record`, which requires an authorized operational role, checks for active trips server-side, and then soft-deletes the truck. Never rely only on a disabled UI button to protect an active operational assignment.
 
 ## Offline/reliability checklist
 For every driver/field action:
@@ -119,23 +89,22 @@ Required sequence when tooling is available:
 `inspect HEAD → typecheck → lint → build → affected-workflow verification → AGENTS update → commit → push → Vercel status`
 
 Never call a deployment green without actual status evidence.
-
 Do not repeatedly trigger deployments while the Hobby quota is exhausted and do not claim the current commit is deployed.
 
 ## Required workflow for future agents
 `read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace real business mutation paths → inspect rules/indexes/config → compare with current TMS behavior → deliberately attack retry/offline/concurrency/security edges → fix root cause → inspect diff → run verification available → update AGENTS.md → commit/push → inspect deployment status → report exact SHA/status`
 
-Do not reset, revert, branch away, or reuse an older generation. Do not stop at a theoretical issue when a safe root fix can be made. Do not invent data, weaken security, or paper over compiler/runtime failures.
+Do not reset, revert, branch away, or reuse an older generation. Do not invent data, weaken security, or paper over compiler/runtime failures.
 
 ## Production QA checkpoint — 2026-09-14
 The deployed production checkpoint `df7fbd7` was manually QA-tested before later HEAD could deploy. Initial gaps were Customers/Trucks/Drivers management UI, workspace selection, driver identity linking, and trip correction.
 
 Current hardening status:
-- **Trip correction:** fixed in latest HEAD; owners/operations and linked drivers can make audited adjacent corrections in either direction, including safe completion reopening of truck/driver/job state. Needs production verification.
+- **Trip correction:** fixed in latest HEAD; owners/operations and linked drivers can make audited adjacent corrections in either direction, including safe completion reopening. Needs production verification.
 - **Workspace choice:** fixed in latest HEAD; multi-org accounts require an explicit chooser unless a valid last-active workspace is available. Needs production verification.
 - **Driver linking:** fixed in latest HEAD; fleet/operations can link a real signed-in account to a Driver record by exact email, and Drivers can be edited. Needs production verification.
-- **Customer management:** fixed in latest HEAD with Edit + Archive. Needs production verification.
-- **Truck management:** fixed in latest HEAD with visible Edit + safe Retire controls; retirement is blocked for trucks carrying an active trip. Needs production verification.
+- **Customer management:** fixed in latest HEAD with Edit + server-controlled Archive. Needs production verification.
+- **Truck management:** fixed in latest HEAD with Edit + server-controlled Retire; retirement is blocked server-side for trucks carrying an active trip. Needs production verification.
 
 After management/identity QA is closed and verified, continue the connected real-world chain:
 `owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting`.
