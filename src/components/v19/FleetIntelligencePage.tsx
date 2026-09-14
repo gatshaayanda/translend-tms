@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { tripsRepo, trucksRepo, tripMetricsRepo, fuelLogsRepo, truckLocationEventsRepo } from "@/lib/firebase/modules";
+import { tripsRepo, trucksRepo, tripMetricsRepo, fuelLogsRepo } from "@/lib/firebase/modules";
 import type { Trip, Truck } from "@/types/core";
 import type { TripMetrics } from "@/types/fleet";
 import type { FuelLog } from "@/types/finance";
@@ -13,13 +13,6 @@ import { FleetLiveMap } from "@/components/location/FleetLiveMap";
 
 type Range = "today" | "month" | "last_month" | "quarter" | "year" | "all";
 function start(range: Range) { const d = new Date(), x = new Date(d); if (range === "today") x.setHours(0, 0, 0, 0); else if (range === "month") x.setDate(1), x.setHours(0, 0, 0, 0); else if (range === "last_month") x.setMonth(x.getMonth() - 1, 1), x.setHours(0, 0, 0, 0); else if (range === "quarter") x.setMonth(Math.floor(x.getMonth() / 3) * 3, 1), x.setHours(0, 0, 0, 0); else if (range === "year") x.setMonth(0, 1), x.setHours(0, 0, 0, 0); else x.setFullYear(2000); return x.getTime(); }
-function locationFailureMessage(error: Error) {
-  const code = "code" in error ? String((error as Error & { code?: string }).code ?? "") : "";
-  if (code === "permission-denied" || /permission|insufficient permissions/i.test(error.message)) {
-    return "Location data was denied by the active Firebase rules. The v19 source rules allow active workspace members to read truck locations; if this persists, deploy the authoritative firestore.rules to translend-tms-dcd2a and verify the live app is using that Firebase project.";
-  }
-  return error.message;
-}
 
 export default function FleetIntelligencePage() {
   const { activeOrg } = useWorkspace();
@@ -30,9 +23,27 @@ export default function FleetIntelligencePage() {
   useEffect(() => {
     if (!activeOrg) return;
     const id = activeOrg.id, q = { environment: "LIVE" as const };
-    const unsubscribers = [tripsRepo.subscribe(id, q, setTrips), trucksRepo.subscribe(id, q, setTrucks), tripMetricsRepo.subscribe(id, q, setMetrics), fuelLogsRepo.subscribe(id, q, setFuel), truckLocationEventsRepo.subscribe(id, { ...q, limitTo: 500 }, setLocations, (error) => setLocationError(locationFailureMessage(error)))];
-    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
-  }, [activeOrg]);
+    const unsubscribers = [tripsRepo.subscribe(id, q, setTrips), trucksRepo.subscribe(id, q, setTrucks), tripMetricsRepo.subscribe(id, q, setMetrics), fuelLogsRepo.subscribe(id, q, setFuel)];
+    let cancelled = false;
+    const loadLocations = async () => {
+      try {
+        const currentUser = user;
+        if (!currentUser) return;
+        const token = await currentUser.getIdToken();
+        const response = await fetch(`/api/driver/location?orgId=${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(String(payload.error ?? "Location data could not be loaded."));
+        if (cancelled) return;
+        setLocations((payload.events ?? []).map((event: Omit<TruckLocationEvent, "capturedAt" | "createdAt" | "updatedAt"> & { capturedAt: number }) => ({ ...event, capturedAt: Timestamp.fromMillis(Number(event.capturedAt)), createdAt: null, updatedAt: null })));
+        setLocationError(null);
+      } catch (error) {
+        if (!cancelled) setLocationError(error instanceof Error ? error.message : "Location data could not be loaded.");
+      }
+    };
+    void loadLocations();
+    const interval = window.setInterval(() => void loadLocations(), 5000);
+    return () => { cancelled = true; window.clearInterval(interval); unsubscribers.forEach((unsubscribe) => unsubscribe()); };
+  }, [activeOrg, user]);
 
   const filtered = useMemo(() => metrics.filter((m) => m.measuredAt?.toMillis?.() >= start(range)), [metrics, range]);
   const selectedTrip = trips.find((t) => t.id === selected) || trips[0];
