@@ -52,7 +52,10 @@ export async function GET(request: Request) {
 
     const snapshot = await getAdminDb().collection(`organizations/${orgId}/truckLocationEvents`).get();
     const events: LocationEventData[] = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }))
+      .map((doc): LocationEventData => {
+        const data = doc.data() as Record<string, unknown>;
+        return { id: doc.id, ...data };
+      })
       .filter((event) => event.environment === "LIVE" && event.deletedAt == null)
       .sort((a, b) => timestampMillis(b.capturedAt) - timestampMillis(a.capturedAt))
       .slice(0, 500)
