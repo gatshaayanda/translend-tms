@@ -3,6 +3,7 @@ import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore"
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 
 const ACCOUNTING_ROLES = new Set(["owner", "finance"]);
+const OPERATIONS_ROLES = new Set(["owner", "operations_manager", "dispatcher", "fleet_manager"]);
 
 async function context(request: Request, orgId: string) {
   const header = request.headers.get("authorization");
@@ -10,7 +11,7 @@ async function context(request: Request, orgId: string) {
   const user = await getAdminAuth().verifyIdToken(header.slice(7));
   const db = getAdminDb();
   const member = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
-  if (!member.exists || member.data()?.status !== "active" || !ACCOUNTING_ROLES.has(String(member.data()?.role))) throw new Error("Accounting access required.");
+  if (!member.exists || member.data()?.status !== "active") throw new Error("Active workspace membership required.");
   return { user, role: String(member.data()?.role), db };
 }
 
@@ -32,11 +33,116 @@ export async function POST(request: Request) {
     const body = await request.json();
     const orgId = String(body.orgId ?? "");
     const action = String(body.action ?? "");
-    if (!orgId || !action) return NextResponse.json({ error: "Organisation and accounting action are required." }, { status: 400 });
+    if (!orgId || !action) return NextResponse.json({ error: "Organisation and finance action are required." }, { status: 400 });
     const { user, role, db } = await context(request, orgId);
     const actor = { orgId, uid: user.uid, role };
 
+    if (action === "invoice_raise") {
+      if (!ACCOUNTING_ROLES.has(role)) throw new Error("Finance access required to raise invoices.");
+      const deliveryNoteId = String(body.deliveryNoteId ?? "");
+      const jobId = String(body.jobId ?? "");
+      const customerId = String(body.customerId ?? "");
+      if (!deliveryNoteId || !jobId || !customerId) return NextResponse.json({ error: "Delivery note, Job and Customer are required." }, { status: 400 });
+      const noteRef = db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`);
+      const jobRef = db.doc(`organizations/${orgId}/jobs/${jobId}`);
+      const customerRef = db.doc(`organizations/${orgId}/customers/${customerId}`);
+      const invoiceRef = db.collection(`organizations/${orgId}/invoices`).doc();
+      const journalRef = db.collection(`organizations/${orgId}/journalEntries`).doc();
+      const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
+      const issuedAt = Timestamp.now();
+      let invoiceNumber = "";
+      await db.runTransaction(async (tx) => {
+        const noteSnap = await tx.get(noteRef);
+        const jobSnap = await tx.get(jobRef);
+        const customerSnap = await tx.get(customerRef);
+        if (!noteSnap.exists || noteSnap.data()?.environment !== "LIVE") throw new Error("Live delivery note not found.");
+        if (!jobSnap.exists || jobSnap.data()?.environment !== "LIVE") throw new Error("Live Job not found.");
+        if (!customerSnap.exists || customerSnap.data()?.environment !== "LIVE") throw new Error("Live Customer not found.");
+        const note = noteSnap.data()!;
+        const job = jobSnap.data()!;
+        const customer = customerSnap.data()!;
+        if (note.jobId !== jobId || note.customerName !== customer.name) throw new Error("Delivery note does not match the selected Job and Customer.");
+        if (note.podState !== "complete") throw new Error("Invoice can only be raised from a completed POD.");
+        if (Number(job.rate) <= 0) throw new Error("The linked Job must have a positive rate before invoicing.");
+        if (job.customerId !== customerId) throw new Error("The selected Customer does not match the Job.");
+        const existing = await tx.get(db.collection(`organizations/${orgId}/invoices`).where("environment", "==", "LIVE").where("deliveryNoteId", "==", deliveryNoteId).where("deletedAt", "==", null));
+        if (!existing.empty) throw new Error("This completed delivery already has an invoice.");
+        const reference = `INV-${invoiceRef.id.slice(0, 10).toUpperCase()}`;
+        invoiceNumber = reference;
+        const dueAt = Timestamp.fromMillis(issuedAt.toMillis() + Number(customer.paymentTermsDays || 0) * 86400000);
+        if (!await openPeriod(db, orgId, issuedAt)) throw new Error("No open accounting period covers the invoice date.");
+        const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
+        tx.set(invoiceRef, { ...base, invoiceNumber: reference, deliveryNoteId, jobId, customerId, customerName: customer.name, amount: Number(job.rate), currency: String(job.currency || customer.currency || "BWP"), status: "issued", issuedAt, dueAt, paidAt: null });
+        tx.set(journalRef, { ...base, entryDate: issuedAt, transactionType: "Customer invoice", reference, amount: Number(job.rate), description: `Invoice for ${note.noteReference}`, debitAccount: "Accounts Receivable", creditAccount: "Haulage Revenue", invoiceId: invoiceRef.id, deliveryNoteId, jobId, customerId });
+        tx.set(auditRef, audit(actor, "create", "invoice", invoiceRef.id, `Invoice ${reference} raised from completed delivery.`, { deliveryNoteId, jobId, customerId, amount: Number(job.rate) }));
+      });
+      return NextResponse.json({ ok: true, invoiceId: invoiceRef.id, invoiceNumber, message: `${invoiceNumber} was raised and posted to Accounts Receivable.` });
+    }
+
+    if (action === "fuel_expense") {
+      if (!OPERATIONS_ROLES.has(role)) throw new Error("Operations access required to record fuel.");
+      const truckId = String(body.truckId ?? "");
+      const litres = Number(body.litres);
+      const totalCost = Number(body.totalCost);
+      const odometerKm = Number(body.odometerKm || 0);
+      const supplier = String(body.supplier ?? "").trim();
+      const tripId = body.tripId ? String(body.tripId) : null;
+      const logDateMillis = Number(body.logDateMillis);
+      if (!truckId || !Number.isFinite(litres) || litres <= 0 || !Number.isFinite(totalCost) || totalCost <= 0 || !Number.isFinite(odometerKm) || odometerKm < 0 || !Number.isFinite(logDateMillis)) return NextResponse.json({ error: "Truck, positive litres, positive cost, valid odometer and date are required." }, { status: 400 });
+      const truckRef = db.doc(`organizations/${orgId}/trucks/${truckId}`);
+      const fuelRef = db.collection(`organizations/${orgId}/fuelLogs`).doc();
+      const journalRef = db.collection(`organizations/${orgId}/journalEntries`).doc();
+      const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
+      const logDate = Timestamp.fromMillis(logDateMillis);
+      await db.runTransaction(async (tx) => {
+        const truckSnap = await tx.get(truckRef);
+        if (!truckSnap.exists || truckSnap.data()?.environment !== "LIVE") throw new Error("Live truck not found.");
+        if (tripId) {
+          const tripSnap = await tx.get(db.doc(`organizations/${orgId}/trips/${tripId}`));
+          if (!tripSnap.exists || tripSnap.data()?.environment !== "LIVE") throw new Error("Linked live trip not found.");
+          if (tripSnap.data()?.truckId !== truckId) throw new Error("Linked trip does not belong to the selected truck.");
+        }
+        const truck = truckSnap.data()!;
+        const now = Timestamp.now();
+        if (logDate.toMillis() > now.toMillis() + 86400000) throw new Error("Fuel date cannot be more than one day in the future.");
+        if (!await openPeriod(db, orgId, logDate)) throw new Error("No open accounting period covers the fuel date.");
+        const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
+        const reference = `FUEL-${fuelRef.id.slice(0, 8).toUpperCase()}`;
+        tx.set(fuelRef, { ...base, logDate, truckId, truckRegistration: truck.registrationNumber, litres, totalCost, odometerKm, supplier, tripId, deliveryNoteId: null, receiptUrl: null, receiptKey: null });
+        tx.set(journalRef, { ...base, entryDate: logDate, transactionType: "Fuel expense", reference, amount: totalCost, description: `Fuel for ${truck.registrationNumber}`, debitAccount: "Fuel Expense", creditAccount: "Cash at bank", fuelLogId: fuelRef.id, tripId });
+        tx.set(auditRef, audit(actor, "create", "fuelLog", fuelRef.id, `Fuel expense ${reference} recorded.`, { truckId, tripId, litres, totalCost }));
+      });
+      return NextResponse.json({ ok: true, fuelLogId: fuelRef.id, message: "Fuel log saved and the fuel expense was posted to the journal." });
+    }
+
+    if (action === "manual_journal") {
+      if (!ACCOUNTING_ROLES.has(role)) throw new Error("Finance access required for journal posting.");
+      const amount = Number(body.amount);
+      const description = String(body.description ?? "").trim();
+      const debitAccount = String(body.debitAccount ?? "").trim();
+      const creditAccount = String(body.creditAccount ?? "").trim();
+      const reference = String(body.reference ?? "").trim();
+      const transactionType = String(body.transactionType ?? "Manual journal").trim();
+      const entryDateMillis = Number(body.entryDateMillis);
+      const entryDate = Number.isFinite(entryDateMillis) ? Timestamp.fromMillis(entryDateMillis) : Timestamp.now();
+      const ref = db.collection(`organizations/${orgId}/journalEntries`).doc();
+      const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
+      await db.runTransaction(async (tx) => {
+        if (!Number.isFinite(amount) || amount <= 0 || !debitAccount || !creditAccount || debitAccount === creditAccount || !description) throw new Error("A positive amount, two different accounts and a description are required.");
+        if (!await openPeriod(db, orgId, entryDate)) throw new Error("No open accounting period covers the journal date.");
+        if (reference) {
+          const duplicate = await tx.get(db.collection(`organizations/${orgId}/journalEntries`).where("environment", "==", "LIVE").where("reference", "==", reference).where("deletedAt", "==", null));
+          if (!duplicate.empty) throw new Error("A journal entry with this reference already exists.");
+        }
+        const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
+        tx.set(ref, { ...base, entryDate, transactionType, reference: reference || `JRN-${ref.id.slice(0, 8).toUpperCase()}`, amount, description, debitAccount, creditAccount });
+        tx.set(auditRef, audit(actor, "create", "journalEntry", ref.id, "Manual journal posted.", { amount, debitAccount, creditAccount, reference: reference || null }));
+      });
+      return NextResponse.json({ ok: true, journalEntryId: ref.id, message: "Balanced journal entry posted." });
+    }
+
     if (action === "invoice_payment") {
+      if (!ACCOUNTING_ROLES.has(role)) throw new Error("Finance access required for invoice payment.");
       const invoiceId = String(body.invoiceId ?? "");
       const amount = Number(body.amount);
       const reference = String(body.reference ?? "").trim();
@@ -61,7 +167,7 @@ export async function POST(request: Request) {
         const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
         tx.set(paymentRef, { ...base, invoiceId, invoiceNumber: invoice.invoiceNumber, customerId: invoice.customerId, customerName: invoice.customerName, amount, currency: invoice.currency, paidAt, reference, method });
         tx.update(invoiceRef, { status: complete ? "paid" : "issued", paidAt: complete ? paidAt : null, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
-        tx.set(journalRef, { ...base, entryDate: paidAt, transactionType: "Customer payment", reference, amount, description: `Payment received for ${invoice.invoiceNumber}`, debitAccount: "Cash at bank", creditAccount: "Accounts Receivable" });
+        tx.set(journalRef, { ...base, entryDate: paidAt, transactionType: "Customer payment", reference, amount, description: `Payment received for ${invoice.invoiceNumber}`, debitAccount: "Cash at bank", creditAccount: "Accounts Receivable", invoiceId });
         tx.set(auditRef, audit(actor, "create", "invoicePayment", paymentRef.id, `${complete ? "Full" : "Partial"} payment posted for ${invoice.invoiceNumber}.`, { invoiceId, amount, reference, fullyPaid: complete }));
         return complete;
       });
@@ -69,6 +175,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "supplier_bill") {
+      if (!ACCOUNTING_ROLES.has(role)) throw new Error("Finance access required for supplier bills.");
       const supplier = String(body.supplier ?? "").trim();
       const reference = String(body.reference ?? "").trim();
       const amount = Number(body.amount);
@@ -90,39 +197,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, message: "Supplier bill created and posted to Accounts Payable." });
     }
 
-    if (action === "manual_journal" || action === "reverse_journal") {
+    if (action === "reverse_journal") {
+      if (!ACCOUNTING_ROLES.has(role)) throw new Error("Finance access required for journal reversal.");
       const sourceId = String(body.sourceId ?? "");
-      let amount = Number(body.amount);
-      const description = String(body.description ?? "").trim();
-      let debitAccount = String(body.debitAccount ?? "").trim();
-      let creditAccount = String(body.creditAccount ?? "").trim();
+      if (!sourceId) throw new Error("Source journal entry is required for a reversal.");
       const ref = db.collection(`organizations/${orgId}/journalEntries`).doc();
       const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
       const entryDate = Timestamp.now();
       await db.runTransaction(async (tx) => {
-        let sourceData: Record<string, unknown> | undefined;
-        if (action === "reverse_journal") {
-          if (!sourceId) throw new Error("Source journal entry is required for a reversal.");
-          const source = await tx.get(db.doc(`organizations/${orgId}/journalEntries/${sourceId}`));
-          if (!source.exists || source.data()?.environment !== "LIVE") throw new Error("Source journal entry not found.");
-          sourceData = source.data() as Record<string, unknown>;
-          if (sourceData.reversedEntryId || sourceData.reversedById) throw new Error("This journal entry has already been reversed.");
-          amount = Number(sourceData.amount);
-          debitAccount = String(sourceData.creditAccount ?? "");
-          creditAccount = String(sourceData.debitAccount ?? "");
-        }
-        if (!Number.isFinite(amount) || amount <= 0 || !debitAccount || !creditAccount || debitAccount === creditAccount || (!description && action === "manual_journal")) throw new Error("A positive amount, two different accounts and a description are required.");
-        if (!await openPeriod(db, orgId, entryDate)) throw new Error("No open accounting period covers the journal date.");
+        const sourceRef = db.doc(`organizations/${orgId}/journalEntries/${sourceId}`);
+        const source = await tx.get(sourceRef);
+        if (!source.exists || source.data()?.environment !== "LIVE") throw new Error("Source journal entry not found.");
+        const sourceData = source.data()!;
+        if (sourceData.reversedEntryId || sourceData.reversedById) throw new Error("This journal entry has already been reversed.");
+        const amount = Number(sourceData.amount);
+        const debitAccount = String(sourceData.creditAccount ?? "");
+        const creditAccount = String(sourceData.debitAccount ?? "");
+        if (!Number.isFinite(amount) || amount <= 0 || !debitAccount || !creditAccount || debitAccount === creditAccount) throw new Error("Source journal entry cannot be reversed safely.");
+        if (!await openPeriod(db, orgId, entryDate)) throw new Error("No open accounting period covers the reversal date.");
         const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
-        tx.set(ref, { ...base, entryDate, transactionType: action === "reverse_journal" ? "Reversal" : "Manual journal", reference: action === "reverse_journal" ? `REV-${sourceId.slice(0, 8).toUpperCase()}` : `JRN-${ref.id.slice(0, 8).toUpperCase()}`, amount, description: description || `Reversal of ${sourceId}`, debitAccount, creditAccount, reversedEntryId: action === "reverse_journal" ? sourceId : null });
-        tx.set(auditRef, audit(actor, action === "reverse_journal" ? "reverse" : "create", "journalEntry", ref.id, action === "reverse_journal" ? `Journal ${sourceId.slice(0, 8)} reversed.` : "Manual journal posted.", { sourceId: sourceId || null, amount, debitAccount, creditAccount }));
-        if (action === "reverse_journal") tx.update(db.doc(`organizations/${orgId}/journalEntries/${sourceId}`), { reversedById: ref.id, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+        tx.set(ref, { ...base, entryDate, transactionType: "Reversal", reference: `REV-${sourceId.slice(0, 8).toUpperCase()}`, amount, description: `Reversal of ${sourceId}`, debitAccount, creditAccount, reversedEntryId: sourceId });
+        tx.set(auditRef, audit(actor, "reverse", "journalEntry", ref.id, `Journal ${sourceId.slice(0, 8)} reversed.`, { sourceId, amount, debitAccount, creditAccount }));
+        tx.update(sourceRef, { reversedById: ref.id, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
       });
-      return NextResponse.json({ ok: true, message: action === "reverse_journal" ? "Reversal journal posted." : "Balanced journal entry posted." });
+      return NextResponse.json({ ok: true, message: "Reversal journal posted." });
     }
 
-    return NextResponse.json({ error: "Unsupported accounting action." }, { status: 400 });
+    return NextResponse.json({ error: "Unsupported finance action." }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Accounting action failed." }, { status: 409 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Finance action failed." }, { status: 409 });
   }
 }
