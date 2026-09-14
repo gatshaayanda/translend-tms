@@ -16,6 +16,48 @@ function finiteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+async function authorizeLocationAccess(request: Request, orgId: string) {
+  const header = request.headers.get("authorization");
+  if (!header?.startsWith("Bearer ")) throw new ApiError(401, "Authentication required.");
+  const user = await getAdminAuth().verifyIdToken(header.slice(7));
+  if (!orgId) throw new ApiError(400, "Workspace is required.");
+
+  const memberSnap = await getAdminDb().doc(`organizations/${orgId}/members/${user.uid}`).get();
+  if (!memberSnap.exists || memberSnap.data()?.status !== "active") throw new ApiError(403, "Active workspace membership required.");
+  const actorRole = String(memberSnap.data()?.role ?? "") as OrgRole;
+  if (!ALLOWED_ROLES.includes(actorRole)) throw new ApiError(403, "Location access is not permitted for this workspace role.");
+  return user;
+}
+
+export async function GET(request: Request) {
+  try {
+    const orgId = new URL(request.url).searchParams.get("orgId")?.trim() ?? "";
+    await authorizeLocationAccess(request, orgId);
+
+    const snapshot = await getAdminDb().collection(`organizations/${orgId}/truckLocationEvents`).get();
+    const events = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .filter((event) => event.environment === "LIVE" && event.deletedAt == null)
+      .sort((a, b) => {
+        const aTime = a.capturedAt instanceof Date ? a.capturedAt.getTime() : Number(a.capturedAt?.toMillis?.() ?? 0);
+        const bTime = b.capturedAt instanceof Date ? b.capturedAt.getTime() : Number(b.capturedAt?.toMillis?.() ?? 0);
+        return bTime - aTime;
+      })
+      .slice(0, 500)
+      .map((event) => ({
+        ...event,
+        createdAt: null,
+        updatedAt: null,
+        capturedAt: event.capturedAt instanceof Date ? event.capturedAt.getTime() : Number(event.capturedAt?.toMillis?.() ?? 0),
+      }));
+
+    return NextResponse.json({ events });
+  } catch (error) {
+    const status = error instanceof ApiError ? error.status : 500;
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Location data could not be loaded." }, { status });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const header = request.headers.get("authorization");
