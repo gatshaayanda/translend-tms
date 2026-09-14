@@ -3,7 +3,7 @@
 ## Authoritative project
 - Repository: `gatshaayanda/translend-tms`
 - Branch: `v19-authoritative`
-- Current checkpoint: `a0ad36609aecabe4720506a3e56225a8d5a6a1ac`
+- Current checkpoint: `d76e07598150506bb67cc3c4d8b7ca97a4dddcf2`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance-receipt transport.
@@ -30,33 +30,33 @@ A screen, button, Firestore document, offline banner or successful UI state is n
 Still not claimed complete: full tax/VAT configuration, credit/debit notes, bank reconciliation, payroll/settlement, richer scheduled/export reporting, and provider-dependent email/push/telematics/map capabilities.
 
 ## v19 hardening lessons
-### 1. Firebase Storage must stay removed
+### Firebase Storage
 `src/lib/firebase/storage.ts` was dead legacy code. `getFirebase()` intentionally returns only `{ app, auth, db }` because v19 uses UploadThing for POD/evidence/receipts. The stale helper caused the build failure by destructuring a removed `storage` property.
 
-Prevention: search the whole repository for `@/lib/firebase/storage`, `uploadPodFile`, `getStorage`, `firebase/storage`, and `storageBucket` before touching Firebase client configuration. Never reintroduce Firebase Storage just to satisfy TypeScript.
+Prevention: search the whole repository for `@/lib/firebase/storage`, `uploadPodFile`, `getStorage`, `firebase/storage`, and `storageBucket`. Never reintroduce Firebase Storage just to satisfy TypeScript.
 
-### 2. Server-controlled mutations must actually be server-controlled
-The audit found admin Delivery UI code performing arrival/departure/acknowledgement as separate direct Firestore updates. That could leave Delivery and Delivery Note half-updated. It also created Delivery + Delivery Note with multiple client writes.
+### Atomic delivery mutations
+The audit found admin Delivery UI code performing arrival/departure/acknowledgement as separate direct Firestore updates and creating Delivery + Delivery Note with multiple client writes. That could leave linked records half-updated.
 
-Fixed: `/api/deliveries/workflow-action` now transactionally handles delivery creation and admin arrival/departure/acknowledgement, and the admin Delivery page uses that boundary. Firestore client rules now deny direct Delivery/Trip state writes and allow only explicitly editable Delivery Note fields.
+Fixed: `/api/deliveries/workflow-action` now transactionally handles delivery creation and admin arrival/departure/acknowledgement, and the admin Delivery page uses that boundary. Firestore client rules deny direct Delivery/Trip state writes and allow only explicitly editable Delivery Note fields.
 
-Prevention: any mutation that changes two linked business records must be traced to one transaction/batch/server workflow. Do not accept two sequential `repo.update()` calls as atomic.
+Prevention: any mutation changing two linked business records must use one transaction/batch/server workflow. Never accept sequential `repo.update()` calls as atomic.
 
-### 3. UploadThing finalization must be atomic and replay-safe
-Evidence upload previously updated Delivery and Delivery Note with separate writes. Concurrent/repeated callbacks could also produce version drift.
+### Atomic/replay-safe evidence finalization
+UploadThing evidence finalization previously updated Delivery and Delivery Note with separate writes. Concurrent/repeated callbacks could also produce version drift.
 
-Fixed: UploadThing evidence finalization now uses a Firestore transaction, treats an existing file key as idempotent, updates both records together, and audits inside the transaction. Notifications remain non-authoritative and occur after commit.
+Fixed: evidence finalization now uses a Firestore transaction, treats an existing file key as idempotent, updates both records together, and audits inside the transaction. Notifications occur after commit and are non-authoritative.
 
-Prevention: file transport success is not business success. The callback must atomically finalize every authoritative record and tolerate callback replay.
+Prevention: file transport success is not business success. The callback must atomically finalize authoritative records and tolerate callback replay.
 
-### 4. Client Firestore rules must protect authoritative fields
-Previous rules preserved the record envelope but still allowed ordinary clients to change business-sensitive fields such as status/assignment/evidence/finance state.
+### Client Firestore security
+Previous rules preserved the record envelope but still allowed ordinary clients to change business-sensitive status/assignment/evidence/finance fields.
 
-Fixed: client creates now validate `orgId`, LIVE environment, actor/creator and soft-delete envelope. Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted to editable fields.
+Fixed: client creates validate `orgId`, LIVE environment, actor/creator and soft-delete envelope. Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted to editable fields.
 
-Firestore rules are security boundaries, not UI configuration. Use `diff().affectedKeys()`/`unchangedKeys()` for field-level protection. Do not weaken rules to fix a permission error.
+Firestore rules are security boundaries, not UI configuration. Use `diff().affectedKeys()`/`unchangedKeys()` for field-level protection. Never weaken rules to hide a permission failure.
 
-### 5. Error contracts matter
+### Error contracts
 Mandatory status semantics: 401 authentication, 403 authorization, 400 invalid input, 404 missing resource, 409 state/concurrency conflict, 500 unexpected server failure. Avoid catch-all 400/401 responses because they break retry/recovery semantics.
 
 ## Offline/reliability checklist
