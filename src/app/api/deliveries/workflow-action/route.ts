@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Timestamp, type Transaction } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import type { DeliveryEvidenceRef, OrgRole } from "@/types/core";
 import { notifyOrgRoles } from "@/lib/notifications/server";
@@ -43,7 +43,6 @@ export async function POST(request: Request) {
         const hasActiveEvidence = evidence.some((item) => !["replaced", "rejected"].includes(item.status ?? "active"));
         const openException = exceptions.some((item) => item.status === "open");
         if (!delivery.arrivalAt || !delivery.departureAt || !receiverAcknowledged || !hasActiveEvidence || !approvedRequiredPod || openException) throw new Error("Delivery requires arrival, departure, receiver acknowledgement, an approved required POD, active evidence and no open exceptions before completion.");
-
         tx.update(deliveryRef, { status: "delivered", deliveredAt: now, podState: "complete", updatedAt: now, updatedBy: user.uid });
         tx.update(noteRef, { podState: "complete", updatedAt: now, updatedBy: user.uid });
         recordAuditEvent({ orgId, actorUid: user.uid, actorRole: memberRole, action: "complete", entityType: "delivery", entityId: deliveryId, summary: `Delivery Note ${deliveryNoteId.slice(0, 8)} completed after POD validation.`, metadata: { deliveryNoteId, approvedRequiredPod: true }, transaction: tx });
@@ -59,7 +58,6 @@ export async function POST(request: Request) {
         if ((evidence.status ?? "active") === "replaced") throw new Error("Replaced evidence cannot be reviewed.");
         const rejectionReason = String(body.rejectionReason ?? "").trim();
         if (action === "reject_evidence" && !rejectionReason) throw new Error("A rejection reason is required.");
-
         evidence.status = action === "approve_evidence" ? "approved" : "rejected";
         evidence.reviewedBy = user.uid;
         evidence.reviewedAt = now as unknown as DeliveryEvidenceRef["reviewedAt"];
@@ -91,7 +89,7 @@ export async function POST(request: Request) {
       return { ok: true, action, status, exceptionId, resolutionNotes };
     });
 
-    if (result.rejected) {
+    if ("rejected" in result && result.rejected) {
       await notifyOrgRoles({ orgId, roles: ["owner", "operations_manager", "dispatcher"], type: "pod_rejected", severity: "warning", title: "POD rejected", message: `Evidence for delivery ${deliveryNoteId.slice(0, 8)} was rejected: ${result.rejectionReason}`, href: `/${orgId}/deliveries?deliveryNoteId=${encodeURIComponent(deliveryNoteId)}`, sourceId: deliveryId, sourceType: "delivery" });
     }
     return NextResponse.json(result);
