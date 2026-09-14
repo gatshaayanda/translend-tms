@@ -108,3 +108,16 @@ Current connected Vercel account exposes only the `adminhub-global` project, not
 `read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace real business mutation paths → inspect rules/indexes/config → compare with current TMS behavior → deliberately attack retry/offline/concurrency/security edges → fix root cause → inspect diff → run verification available → update AGENTS.md → commit/push → inspect deployment status → report exact SHA/status`
 
 Do not reset, revert, branch away, or reuse an older generation. Do not stop at a theoretical issue when a safe root fix can be made. Do not invent data, weaken security, or paper over compiler/runtime failures.
+
+
+## Production QA checkpoint — 2026-09-14
+The deployed production checkpoint `df7fbd7` was manually QA-tested before the later `3649f4b` head could deploy. Treat the following observed gaps as real until fixed and re-verified; do not describe CRUD foundations or deeper workflows as user-usable when the UI cannot reach them.
+
+1. **Customers/Trucks/Drivers:** production UI exposes create and list, but no visible edit or archive/delete actions. Repository helpers already provide `update` and `softDelete`; wire safe management UI and respect protected operational fields.
+2. **Workspace selection:** WorkspaceContext currently auto-selects the first resolved organization. Multi-workspace users need a deliberate chooser/switcher and persisted last-active workspace; invitation acceptance must not silently strand another accessible workspace.
+3. **Driver identity linkage:** driver invite/member acceptance and Driver.business record linkage are separate. A driver can sign in successfully and still hit “not linked”. Provide a visible authorized fleet/operations linking flow and prevent ambiguous email/UID matches. The end-to-end path must be: invite → sign in → workspace membership → authorized link to exactly one Driver record → My Trip.
+4. **Trip progression:** latest head still intentionally enforces forward-only one-step progression. Do not silently weaken operational state integrity. If correction is needed, add an explicit audited exception/correction path rather than generic backward state mutation.
+5. **QA priority:** fix the earlier blockers before claiming deeper delivery/finance workflows are reachable by a normal user. Production QA observations outrank theoretical feature descriptions.
+
+Required verification after these fixes:
+`owner multi-workspace → choose/switch workspace → create customer/truck/driver → edit → archive where allowed → invite driver → driver signs in → link/claim → assign trip → forward progression → explicit correction/exception path`.
