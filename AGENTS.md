@@ -3,7 +3,7 @@
 ## Authoritative project
 - Repository: `gatshaayanda/translend-tms`
 - Branch: `v19-authoritative`
-- Current checkpoint: `2e42da0c6f97c2c6af972a6a4b1a88cd0f6c9d2e`
+- Current checkpoint: `7b33b10580536cfe21de4b28d1b351e26b69dbb8`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance-receipt transport.
