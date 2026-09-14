@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `175ad46ed23300a1e38b74e746c4acf3c49a4e87`
+- Current application checkpoint: `71b4b3a8c97fed364822bd89adc56a347d1397ee`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -48,8 +48,8 @@ Driver My Trip supports `planned → en_route_pickup → loading → in_transit 
 ### 5. Complete Dispatch — CORE COMPLETE
 Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch creates assignment notifications and immutable server audit events.
 
-### 6. Accounting — CORE CONTROL PASS COMPLETE
-Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection.
+### 6. Accounting — HARDENED CONTROL PASS
+Chart of accounts, accounting periods/open-period posting control, balanced journals/reversals, customer invoice payments, supplier bills/AP, AR/AP outstanding balances and ageing, LIVE journal visibility, finance-role server transaction boundary, finance Firestore security and correct invoice selection. **Latest hardening:** accounting API access is now restricted to `owner` and `finance` (operations managers no longer receive finance mutation access), invoice payment references are duplicate-protected, supplier bills are duplicate-protected by supplier/reference, reversals are guarded against repeated reversal, and payment/bill/journal mutations write immutable audit events in the same Firestore batch as the accounting mutation.
 
 Still not claimed complete: dedicated credit/debit-note domain, full tax/VAT configuration, bank/cash reconciliation and dedicated accounting statement/export workflows.
 
@@ -64,12 +64,12 @@ Persisted org-scoped notification records, recipient-scoped reads, read/unread s
 Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and real push/email providers. Never claim email/push live without a configured provider.
 
 ### 9. Audit / Data Integrity — FOUNDATION IMPLEMENTED
-Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception resolution and driver delivery exceptions write audit events.
+Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception resolution and driver delivery exceptions write audit events. **Accounting payment, supplier-bill, manual-journal and reversal mutations now also write audit events atomically with the accounting mutation.**
 
 Still to expand: audit coverage across all important mutations, stronger idempotency keys, referential/orphan checks, concurrency protection, generalized mutation queues and partial-workflow recovery.
 
 ### 10. Workspace / Admin / Permissions — CONTROL PASS COMPLETE
-Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension/restoration, with owner protection, operations-manager limits, audit events and in-app notifications. Added a controlled owner-transfer transaction: current owner transfers ownership to an active member, becomes Operations Manager, organization `ownerUid` is updated atomically, and both parties are notified/audited. Team UI exposes member access controls and owner transfer. **Firestore membership rules are now hardened so clients cannot self-edit their membership documents; membership mutations remain server-controlled.**
+Existing invitation lifecycle remains server-controlled. Added secure server member actions for role changes, suspension/restoration, with owner protection, operations-manager limits, audit events and in-app notifications. Added a controlled owner-transfer transaction: current owner transfers ownership to an active member, becomes Operations Manager, organization `ownerUid` is updated atomically, and both parties are notified/audited. Team UI exposes member access controls and owner transfer. **Firestore membership rules are hardened so clients cannot self-edit their membership documents; membership mutations remain server-controlled.**
 
 Still to expand: richer permission testing, company settings/defaults, invitation cancellation/resend controls and real transactional email when configured.
 
@@ -95,7 +95,7 @@ Driver browser GPS is foreground and permission-based; do not claim background t
 
 ## Firestore safety
 
-Firestore rules are security boundaries, not UI configuration. Preserve workspace membership security; do not weaken rules to fix UI/query problems; verify query shapes against rules/indexes; new domains require types + repository + rules + indexes/query shape + UI workflow; preserve environment/soft-delete conventions; workspaceInvites remain server-controlled; notifications are recipient-readable and only readAt-writable by clients; auditEvents are immutable to clients. Membership documents are not client-self-editable.
+Firestore rules are security boundaries, not UI configuration. Preserve workspace membership security; do not weaken rules to fix UI/query problems; verify query shapes against rules/indexes; new domains require types + repository + rules + indexes/query shape + UI workflow; preserve environment/soft-delete conventions; workspaceInvites remain server-controlled; notifications are recipient-readable and only readAt-writable by clients; auditEvents are immutable to clients. Membership documents are not client-self-editable. Accounting mutations are server-controlled and restricted to owner/finance roles.
 
 ## UploadThing
 
