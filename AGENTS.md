@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `b7f436248c73fec6ee15278c491ed1c06165187c`
+- Current application checkpoint: `c1b7b29d0ea917474657776f9d55f11a44e75c08`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -42,8 +42,8 @@ Real Firestore truck location events, latest position per truck, moving/idle/sta
 ### 3. GPS / Telematics Integration — FOUNDATION COMPLETE
 Provider-neutral `POST /api/telematics/ingest`, server-side auth/workspace validation, provider vehicle → Translend truck mapping, validation, duplicate/idempotency protection, stale-event protection, safe mapping and normalized LIVE telemetry with `orgId`. Provider credentials remain external and must never be faked.
 
-### 4. Complete Driver Workflow — CORE COMPLETE
-Driver My Trip supports `planned → en_route_pickup → loading → in_transit → unloading → completed`, assigned-driver filtering, secure server-side status changes, delivery arrival/departure, receiver acknowledgement, delivery exceptions, POD/evidence handoff, inspections, defects, defect→work-order handoff, maintenance/tyre visibility, browser GPS capture and offline awareness. Driver writes are server/role scoped.
+### 4. Complete Driver Workflow — HARDENED CORE
+Driver My Trip supports `planned → en_route_pickup → loading → in_transit → unloading → completed`, assigned-driver filtering, secure server-side status changes, delivery arrival/departure, receiver acknowledgement, delivery exceptions, POD/evidence handoff, inspections, defects, defect→work-order handoff, maintenance/tyre visibility, browser GPS capture and offline awareness. Driver writes are server/role scoped. Driver delivery arrival/departure/acknowledgement actions now reject duplicate lifecycle writes, enforce arrival-before-departure/acknowledgement, and emit immutable audit events for those lifecycle actions.
 
 ### 5. Complete Dispatch — CORE COMPLETE
 Real dispatch board/workflow, unassigned work visibility, secure truck/driver assignment, availability checks preventing double-booking, atomic trip creation + job/truck/driver updates, dispatch KPIs, search/status filtering and completion release of truck/driver and job. Dispatch creates assignment notifications and immutable server audit events.
@@ -63,8 +63,8 @@ Persisted org-scoped notification records, recipient-scoped reads, read/unread s
 
 Still to expand: missing-POD ageing alerts, route variance, maintenance/inspection, finance due dates, driver reminders, richer exception escalation, preferences and real push/email providers. Never claim email/push live without a configured provider.
 
-### 9. Audit / Data Integrity — FOUNDATION IMPLEMENTED
-Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception resolution and driver delivery exceptions write audit events. Accounting payment, supplier-bill, manual-journal and reversal mutations also write audit events atomically with the accounting mutation.
+### 9. Audit / Data Integrity — EXPANDED FOUNDATION
+Immutable server-written `auditEvents` with client create/update/delete denied. Dispatch, evidence upload/review/completion, delivery exception creation/resolution, driver delivery exceptions, and driver arrival/departure/receiver acknowledgement write audit events. Accounting payment, supplier-bill, manual-journal and reversal mutations also write audit events atomically with the accounting mutation.
 
 Still to expand: audit coverage across all important mutations, stronger idempotency keys, referential/orphan checks, concurrency protection, generalized mutation queues and partial-workflow recovery.
 
