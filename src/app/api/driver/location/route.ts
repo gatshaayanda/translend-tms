@@ -6,6 +6,14 @@ import type { TelemetryStatus } from "@/types/location";
 
 const ALLOWED_ROLES: OrgRole[] = ["owner", "operations_manager", "dispatcher", "fleet_manager", "driver"];
 
+type LocationEventData = {
+  id: string;
+  environment?: string;
+  deletedAt?: unknown;
+  capturedAt?: unknown;
+  [key: string]: unknown;
+};
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -14,6 +22,14 @@ class ApiError extends Error {
 
 function finiteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function timestampMillis(value: unknown): number {
+  if (value instanceof Date) return value.getTime();
+  if (value && typeof value === "object" && "toMillis" in value && typeof value.toMillis === "function") {
+    return Number(value.toMillis());
+  }
+  return Number(value ?? 0);
 }
 
 async function authorizeLocationAccess(request: Request, orgId: string) {
@@ -35,20 +51,16 @@ export async function GET(request: Request) {
     await authorizeLocationAccess(request, orgId);
 
     const snapshot = await getAdminDb().collection(`organizations/${orgId}/truckLocationEvents`).get();
-    const events = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
+    const events: LocationEventData[] = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) }))
       .filter((event) => event.environment === "LIVE" && event.deletedAt == null)
-      .sort((a, b) => {
-        const aTime = a.capturedAt instanceof Date ? a.capturedAt.getTime() : Number(a.capturedAt?.toMillis?.() ?? 0);
-        const bTime = b.capturedAt instanceof Date ? b.capturedAt.getTime() : Number(b.capturedAt?.toMillis?.() ?? 0);
-        return bTime - aTime;
-      })
+      .sort((a, b) => timestampMillis(b.capturedAt) - timestampMillis(a.capturedAt))
       .slice(0, 500)
       .map((event) => ({
         ...event,
         createdAt: null,
         updatedAt: null,
-        capturedAt: event.capturedAt instanceof Date ? event.capturedAt.getTime() : Number(event.capturedAt?.toMillis?.() ?? 0),
+        capturedAt: timestampMillis(event.capturedAt),
       }));
 
     return NextResponse.json({ events });
