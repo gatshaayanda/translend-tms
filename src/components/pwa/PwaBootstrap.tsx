@@ -12,7 +12,7 @@ type SyncState = "starting" | "ready" | "offline" | "syncing" | "synced" | "atte
 export function PwaBootstrap() {
   const [installEvent, setInstallEvent] = useState<InstallPromptEvent | null>(null);
   const [online, setOnline] = useState(() => typeof navigator !== "undefined" ? navigator.onLine : true);
-  const [syncState, setSyncState] = useState<SyncState>(() => typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "starting");
+  const [, setSyncState] = useState<SyncState>(() => typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "starting");
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -71,21 +71,7 @@ export function PwaBootstrap() {
     if (result.outcome === "accepted") setInstallEvent(null);
   };
 
-  const syncLabel = {
-    starting: "Preparing offline work…",
-    ready: "Offline changes waiting to sync",
-    offline: "Offline — cached data and supported work remain available. Changes are saved locally and will sync when you reconnect.",
-    syncing: "Syncing offline changes…",
-    synced: "Offline changes synced",
-    attention: "Some offline changes need attention — reconnect and review the affected workflow",
-    unavailable: "Offline storage is not available in this browser",
-    failed: "Offline storage could not be enabled",
-  }[syncState];
-
   return <>
-    {!online && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/10 bg-white px-4 py-3 text-center text-xs font-semibold text-gray-700">{syncLabel}</div>}
-    {online && (syncState === "syncing" || syncState === "ready" || syncState === "attention") && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/10 bg-white px-4 py-2 text-center text-[11px] font-semibold text-gray-600">{syncLabel}</div>}
-    {online && (syncState === "unavailable" || syncState === "failed") && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-black/10 bg-white px-4 py-3 text-center text-xs font-semibold text-gray-700">{syncLabel}</div>}
     {installEvent && <button onClick={install} className="fixed bottom-4 right-4 z-40 rounded-full bg-black px-4 py-3 text-xs font-bold text-white shadow-lg">Install Translend</button>}
   </>;
 }
