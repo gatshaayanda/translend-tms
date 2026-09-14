@@ -44,6 +44,16 @@ export async function POST(request: Request) {
         if (!tripSnap.exists || tripSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Live trip not found.");
         const trip = tripSnap.data()!;
         if (!["completed", "unloading"].includes(String(trip.status))) throw new ApiError(409, "Only an unloading or completed trip can start a delivery record.");
+        if (!trip.jobId) throw new ApiError(409, "The trip is not linked to a Job.");
+        const jobRef = db.doc(`organizations/${orgId}/jobs/${trip.jobId}`);
+        const jobSnap = await tx.get(jobRef);
+        if (!jobSnap.exists || jobSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Live Job not found.");
+        const job = jobSnap.data()!;
+        if (!job.customerId) throw new ApiError(409, "The linked Job is not assigned to a Customer.");
+        const customerRef = db.doc(`organizations/${orgId}/customers/${job.customerId}`);
+        const customerSnap = await tx.get(customerRef);
+        if (!customerSnap.exists || customerSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Live Customer not found for the linked Job.");
+        const customer = customerSnap.data()!;
         const existing = await tx.get(db.collection(`organizations/${orgId}/deliveries`).where("environment", "==", "LIVE").where("tripId", "==", tripId).where("deletedAt", "==", null));
         if (!existing.empty) throw new ApiError(409, "This trip already has a delivery record.");
         const now = FieldValue.serverTimestamp();
@@ -56,12 +66,12 @@ export async function POST(request: Request) {
         tx.set(noteRef, {
           orgId, environment: "LIVE", createdAt: now, createdBy: user.uid, updatedAt: now, updatedBy: user.uid, deletedAt: null,
           noteReference: `DN-${deliveryRef.id.slice(0, 8).toUpperCase()}`, noteDateTime: Timestamp.now(), jobId: trip.jobId, tripId,
-          deliveryId: deliveryRef.id, suppliedTo: "", customerName: "", vehicleRegistration: trip.truckRegistration ?? "", deliveryLocation: "",
+          deliveryId: deliveryRef.id, suppliedTo: "", customerName: String(customer.name ?? ""), vehicleRegistration: trip.truckRegistration ?? "", deliveryLocation: "",
           driverId: trip.driverId, driverName: trip.driverName, orderReference: null, podReference: null, loadingPoint: null,
           receivedByName: "", receivedByRole: null, notes: "", materialLines: [{ id: crypto.randomUUID(), description: "", materialCode: null, quantity: 0, unit: "", expectedQuantity: null, notes: "" }],
           arrivalAt: null, arrivalBy: null, departureAt: null, departureBy: null, acknowledgements: [], evidenceRefs: [], exceptionIds: [], podState: "not_started",
         });
-        recordAuditEvent({ orgId, actorUid: user.uid, actorRole: memberRole, action: "create", entityType: "delivery", entityId: deliveryRef.id, summary: `Created delivery record for trip ${tripId.slice(0, 8)}.`, metadata: { tripId, deliveryNoteId: noteRef.id }, transaction: tx });
+        recordAuditEvent({ orgId, actorUid: user.uid, actorRole: memberRole, action: "create", entityType: "delivery", entityId: deliveryRef.id, summary: `Created delivery record for trip ${tripId.slice(0, 8)}.`, metadata: { tripId, deliveryNoteId: noteRef.id, customerId: job.customerId }, transaction: tx });
       });
       return NextResponse.json({ ok: true, action, deliveryId: deliveryRef.id, deliveryNoteId: noteRef.id });
     }
