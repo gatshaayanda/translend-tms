@@ -20,36 +20,45 @@ export async function POST(request: Request) {
     const actorRef = db.doc(`organizations/${orgId}/members/${user.uid}`);
     const targetRef = db.doc(`organizations/${orgId}/members/${memberUid}`);
     const orgRef = db.doc(`organizations/${orgId}`);
-    const [actorSnap, targetSnap, orgSnap] = await Promise.all([actorRef.get(), targetRef.get(), orgRef.get()]);
-    const actor = actorSnap.data(); const target = targetSnap.data();
-    if (!actorSnap.exists || actor?.status !== "active" || !["owner", "operations_manager"].includes(actor.role)) return NextResponse.json({ error: "Workspace member management access required." }, { status: 403 });
-    if (!targetSnap.exists || target?.status === undefined) return NextResponse.json({ error: "Workspace member not found." }, { status: 404 });
-    if (memberUid === user.uid) return NextResponse.json({ error: "You cannot change your own workspace access from this screen." }, { status: 409 });
-    if (action === "transfer_owner") {
-      if (actor.role !== "owner") return NextResponse.json({ error: "Only the current workspace owner can transfer ownership." }, { status: 403 });
-      if (target.role === "owner") return NextResponse.json({ error: "That member is already the workspace owner." }, { status: 409 });
-      if (target.status !== "active") return NextResponse.json({ error: "Ownership can only be transferred to an active member." }, { status: 409 });
-      const batch = db.batch(); const now = Timestamp.now();
-      batch.update(orgRef, { ownerUid: memberUid, updatedAt: now });
-      batch.update(actorRef, { role: "operations_manager", updatedAt: now, updatedBy: user.uid });
-      batch.update(targetRef, { role: "owner", updatedAt: now, updatedBy: user.uid });
-      await batch.commit();
-      await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "owner", action: "update", entityType: "organization", entityId: orgId, summary: `Workspace ownership transferred to ${memberUid.slice(0, 8)}.`, metadata: { previousOwnerUid: user.uid, newOwnerUid: memberUid } });
-      await notifyUsers({ orgId, recipientUids: [memberUid, user.uid], type: "driver_reminder", severity: "urgent", title: "Workspace ownership changed", message: memberUid === user.uid ? "You are now the workspace owner." : "Workspace ownership has been transferred to you; your previous owner access is now Operations Manager.", href: `/${orgId}/control-tower`, sourceId: orgId, sourceType: "organization" });
-      return NextResponse.json({ ok: true, action });
-    }
-    if (target.role === "owner") return NextResponse.json({ error: "The workspace owner cannot be changed by this action." }, { status: 409 });
-    if (action === "change_role" && role === "owner") return NextResponse.json({ error: "Use the controlled owner transfer action." }, { status: 409 });
-    if (actor.role === "operations_manager" && target.role === "operations_manager") return NextResponse.json({ error: "Only the workspace owner can change another operations manager." }, { status: 403 });
-
     const now = Timestamp.now();
-    if (action === "change_role") await targetRef.update({ role, updatedAt: now, updatedBy: user.uid });
-    else if (action === "suspend") await targetRef.update({ status: "suspended", updatedAt: now, updatedBy: user.uid });
-    else await targetRef.update({ status: "active", updatedAt: now, updatedBy: user.uid });
+    const result = await db.runTransaction(async (tx) => {
+      const [actorSnap, targetSnap, orgSnap] = await Promise.all([tx.get(actorRef), tx.get(targetRef), tx.get(orgRef)]);
+      const actor = actorSnap.data();
+      const target = targetSnap.data();
+      if (!actorSnap.exists || actor?.status !== "active" || !["owner", "operations_manager"].includes(actor.role)) throw new Error("Workspace member management access required.");
+      if (!targetSnap.exists || target?.status === undefined) throw new Error("Workspace member not found.");
+      if (!orgSnap.exists) throw new Error("Workspace not found.");
+      if (memberUid === user.uid) throw new Error("You cannot change your own workspace access from this screen.");
 
-    await recordAuditEvent({ orgId, actorUid: user.uid, actorRole: actor.role, action: "update", entityType: "orgMember", entityId: memberUid, summary: `${action.replaceAll("_", " ")} for workspace member ${memberUid.slice(0, 8)}.`, metadata: { memberUid, action, role: role ?? target.role } });
-    await notifyUsers({ orgId, recipientUids: [memberUid], type: "driver_reminder", severity: action === "suspend" ? "urgent" : "info", title: action === "suspend" ? "Workspace access suspended" : action === "restore" ? "Workspace access restored" : "Workspace role changed", message: action === "change_role" ? `Your Translend workspace role is now ${role}.` : action === "suspend" ? "Your access to this workspace has been suspended." : "Your access to this workspace has been restored.", href: `/${orgId}/control-tower`, sourceId: memberUid, sourceType: "orgMember" });
-    return NextResponse.json({ ok: true });
+      if (action === "transfer_owner") {
+        if (actor.role !== "owner") throw new Error("Only the current workspace owner can transfer ownership.");
+        if (target.role === "owner") throw new Error("That member is already the workspace owner.");
+        if (target.status !== "active") throw new Error("Ownership can only be transferred to an active member.");
+        tx.update(orgRef, { ownerUid: memberUid, updatedAt: now, updatedBy: user.uid });
+        tx.update(actorRef, { role: "operations_manager", updatedAt: now, updatedBy: user.uid });
+        tx.update(targetRef, { role: "owner", updatedAt: now, updatedBy: user.uid });
+        recordAuditEvent({ orgId, actorUid: user.uid, actorRole: "owner", action: "update", entityType: "organization", entityId: orgId, summary: `Workspace ownership transferred to ${memberUid.slice(0, 8)}.`, metadata: { previousOwnerUid: user.uid, newOwnerUid: memberUid }, transaction: tx });
+        return { action, recipientUids: [memberUid, user.uid], notificationType: "transfer" as const };
+      }
+
+      if (target.role === "owner") throw new Error("The workspace owner cannot be changed by this action.");
+      if (action === "change_role" && role === "owner") throw new Error("Use the controlled owner transfer action.");
+      if (actor.role === "operations_manager" && target.role === "operations_manager") throw new Error("Only the workspace owner can change another operations manager.");
+
+      if (action === "change_role") tx.update(targetRef, { role, updatedAt: now, updatedBy: user.uid });
+      else if (action === "suspend") tx.update(targetRef, { status: "suspended", updatedAt: now, updatedBy: user.uid });
+      else tx.update(targetRef, { status: "active", updatedAt: now, updatedBy: user.uid });
+      recordAuditEvent({ orgId, actorUid: user.uid, actorRole: actor.role, action: "update", entityType: "orgMember", entityId: memberUid, summary: `${action.replaceAll("_", " ")} for workspace member ${memberUid.slice(0, 8)}.`, metadata: { memberUid, action, role: role ?? target.role }, transaction: tx });
+      return { action, recipientUids: [memberUid], notificationType: "member" as const };
+    });
+
+    if (result.notificationType === "transfer") {
+      await notifyUsers({ orgId, recipientUids: result.recipientUids, type: "driver_reminder", severity: "urgent", title: "Workspace ownership changed", message: "Workspace ownership has been transferred to you; the previous owner is now Operations Manager.", href: `/${orgId}/control-tower`, sourceId: orgId, sourceType: "organization" });
+    } else {
+      const notificationAction = result.action;
+      await notifyUsers({ orgId, recipientUids: result.recipientUids, type: "driver_reminder", severity: notificationAction === "suspend" ? "urgent" : "info", title: notificationAction === "suspend" ? "Workspace access suspended" : notificationAction === "restore" ? "Workspace access restored" : "Workspace role changed", message: notificationAction === "change_role" ? `Your Translend workspace role is now ${role}.` : notificationAction === "suspend" ? "Your access to this workspace has been suspended." : "Your access to this workspace has been restored.", href: `/${orgId}/control-tower`, sourceId: memberUid, sourceType: "orgMember" });
+    }
+    return NextResponse.json({ ok: true, action: result.action });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Workspace member action failed." }, { status: 400 });
   }
