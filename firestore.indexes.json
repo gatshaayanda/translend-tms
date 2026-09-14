@@ -17,7 +17,10 @@
     { "collectionGroup": "trips", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "deletedAt", "order": "ASCENDING" }, { "fieldPath": "environment", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
     { "collectionGroup": "trips", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "driverId", "order": "ASCENDING" }, { "fieldPath": "truckId", "order": "ASCENDING" } ] },
     { "collectionGroup": "deliveries", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "deletedAt", "order": "ASCENDING" }, { "fieldPath": "environment", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
-    { "collectionGroup": "notifications", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "deletedAt", "order": "ASCENDING" }, { "fieldPath": "environment", "order": "ASCENDING" }, { "fieldPath": "recipientUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] }
+    { "collectionGroup": "notifications", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "deletedAt", "order": "ASCENDING" }, { "fieldPath": "environment", "order": "ASCENDING" }, { "fieldPath": "recipientUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "invoices", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "environment", "order": "ASCENDING" }, { "fieldPath": "deliveryNoteId", "order": "ASCENDING" }, { "fieldPath": "deletedAt", "order": "ASCENDING" } ] },
+    { "collectionGroup": "invoicePayments", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "invoiceId", "order": "ASCENDING" }, { "fieldPath": "environment", "order": "ASCENDING" }, { "fieldPath": "deletedAt", "order": "ASCENDING" } ] },
+    { "collectionGroup": "journalEntries", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "environment", "order": "ASCENDING" }, { "fieldPath": "reference", "order": "ASCENDING" }, { "fieldPath": "deletedAt", "order": "ASCENDING" } ] }
   ],
   "fieldOverrides": []
 }
