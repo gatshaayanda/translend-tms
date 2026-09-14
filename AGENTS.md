@@ -70,7 +70,7 @@ Fixed: accounting-period queries are now read through the active Firestore trans
 ### Job integrity and dispatch concurrency
 Job creation was relying too heavily on UI validation. A client could otherwise attempt to create a confirmed Job with an invalid customer reference, mismatched customer name, non-positive rate, negative weight or reversed dates. A dispatched Job could also have its customer/rate/scheduling fields edited directly after assignment.
 
-Fixed: Firestore Job-create rules now require a LIVE, non-deleted Customer in the same workspace, matching `customerName`, positive rate, non-negative weight and ordered timestamps. Sensitive Job fields remain editable while the Job is confirmed but are locked once the Job is dispatched; status remains server-controlled. The dispatch API now returns correct 401/403/404/409/500 semantics instead of collapsing business conflicts into 400. Dispatch already uses one transaction over Job + Truck + Driver, so concurrent attempts conflict and re-evaluate against the latest state rather than creating a second assignment.
+Fixed: Firestore Job-create rules now require a LIVE, non-deleted Customer in the same workspace, matching `customerName`, positive rate, non-negative weight and ordered timestamps. Sensitive Job fields remain editable while the Job is confirmed but are locked once it is dispatched; status remains server-controlled. The dispatch API now returns correct 401/403/404/409/500 semantics instead of collapsing business conflicts into 400. Dispatch already uses one transaction over Job + Truck + Driver, so concurrent attempts conflict and re-evaluate against the latest state rather than creating a second assignment.
 
 Prevention: validate business references and money/date invariants at the authorization boundary, not only in forms. Once dispatch has consumed a Job, protect the commercial identity and schedule from ordinary client edits.
 
@@ -80,6 +80,14 @@ Production QA exposed that an owner could advance a trip but had no way to corre
 Fixed in `0fede9a` + `056087d`: adjacent trip status changes can now be explicitly corrected by authorized operational roles, and linked drivers can also move their assigned trip one adjacent step in either direction. Every correction is audited with from/to status and direction. Completion reversal restores the trip's truck/driver to `on_trip` and the job to `in_progress`; completion still remains an explicit operational state, not a generic arbitrary status edit.
 
 Prevention: operational status must remain sequential and auditable, but authorized actors need an explicit correction path. Never implement irreversible forward-only UI when a legitimate field correction is required.
+
+### Workspace and driver identity QA
+Production QA found that multiple workspaces were silently selecting the first organization and that a signed-in invited driver could remain unlinked to the Driver business record.
+
+Fixed in the latest hardening pass: multi-workspace accounts now stop at an explicit workspace chooser unless a valid last-active workspace exists; the chosen workspace is persisted locally. Fleet/operations users now have a visible Driver "Link account" action, backed by `/api/fleet/link-driver`, which requires active authorized membership and an exact Driver-record email match to a real Firebase account. Drivers also have an Edit path. The link operation rejects ambiguous reuse of one account across multiple Driver records.
+
+### Customer management QA
+Production QA found Customer was create/list only. The customer register now exposes Edit and Archive controls, with archive blocked when open jobs exist. The existing repository soft-delete path is used rather than destructive deletion.
 
 ## Offline/reliability checklist
 For every driver/field action:
@@ -109,7 +117,7 @@ Required sequence when tooling is available:
 
 Never call a deployment green without actual status evidence.
 
-Current connected Vercel account exposes only the `adminhub-global` project, not a dedicated `translend-tms` project. The last GitHub Vercel check reported a Vercel **build-rate-limit** failure rather than the original TypeScript Storage error. Do not repeatedly trigger deployments while the Hobby quota is exhausted and do not claim the current commit is deployed.
+Do not repeatedly trigger deployments while the Hobby quota is exhausted and do not claim the current commit is deployed.
 
 ## Required workflow for future agents
 `read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace real business mutation paths → inspect rules/indexes/config → compare with current TMS behavior → deliberately attack retry/offline/concurrency/security edges → fix root cause → inspect diff → run verification available → update AGENTS.md → commit/push → inspect deployment status → report exact SHA/status`
@@ -117,13 +125,16 @@ Current connected Vercel account exposes only the `adminhub-global` project, not
 Do not reset, revert, branch away, or reuse an older generation. Do not stop at a theoretical issue when a safe root fix can be made. Do not invent data, weaken security, or paper over compiler/runtime failures.
 
 ## Production QA checkpoint — 2026-09-14
-The deployed production checkpoint `df7fbd7` was manually QA-tested before later HEAD could deploy. Observed gaps were:
+The deployed production checkpoint `df7fbd7` was manually QA-tested before later HEAD could deploy. Initial gaps were Customers/Trucks/Drivers management UI, workspace selection, driver identity linking, and trip correction.
 
-1. **Customers/Trucks/Drivers:** production UI exposes create/list but no visible edit/archive actions. Repository helpers already provide `update` and `softDelete`. This remains a priority until the UI is wired and verified.
-2. **Workspace selection:** WorkspaceContext auto-selected the first resolved organization. Multi-workspace users need deliberate chooser/switcher and persisted last-active workspace. This remains a priority; do not change the existing single-workspace flow unnecessarily.
-3. **Driver identity linkage:** driver invite/member acceptance and Driver business-record linkage are separate. A driver can sign in and still hit “not linked”. A visible authorized fleet/operations linking flow is required. End-to-end target: invite → sign in → membership → link exactly one Driver record → My Trip.
-4. **Trip correction:** QA exposed missing owner correction. This is now fixed in the latest HEAD with adjacent forward/backward controls for owners/operations and linked drivers, backed by an audited server route. Re-verify after deployment.
-5. **Connected workflow priority:** after the above blockers, continue through driver coordination → delivery/POD → invoice → payment/owed money → journal/reporting. Do not treat finance as complete merely because server actions exist.
+Current hardening status:
+- **Trip correction:** fixed in latest HEAD; owners/operations and linked drivers can make audited adjacent corrections in either direction, including safe completion reopening of truck/driver/job state. Needs production verification.
+- **Workspace choice:** fixed in latest HEAD; multi-org accounts require an explicit chooser unless a valid last-active workspace is available. Needs production verification.
+- **Driver linking:** fixed in latest HEAD; fleet/operations can link a real signed-in account to a Driver record by exact email, and Drivers can be edited. Needs production verification.
+- **Customer management:** fixed in latest HEAD with Edit + Archive. Needs production verification.
+- **Truck management:** **still outstanding** — existing Fleet page still needs visible Edit + safe Archive/retire controls. Do not call Truck RUD complete yet.
 
-Required verification after these fixes:
-`owner multi-workspace → choose/switch workspace → create customer/truck/driver → edit → archive where allowed → invite driver → driver signs in → link/claim → assign trip → forward progression → explicit correction → delivery/POD → invoice → payment/owed → journal/reporting`.
+After Truck management is closed and verified, continue the connected real-world chain:
+`owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting`.
+
+Finance must be validated as a connected consequence of completed POD, not treated as complete because finance server actions merely exist.
