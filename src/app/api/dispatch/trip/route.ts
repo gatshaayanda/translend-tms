@@ -4,25 +4,34 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { notifyUsers } from "@/lib/notifications/server";
 import { recordAuditEvent } from "@/lib/audit/server";
 
+class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 export async function POST(request: Request) {
   try {
     const header = request.headers.get("authorization");
-    if (!header?.startsWith("Bearer ")) throw new Error("Authentication required.");
-    const user = await getAdminAuth().verifyIdToken(header.slice(7));
+    if (!header?.startsWith("Bearer ")) throw new ApiError(401, "Authentication required.");
+    let user;
+    try {
+      user = await getAdminAuth().verifyIdToken(header.slice(7).trim());
+    } catch {
+      throw new ApiError(401, "Invalid authentication token.");
+    }
     const body = await request.json();
     const orgId = String(body.orgId ?? "");
     const jobId = String(body.jobId ?? "");
     const truckId = String(body.truckId ?? "");
     const driverId = String(body.driverId ?? "");
     if (!orgId || !jobId || !truckId || !driverId) {
-      return NextResponse.json({ error: "Job, truck, and driver are required." }, { status: 400 });
+      throw new ApiError(400, "Job, truck, and driver are required.");
     }
 
     const db = getAdminDb();
     const member = await db.doc(`organizations/${orgId}/members/${user.uid}`).get();
     const role = member.data()?.role;
     if (!member.exists || member.data()?.status !== "active" || !["owner", "operations_manager", "dispatcher"].includes(role)) {
-      return NextResponse.json({ error: "Dispatch access required." }, { status: 403 });
+      throw new ApiError(403, "Dispatch access required.");
     }
 
     const jobRef = db.doc(`organizations/${orgId}/jobs/${jobId}`);
@@ -39,25 +48,26 @@ export async function POST(request: Request) {
         tx.get(driverRef),
       ]);
 
-      if (!jobSnap.exists) throw new Error("The selected job no longer exists.");
-      if (!truckSnap.exists) throw new Error("The selected truck no longer exists.");
-      if (!driverSnap.exists) throw new Error("The selected driver no longer exists.");
+      if (!jobSnap.exists) throw new ApiError(404, "The selected job no longer exists.");
+      if (!truckSnap.exists) throw new ApiError(404, "The selected truck no longer exists.");
+      if (!driverSnap.exists) throw new ApiError(404, "The selected driver no longer exists.");
 
       const job = jobSnap.data()!;
       const truck = truckSnap.data()!;
       const driver = driverSnap.data()!;
 
       if (job.environment !== "LIVE" || truck.environment !== "LIVE" || driver.environment !== "LIVE") {
-        throw new Error("Only LIVE records can be dispatched.");
+        throw new ApiError(409, "Only LIVE records can be dispatched.");
       }
       if (job.deletedAt || truck.deletedAt || driver.deletedAt) {
-        throw new Error("One of the selected records is no longer active.");
+        throw new ApiError(409, "One of the selected records is no longer active.");
       }
-      // A dispatch is a one-way reservation of the job. Once it is dispatched,
-      // retrying the same request must fail rather than creating a second trip.
-      if (job.status !== "confirmed") throw new Error("Only a confirmed job can be dispatched.");
-      if (truck.status !== "available") throw new Error("The selected truck is no longer available.");
-      if (driver.status !== "available") throw new Error("The selected driver is no longer available.");
+      // The job, truck and driver are all read in the same transaction that writes
+      // their state. A concurrent dispatch therefore conflicts and is re-evaluated
+      // against the new status instead of creating a second assignment.
+      if (job.status !== "confirmed") throw new ApiError(409, "Only a confirmed job can be dispatched.");
+      if (truck.status !== "available") throw new ApiError(409, "The selected truck is no longer available.");
+      if (driver.status !== "available") throw new ApiError(409, "The selected driver is no longer available.");
 
       driverLinkedUid = typeof driver.linkedUid === "string" ? driver.linkedUid : null;
       jobNumber = String(job.jobNumber ?? jobId);
@@ -102,9 +112,8 @@ export async function POST(request: Request) {
       });
     });
 
-    // Notification delivery is intentionally outside the business transaction:
-    // a transient notification failure must not turn a successful dispatch into
-    // an apparent failure that a client may retry and misinterpret.
+    // Notification delivery is outside the business transaction: a transient
+    // notification failure must never make a successful dispatch look retryable.
     if (driverLinkedUid) {
       try {
         await notifyUsers({
@@ -125,6 +134,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, tripId: tripRef.id });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Dispatch failed." }, { status: 400 });
+    const status = error instanceof ApiError ? error.status : 500;
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Dispatch failed." }, { status });
   }
 }

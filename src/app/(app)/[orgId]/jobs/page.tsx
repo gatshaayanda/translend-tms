@@ -151,6 +151,18 @@ function JobFormDialog({
       setError("Origin and destination are required.");
       return;
     }
+    if (!Number.isFinite(form.cargoWeightTons) || form.cargoWeightTons < 0) {
+      setError("Cargo weight cannot be negative.");
+      return;
+    }
+    if (!Number.isFinite(form.rate) || form.rate <= 0) {
+      setError("A positive job rate is required.");
+      return;
+    }
+    if (form.pickupDate && form.deliveryDate && new Date(form.deliveryDate).getTime() < new Date(form.pickupDate).getTime()) {
+      setError("Delivery date cannot be earlier than pickup date.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -225,6 +237,7 @@ function JobFormDialog({
             <Field label="Cargo weight (tons)">
               <input
                 type="number"
+                min="0"
                 value={form.cargoWeightTons}
                 onChange={(e) => setForm((f) => ({ ...f, cargoWeightTons: Number(e.target.value) }))}
                 className="input"
@@ -233,6 +246,8 @@ function JobFormDialog({
             <Field label="Rate">
               <input
                 type="number"
+                min="0.01"
+                step="0.01"
                 value={form.rate}
                 onChange={(e) => setForm((f) => ({ ...f, rate: Number(e.target.value) }))}
                 className="input"

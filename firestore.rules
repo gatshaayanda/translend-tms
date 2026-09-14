@@ -27,6 +27,23 @@ service cloud.firestore {
     function clientUpdateExcludes(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasAny(fields) == false;
     }
+    function validJobCreate(orgId) {
+      return validClientCreate(orgId)
+        && request.resource.data.status == 'confirmed'
+        && request.resource.data.customerId is string
+        && request.resource.data.customerId.size() > 0
+        && exists(/databases/$(database)/documents/organizations/$(orgId)/customers/$(request.resource.data.customerId))
+        && get(/databases/$(database)/documents/organizations/$(orgId)/customers/$(request.resource.data.customerId)).data.environment == 'LIVE'
+        && get(/databases/$(database)/documents/organizations/$(orgId)/customers/$(request.resource.data.customerId)).data.deletedAt == null
+        && request.resource.data.customerName == get(/databases/$(database)/documents/organizations/$(orgId)/customers/$(request.resource.data.customerId)).data.name
+        && request.resource.data.rate is number
+        && request.resource.data.rate > 0
+        && request.resource.data.cargoWeightTons is number
+        && request.resource.data.cargoWeightTons >= 0
+        && request.resource.data.requestedPickupDate is timestamp
+        && request.resource.data.requestedDeliveryDate is timestamp
+        && request.resource.data.requestedDeliveryDate >= request.resource.data.requestedPickupDate;
+    }
 
     match /users/{uid} { allow read, write: if isSignedIn() && request.auth.uid == uid; }
     match /workspaceInvites/{inviteId} { allow read, write: if false; }
@@ -56,7 +73,14 @@ service cloud.firestore {
       match /customers/{docId} { allow read: if isOrgMember(orgId); allow create: if (canEditOperations(orgId) || canEditFinance(orgId)) && validClientCreate(orgId); allow update: if (canEditOperations(orgId) || canEditFinance(orgId)) && preservesRecordEnvelope(); allow delete: if false; }
       match /trucks/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId) && validClientCreate(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope() && clientUpdateExcludes(['status', 'assignedDriverId']); allow delete: if false; }
       match /drivers/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId) && validClientCreate(orgId); allow update: if canEditOperations(orgId) && preservesRecordEnvelope() && clientUpdateExcludes(['status', 'assignedTruckId', 'linkedUid']); allow delete: if false; }
-      match /jobs/{docId} { allow read: if isOrgMember(orgId); allow create: if canEditOperations(orgId) && validClientCreate(orgId) && request.resource.data.status == 'confirmed'; allow update: if canEditOperations(orgId) && preservesRecordEnvelope() && clientUpdateExcludes(['status']); allow delete: if false; }
+      match /jobs/{docId} {
+        allow read: if isOrgMember(orgId);
+        allow create: if canEditOperations(orgId) && validJobCreate(orgId);
+        allow update: if canEditOperations(orgId) && preservesRecordEnvelope()
+          && (resource.data.status == 'confirmed' || clientUpdateExcludes(['customerId', 'customerName', 'rate', 'currency', 'requestedPickupDate', 'requestedDeliveryDate']))
+          && clientUpdateExcludes(['status']);
+        allow delete: if false;
+      }
 
       match /trips/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
       match /deliveries/{docId} { allow read: if isOrgMember(orgId); allow create, update, delete: if false; }
