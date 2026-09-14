@@ -4,7 +4,12 @@ export type QueuedDriverAction = {
   id: string;
   createdAt: number;
   orgId: string;
-  endpoint: "/api/driver/trip-status" | "/api/driver/delivery-action" | "/api/driver/vehicle-action";
+  endpoint:
+    | "/api/driver/trip-status"
+    | "/api/driver/delivery-action"
+    | "/api/driver/vehicle-action"
+    | "/api/dispatch/trip"
+    | "/api/operations/archive-record";
   payload: Record<string, unknown>;
   attempts: number;
   lastError: string | null;
@@ -126,7 +131,7 @@ export async function syncQueuedDriverActions(): Promise<{ synced: number; faile
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const error = typeof data?.error === "string" ? data.error : `Server rejected queued action (${response.status}).`;
+        const error = typeof data?.error === "string" ? data.error : `Server rejected queued work (${response.status}).`;
         const terminal = response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429;
         await recordFailure(action, error, terminal ? "blocked" : "pending");
         if (terminal) blocked += 1; else failed += 1;
@@ -136,7 +141,7 @@ export async function syncQueuedDriverActions(): Promise<{ synced: number; faile
       synced += 1;
     } catch (error) {
       if (isNetworkFailure(error)) break;
-      await recordFailure(action, error instanceof Error ? error.message : "Queued action failed.", "pending");
+      await recordFailure(action, error instanceof Error ? error.message : "Queued work failed.", "pending");
       failed += 1;
     }
   }
