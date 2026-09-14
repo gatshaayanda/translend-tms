@@ -6,7 +6,7 @@ This is **Translend TMS · Truck Division v19**.
 
 - Repository: `gatshaayanda/translend-tms`
 - Authoritative branch: `v19-authoritative`
-- Current application checkpoint: `12b85aea774c9dc6f0fd2b8ea30814259239640b`
+- Current application checkpoint: `d6871bafdacccdb35aff1b18542fc2b9aeb2b5d7`
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance receipt transport.
@@ -62,12 +62,18 @@ Driver My Trip supports trip progression, delivery milestones, POD, exceptions, 
 - vehicle defects/work-order creation
 - POD/evidence upload retry
 
-Queued server mutations carry idempotency keys and are replayed after reconnect/auth readiness. The server records replay receipts transactionally so a successful request whose response is lost cannot be applied twice.
+Queued server mutations carry idempotency keys and are replayed after reconnect/auth readiness. The server records replay receipts transactionally so a successful request whose response is lost cannot be applied twice. Online and offline driver mutations use the same idempotency contract.
+
+The queue now distinguishes retryable transport/server failures from terminal 4xx validation/authorization/state conflicts. Terminal rejected actions remain stored as **blocked** rather than silently retrying forever, and the PWA surfaces that attention state.
+
+The PWA service worker now caches previously visited application routes and Next static assets so an already-opened driver workflow can actually reload while offline. It still does not claim arbitrary first-ever navigation offline.
 
 Firestore native persistence still handles cached reads and supported direct Firestore writes; full offline proof of every admin CRUD surface remains a QA obligation. Finance mutations intentionally remain online/server-controlled because replaying money movements without a deliberate accounting idempotency/period design would be unsafe.
 
 ### 7. Reliability / Data Integrity — ACTIVE HARDENING
-Major business transactions are atomic and audit-backed. Driver server actions now return meaningful HTTP classes instead of converting all failures into 400/401 responses. Replay-safe mutation receipts protect offline/server retries. Firestore rules now preserve the immutable record envelope (`orgId`, environment, creator, creation timestamp, soft-delete state) during client updates and block client access to server-only mutation receipts.
+Major business transactions are atomic and audit-backed. Driver server actions return meaningful HTTP classes. Replay-safe mutation receipts protect offline/server retries. Firestore rules preserve the immutable record envelope (`orgId`, environment, creator, creation timestamp, soft-delete state) during client updates and block client access to server-only mutation receipts.
+
+The driver vehicle inspection path requires an explicit odometer value instead of silently converting an empty reading into zero. Trip driver/truck lookup has an explicit Firestore composite index so the transactional inspection/defect path does not depend on an undeclared index.
 
 Remaining reliability targets: broader mutation audit coverage, generalized idempotency beyond driver actions, referential/orphan checks, conflict-resolution UX, offline admin CRUD proof, partial-workflow recovery and stronger concurrency test coverage.
 
@@ -98,6 +104,8 @@ For every driver field action ask:
 4. Does reconnect replay it automatically?
 5. Can a lost response/retry create a duplicate?
 6. Does a server rejection remain visible with a useful next action?
+7. Can the actual application shell reload offline after it has been visited?
+8. Does a blocked action stop infinite automatic retries while remaining recoverable/visible?
 
 Competitor/reference evidence supports this standard: Firebase documents offline cache/write synchronization, and current fleet products explicitly support offline inspections and mobile field workflows. Firestore transactions are not offline-capable, while batched/direct writes can be persisted offline; therefore transaction-backed business actions need explicit queues rather than a connectivity banner alone.
 
@@ -110,7 +118,8 @@ For every client-writable collection verify:
 - business-sensitive state changes use a server transaction where necessary;
 - audit records are immutable to clients;
 - query constraints actually satisfy Firestore rules;
-- no broad rule accidentally overrides a restrictive rule.
+- no broad rule accidentally overrides a restrictive rule;
+- every compound query used by a server transaction has an index or known Firestore-supported query plan.
 
 Firestore rules are not filters: a query must itself satisfy the rule constraints. Field-level protection should use `diff().affectedKeys()`/`unchangedKeys()` where appropriate.
 
@@ -159,7 +168,7 @@ GitHub `v19-authoritative` is the source of truth. Never claim a GitHub commit i
 
 ## Required workflow for every future pass
 
-`read AGENTS.md → confirm branch → inspect HEAD/recent commits → inspect actual route/component/data flow → compare against current product/reference expectations → implement the root fix, not only the visible symptom → inspect diff → typecheck/lint/build where available → verify affected workflows → update AGENTS.md → commit → push → report exact SHA and verification evidence`
+`read AGENTS.md → confirm branch → inspect HEAD/recent commits → inspect actual route/component/data flow → compare against current product/reference expectations → inspect rules + indexes + offline behavior → implement the root fix, not only the visible symptom → inspect diff → typecheck/lint/build where available → verify affected workflows → update AGENTS.md → commit → push → report exact SHA and verification evidence`
 
 Do not stop at analysis when a safe implementation step can be completed. Do not ask for approval for obvious safe hardening.
 
