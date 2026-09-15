@@ -3,168 +3,147 @@
 ## Authoritative project
 - Repository: `gatshaayanda/translend-tms`
 - Branch: `v19-authoritative`
-- Current checkpoint: latest `v19-authoritative` HEAD; verify the branch before continuing.
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
-- UploadThing = POD/evidence and finance-receipt transport.
-- Never introduce Firebase Storage for POD/evidence/receipts.
+- UploadThing = POD/evidence and finance-receipt transport. Never reintroduce Firebase Storage.
 - Never replace Firebase with Supabase/another backend.
 - GitHub/current HEAD outranks remembered chat context and old patches.
+- Do not reset, revert, branch away, or reuse an older generation.
 
 ## Product north star
 `Job → Dispatch → Trip → Delivery → POD/evidence → Invoice → Payment → Journal → Reporting`
 
-A screen, button, Firestore document, offline banner or successful UI state is not proof that the business operation works. Trace the real mutation, authorization, atomicity, retry/idempotency, audit and reporting consequences.
+Every important workflow must trace the real mutation, authorization, atomicity, retry/idempotency, audit and reporting consequences. A screen or successful UI state is not proof that the business operation works.
 
-## Current state
-- Company/workspace, users/roles, customers, trucks, drivers: LIVE workspace data and CRUD foundations exist; customer, driver and truck management surfaces expose practical correction/retirement controls and remain subject to production verification.
-- Job → Dispatch → Trip: transactional dispatch and driver trip progression are implemented; dispatch requires an idempotency key and records a replay receipt so an offline/lost-response replay cannot create a second trip.
-- Delivery/POD: required POD gating, evidence review/replacement, exceptions and completion validation exist.
-- Offline operational work: Firestore persistence covers supported owner/operations data already loaded into the browser; durable IndexedDB action queue also covers safe server-controlled trip corrections and dispatch, with automatic replay and blocked terminal failures. Offline dispatch is transactionally idempotent. This is not a claim that the entire TMS is offline-capable.
-- Driver offline actions: durable queue + replay receipts + blocked terminal failures exist for field mutations.
-- Fleet inspections/defects/work orders/offline replay: hardened path exists.
-- GPS/location: browser GPS capture exists for the active driver workflow. The initial permission request is deliberately made directly through the Start button's geolocation call path; an asynchronous Permissions API preflight is not placed in front of that request. GPS points are now persisted through the authenticated `/api/driver/location` server workflow instead of relying on a direct client Firestore create, so valid owner/operations/driver sessions are checked server-side and a client-side Firestore permission mismatch cannot masquerade as a GPS-save failure. Driver writes are additionally constrained to the linked driver's assigned truck/trip. Tracking is not shown until a successful position is received. Background location is not claimed.
-- PWA/offline UI: offline persistence and automatic queue replay remain active, but there is no persistent online/offline sync-status banner. Normal sync states are deliberately silent so the product surface is not covered by a misleading cached/offline message. The install affordance remains available when the browser supplies it.
-- Finance: invoice/payment/journal/fuel/supplier-bill server actions exist; finance stays online/server-controlled.
-- Reporting: LIVE Firestore-derived reporting exists.
-- **Canonical branded documents:** Translend Tax Invoice and Delivery Note are now an explicit product requirement. Printable documents must be generated from authoritative LIVE customer/job/delivery/POD/finance records and must preserve the supplied Translend document semantics and branding rather than producing generic invoice/POD templates.
+## Current development state — 2026-09-15
+The core Truck Division operating system is now substantially implemented. Development is continuing on the remaining accounting/control modules before the project is considered feature-complete.
 
-Still not claimed complete: exact final printable Tax Invoice/Delivery Note template implementation and verification, full tax/VAT configuration, credit/debit notes, bank reconciliation, payroll/settlement, richer scheduled/export reporting, and provider-dependent email/push/telematics/map capabilities.
+### Implemented core
+- Company/workspace, authentication, membership and roles.
+- Explicit multi-workspace selection with valid last-active workspace handling.
+- Customers: LIVE CRUD, edit and controlled archive.
+- Trucks: LIVE CRUD, edit and controlled retirement; active-trip retirement is blocked server-side.
+- Drivers: LIVE CRUD/edit and signed-in account linking by exact email.
+- Jobs: customer-linked commercial/date validation and controlled lifecycle.
+- Dispatch: transactional Job + Truck + Driver assignment with idempotency key and replay receipt.
+- Trips: driver progression plus audited adjacent corrections in both directions, including safe completion reopening. No arbitrary status jumping.
+- Driver workflow: field trip actions, delivery progression, vehicle actions and durable offline action queue/replay.
+- Delivery: automatic delivery creation/linking when a trip reaches unloading, linked Delivery Note, required POD gating, evidence review/replacement and exception handling.
+- POD/evidence: UploadThing-backed evidence finalization is transactional/idempotent and audited.
+- GPS: browser capture with hardened permission flow and authenticated server persistence through `/api/driver/location`; driver writes are constrained to the linked truck/trip. Background GPS is not claimed.
+- Fleet inspections, defects, work orders and related offline/replay paths.
+- PWA shell, Firestore persistence and supported durable offline queues. No persistent misleading sync banner.
+- Finance server actions for invoice raising, customer payments, journal posting/reversal, fuel expense and supplier bills.
+- LIVE Firestore-derived reporting.
+- Canonical branded printable Tax Invoice and Delivery Note components/routes, tied to authoritative LIVE records.
+- Vercel Analytics/Speed Insights infrastructure.
 
-## Canonical Translend printable documents
-The supplied Nicolaus M. Nshoya / Translend examples are the reference business documents for v19. Treat them as functional requirements, not merely visual inspiration.
+### Latest feature push
+`0fd839c9f997d0b920117a4ede62cfc02a1f2ca5` — controlled Credit & Debit Notes.
 
-### Tax Invoice must support
+This adds:
+- Finance/owner-only Credit & Debit Notes surface.
+- Server-authoritative `/api/accounting/invoice-adjustment` mutation.
+- Separate immutable adjustment documents under `invoiceAdjustments` rather than rewriting issued invoices.
+- Credit/debit journal posting and audit records.
+- Credit-note ceiling against the invoice's current adjusted balance.
+- Navigation entry and breadcrumb for the new control surface.
+
+The previous checkpoint `da4160d13ffdbdb1e1c5764e3cd7cc7b33a8fa56` already contained the canonical printable document implementation.
+
+## Remaining substantive product development
+Priority order:
+1. **Full VAT/tax configuration** — workspace tax settings, taxable/exempt handling, tax-inclusive/exclusive calculation, authoritative invoice tax fields, VAT journal treatment and document presentation.
+2. **Bank reconciliation** — bank transaction/import model, matching against customer payments/journal entries, reconciliation state, controlled adjustments and audit trail.
+3. **Payroll / driver settlement** — driver/subcontractor settlement records, trip-linked earnings/costs, approval/payment state and journal consequences.
+4. **Richer scheduled/export reporting** — operational/financial report periods, durable exports and scheduled report infrastructure where useful.
+5. **Provider integrations** — email, push notifications, telematics and external/background mapping capabilities where a real provider is selected.
+
+These are product-development items, not QA claims. Do not mark them complete merely because a placeholder screen or server action exists.
+
+## Canonical printable documents
+Translend Tax Invoice and Delivery Note are functional business documents, not generic templates.
+
+### Tax Invoice requirements
 - Translend Proprietary Limited identity and physical/postal address fields.
 - Invoice date and unique invoice number.
 - Client reference / PO number.
-- Delivery Note number(s) linked to the invoice.
+- Linked Delivery Note number(s).
 - Issued-by, email and contact fields.
-- Customer physical/postal address and contact person/contact details.
-- Invoice notes covering the 48-hour claims/discrepancy window, load-measurement basis, VAT treatment, delivery acknowledgement by site representative signature/company stamp, and applicable vehicle/reference wording.
+- Customer address/contact information.
+- Standard Translend claims/discrepancy, measurement, VAT and delivery acknowledgement wording.
 - Line items with date, description, quantity, unit price and BWP amount.
-- Payment terms including E.O.M. and balance due.
-- Translend bank/payment details and invoice reference.
-- Totals/VAT presentation must come from authoritative finance data; never hard-code amounts into a document.
+- Payment terms, balance due and Translend bank/payment details.
+- Tax/VAT totals must come from authoritative finance data; never hard-code financial amounts.
 
-### Delivery Note must support
-- Delivery Note number, date and time.
-- Company/supplied-to identity.
-- Delivery location.
-- Order number / POD reference.
-- Vehicle registration and driver name.
-- Loading point.
-- Delivered material/description, arrival, departure and quantity.
-- Driver and foreman acknowledgement/signature fields where applicable.
-- Received-by name, signature and cell/contact.
-- Standard receipt/discrepancy wording stating that shortages, damages or discrepancies should be noted at delivery.
-- Delivery Note must remain linked to the live Job, Trip and POD/evidence record.
+### Delivery Note requirements
+- Delivery Note number, date/time and customer/supplied-to identity.
+- Delivery location, order/POD reference, vehicle and driver.
+- Loading point, material/description, arrival, departure and quantity.
+- Driver/foreman acknowledgement and received-by/signature/contact fields where applicable.
+- Standard shortage/damage/discrepancy wording.
+- Remains linked to the LIVE Job, Trip and POD/evidence record.
 
-### Document integrity rules
-- Printable documents are downstream projections of authoritative records; they must not become a second source of truth.
-- Invoice delivery-note references must resolve to real records in the same workspace/customer/job chain.
-- A document must never silently invent, blank, or stale-copy customer, vehicle, driver, quantities, prices or financial totals when authoritative data exists.
-- Generated documents must preserve immutable document numbering/version semantics after issue; corrections should use controlled finance/operational workflows rather than silently rewriting issued records.
-- Document generation must be permission-controlled and auditable.
-- Verify print/PDF layout, pagination, BWP formatting, dates, signatures/evidence placeholders, and customer-facing wording against the canonical supplied examples.
+### Document integrity
+- Documents are downstream projections of authoritative records, never a second source of truth.
+- Issued document numbering and financial values are not silently rewritten.
+- Corrections use controlled credit/debit or operational workflows.
+- Document generation is permission-controlled and auditable.
+- Print/PDF layout, pagination, BWP formatting, signatures and customer-facing wording must be verified against the canonical supplied examples.
 
-## v19 hardening lessons
-### Firebase Storage
-`src/lib/firebase/storage.ts` was dead legacy code. `getFirebase()` intentionally returns only `{ app, auth, db }` because v19 uses UploadThing for POD/evidence/receipts. Never reintroduce Firebase Storage just to satisfy TypeScript.
+## Hardening rules
+### Firebase and client security
+- Server-controlled Trip/Delivery/finance/exception collections are client-write denied.
+- Delivery Note client updates are allowlisted.
+- Historical truck location events are append-only.
+- Finance/accounting mutations are server-authoritative.
+- Never weaken rules to hide an authorization problem.
 
-### Atomic delivery mutations
-`/api/deliveries/workflow-action` transactionally handles delivery creation and admin arrival/departure/acknowledgement. Client rules deny direct Delivery/Trip state writes and allow only explicitly editable Delivery Note fields.
+### Atomicity and transactions
+- Firestore transaction reads/queries must finish before writes.
+- Delivery mutations, evidence finalization, dispatch and finance operations must preserve atomic business state.
+- Accounting-period checks belong inside the transaction read set.
+- Never directly create accounting records from the browser.
 
-### Transaction read ordering
-All Firestore transaction reads/queries must finish before writes. Delivery exception resolution was corrected to follow this rule.
+### Finance
+Always trace:
+`completed POD → invoice → adjustment/payment → AR/Cash journal → reporting`.
 
-### Atomic/replay-safe evidence
-UploadThing evidence finalization is transactional, keyed by file key for idempotency, updates linked records together and audits inside the transaction.
+Check duplicate invoice/payment/reference, customer/job/POD linkage, positive amounts, open accounting period, overpayment, journal balance, adjustment integrity, audit, concurrency and lost-response behavior.
 
-### Client Firestore security
-Server-controlled Trip/Delivery/finance/exception collections are client-write denied. Truck/Driver/Job status/assignment fields are protected. Delivery Note client updates are allowlisted. Historical truck location events are append-only. Browser GPS persistence now uses the server-controlled location route so location authorization is explicit and consistent with the authenticated workspace session.
+Credit/debit notes are separate immutable adjustments. Do not rewrite issued invoices to represent corrections.
 
-### Finance concurrency
-Accounting-period checks are inside the transaction read set. Supplier-bill journal entries retain `supplierBillId`. Finance errors distinguish 401/403/400/404/409/500.
+### Offline/reliability
+- PWA shell and Firestore persistence are real infrastructure, not a status-message simulation.
+- Supported owner/operations dispatch and trip corrections use durable queue/idempotency/replay controls.
+- Driver field mutations use durable queue/replay receipts and blocked terminal failures.
+- Finance/accounting remains explicitly online/server-authoritative until each mutation receives a deliberate safe offline/idempotency design.
+- Do not market archive/retire actions as offline-complete merely because a queue type can represent them.
 
-### Job integrity and dispatch concurrency
-Job creation validates same-workspace customer references, commercial/date invariants and positive rates. Dispatched Job commercial identity/schedule are protected. Dispatch uses one transaction over Job + Truck + Driver and handles concurrency conflicts correctly. Dispatch also requires an idempotency key and persists an operation receipt in the same transaction as the trip/job/truck/driver mutation.
+### GPS
+- Permission request stays directly on the Start button geolocation call path.
+- Do not put an awaited Permissions API preflight in front of the user-gesture request.
+- Do not claim background tracking.
+- Persist successful locations through the authenticated server route with workspace/role/truck/driver checks.
 
-### Operational trip corrections
-Production QA exposed that an owner could advance a trip but had no correction path. The Trips register and My Trip view now expose adjacent correction. `/api/driver/trip-status` enforces one-step movement in either direction, audits from/to status and direction, and safely reopens completed truck/driver/job state. No arbitrary status jumping.
+## Production QA checkpoint
+The latest production-QA work exposed and fixed:
+- trip correction,
+- workspace selection,
+- driver linking,
+- customer edit/archive,
+- truck edit/retire,
+- owner/operations dispatch/trip offline queue/idempotency,
+- driver GPS permission/persistence,
+- misleading PWA sync banner.
 
-### Workspace and driver identity QA
-Multiple workspaces now require explicit choice unless a valid last-active workspace exists. Fleet/operations users have a visible Driver "Link account" action backed by `/api/fleet/link-driver`, requiring active membership and exact Driver-record email matching. Drivers have an Edit path.
+These fixes require actual production verification when QA resumes. Do not confuse that verification status with development completeness.
 
-### Customer management QA
-Customer management now exposes Edit and Archive. Customer archive is routed through `/api/operations/archive-record`, where role authorization and open-job checks are enforced server-side before soft deletion. The UI is not trusted as the business control.
-
-### Truck management QA
-Truck management now exposes Edit and Retire. Truck edit only changes descriptive vehicle fields; server-controlled status/assignment fields are not edited by the register. Retire is routed through `/api/operations/archive-record`, which requires an authorized operational role, checks for active trips server-side, and then soft-deletes the truck. Never rely only on a disabled UI button to protect an active operational assignment.
-
-### Browser GPS permission QA
-Location capture is a browser capability and cannot programmatically override a user/browser/site-level denial. The actual permission request must remain directly on the Start button's synchronous geolocation call path; do not put an awaited Permissions API query in front of it because that can cause Chromium to reject the request as no longer user-gesture initiated. Denied/blocked errors must give site-settings recovery guidance. Reject insecure contexts, avoid entering TRACKING before the first successful position, and do not claim background GPS tracking. After a successful browser position, persistence goes through `/api/driver/location`; that route verifies the Firebase ID token, active workspace membership, allowed role, LIVE truck, and linked-driver assignment where applicable before creating the append-only event.
-
-### PWA banner UI QA
-Offline persistence/replay is product infrastructure, not a reason to cover the application with a permanent status strip. `PwaBootstrap` must keep service-worker registration, Firestore persistence and automatic queue replay, but must not render normal `starting`, `syncing`, `ready`, `synced`, or ordinary `offline` status as a persistent page banner. Actionable workflow errors should be surfaced by the workflow that needs the user's attention. Do not remove the underlying offline queue/persistence just to remove the banner.
-
-## Offline/reliability checklist
-For every offline-capable owner/operations or driver action:
-1. Can it be entered offline?
-2. Is it durably queued or covered by Firestore persistence?
-3. Does UI show local-save/queued state?
-4. Does reconnect replay automatically where server action is involved?
-5. Can a lost response duplicate the mutation?
-6. Does a terminal server rejection become blocked/attention-required?
-7. Can the visited workflow reload offline from cached data/app shell?
-8. Does replay survive another network loss without infinite retry?
-
-### Offline contract
-- The PWA shell is real service-worker caching, not a static offline message.
-- Firestore-backed owner/operations reads and supported CRUD benefit from Firestore IndexedDB persistence after the relevant data has been loaded/cached by the browser.
-- Server-controlled trip corrections can be entered offline from the Trips register and are durably queued with an idempotency key for automatic replay.
-- Owner/operations Dispatch → Trip can be entered offline; the request is durably queued and the server requires the same idempotency key on replay. The dispatch transaction records the key and resulting trip ID before any notification is sent, preventing duplicate trips after a lost response.
-- The offline UI must not imply that only driver actions are supported; normal online operation should have no persistent sync banner.
-- Finance/accounting mutations remain explicitly online/server-authoritative until they receive their own safe offline/idempotency design. Do not fake offline financial success.
-- Archive/retire operations are not considered offline-complete merely because the queue type can represent the endpoint; they still require caller integration and deliberate idempotency/replay verification before being marketed as offline-safe.
-
-Firestore transactions are not offline-capable, so money/state-changing server transactions require an explicit online boundary and safe retry/idempotency design. Do not blindly make finance mutations offline.
-
-## Finance checklist
-Always trace `completed POD → invoice → payment → AR/Cash journal → reporting`.
-Check duplicate invoice/payment/reference, customer/job/POD linkage, positive amount, open accounting period, overpayment, supplier bill linkage, journal balance, reversal integrity, audit, concurrency and lost-response behavior.
-
-Never let a client directly create accounting records. Prefer one server transaction for operational + accounting state that must succeed together.
-
-## Fleet/TMS benchmark
-Current fleet references consistently treat dispatch, mobile driver workflows, offline field operation, ePOD, inspections, maintenance/work orders, fuel/cost control, visibility and reporting as connected workflows. Use current Trimble/Fleetio/Samsara references as behavioral benchmarks, not feature-cloning instructions.
-
-## Deployment/verification
+## Development workflow
 Required sequence when tooling is available:
-`inspect HEAD → typecheck → lint → build → affected-workflow verification → AGENTS update → commit → push → Vercel status`
+`inspect HEAD → typecheck → lint → build → affected workflow verification → AGENTS update → commit → push → deployment status`
 
-Never call a deployment green without actual status evidence.
-Do not repeatedly trigger deployments while the Hobby quota is exhausted and do not claim the current commit is deployed.
+Never call a deployment green without actual status evidence. Do not repeatedly trigger deployments while quota is exhausted.
 
-## Required workflow for future agents
-`read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace real business mutation paths → inspect rules/indexes/config → compare with current TMS behavior → deliberately attack retry/offline/concurrency/security edges → fix root cause → inspect diff → run verification available → update AGENTS.md → commit/push → inspect deployment status → report exact SHA/status`
-
-Do not reset, revert, branch away, or reuse an older generation. Do not invent data, weaken security, or paper over compiler/runtime failures.
-
-## Production QA checkpoint — 2026-09-14
-The deployed production checkpoint `df7fbd7` was manually QA-tested before later HEAD could deploy. Initial gaps were Customers/Trucks/Drivers management UI, workspace selection, driver identity linking, and trip correction.
-
-Current hardening status:
-- **Trip correction:** fixed in latest HEAD; owners/operations and linked drivers can make audited adjacent corrections in either direction, including safe completion reopening. Needs production verification.
-- **Workspace choice:** fixed in latest HEAD; multi-org accounts require an explicit chooser unless a valid last-active workspace is available. Needs production verification.
-- **Driver linking:** fixed in latest HEAD; fleet/operations can link a real signed-in account to a Driver record by exact email, and Drivers can be edited. Needs production verification.
-- **Customer management:** fixed in latest HEAD with Edit + server-controlled Archive. Needs production verification.
-- **Truck management:** fixed in latest HEAD with Edit + server-controlled Retire; retirement is blocked server-side for trucks carrying an active trip. Needs production verification.
-- **Offline owner/operations:** queue covers owner trip corrections and dispatch, with dispatch idempotency protection. Needs production offline/reconnect verification; this is not a claim that all owner/finance workflows work offline.
-- **Driver GPS permission:** request flow is hardened and GPS persistence now uses `/api/driver/location` with server-side workspace/role/truck checks. Needs production verification on the actual driver device/browser, including first-time allow, previously denied site permission, insecure-context handling, and successful event write.
-- **PWA sync banner:** removed from the bootstrap UI while preserving service-worker registration, Firestore persistence and queue replay. Needs production verification in both browser and installed PWA so stale cached UI is not mistaken for current source.
-
-After management/identity QA is closed and verified, continue the connected real-world chain:
-`owner workspace → customer/truck/driver management → invite/link driver → assign trip → driver coordination/status correction → delivery/POD → invoice → payment/owed → journal/reporting → canonical printable documents`.
-
-Finance must be validated as a connected consequence of completed POD, not treated as complete because finance server actions merely exist.
+Future agents:
+`read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace business mutation paths → inspect rules/indexes/config → attack retry/offline/concurrency/security edges → fix root cause → inspect diff → verify → update AGENTS.md → commit/push → report exact SHA/status`.
