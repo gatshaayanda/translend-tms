@@ -48,51 +48,25 @@ The core Truck Division operating system is substantially implemented. Developme
 - `bb2166bfddf9c3f1a2247c5d3a924605a5553b80` — root entry routes each role to its correct workspace landing page.
 - `58aa1af748c034326af4ffbe8de04a5e0c063be0` — driver route boundary enforced so direct URLs outside the driver surface return to My Trip.
 - `7778720d5d17fabb6fe63e3e5b0a7da8f50f6b2a` — driver surface tightened to My Trip only; workspace switching remains available for multi-workspace accounts.
+- `b3539491b1664fd8d86c8f9b0a8f1d766ba42962` — login workspace resolution corrected so an active driver membership takes precedence over the owner's workspace when no newly claimed invite explicitly selects another workspace.
 
 ### Multi-workspace / driver access hardening
-- Login no longer skips pending invite claiming merely because the user already has an active membership in another workspace.
-- A successfully claimed invite immediately wins active-workspace resolution for that login and is persisted as the user's last active workspace.
+- Login checks pending workspace invitations before resolving the active workspace.
+- A newly claimed invite wins active-workspace resolution and is persisted as last-active.
+- If the signed-in account already has a driver membership in another workspace, that driver workspace now takes precedence over an owner workspace on login. This also covers invites that have already produced an active membership and therefore no longer appear as pending.
 - Accounts with multiple workspaces have an in-app workspace selector. Switching to a driver membership opens `My Trip`; non-driver memberships open `Operations Hub`.
 - Driver navigation is intentionally limited to `My Trip`; the existing My Trip workflow contains driver trip actions, delivery actions, vehicle tools and GPS/location capture.
 - Driver direct-route access is bounded by the org layout; attempting management/finance or other non-driver routes redirects to `My Trip`.
 - Existing server-side role authorization remains authoritative for CRUD. UI visibility is not treated as the security boundary.
 - Driver GPS remains available through the existing authenticated location path and My Trip workflow; background tracking is not claimed.
 
-### Credit & Debit Notes
-- Finance/owner-only Credit & Debit Notes surface.
-- Server-authoritative `/api/accounting/invoice-adjustment` mutation.
-- Separate `invoiceAdjustments` documents; issued invoices are not silently rewritten.
-- Credit/debit journal posting and audit records.
-- Credit-note ceiling against the invoice's current adjusted balance.
-- Navigation and breadcrumb included.
-- Further integration remains: customer-payment outstanding calculations and reporting must incorporate adjustment balances consistently.
-
-### Tax & VAT controls
-- Finance/owner-only `/tax-vat` surface.
-- Server-authoritative `/api/accounting/tax-settings` GET/PUT endpoint.
-- Workspace-level enabled/exempt setting, standard rate, inclusive/exclusive mode, tax code, VAT registration number and legal tax name.
-- Added reusable server-safe `src/lib/accounting/tax.ts` calculation primitives for exclusive and inclusive VAT, with rounded net/tax/gross breakdowns.
-- Added authenticated `/api/accounting/tax-preview` endpoint so finance/owner users can validate the authoritative workspace tax configuration against an amount without mutating accounting records.
-- VAT is still **not complete**: invoice creation, VAT journal posting, adjustment/tax interaction and canonical invoice document presentation must consume the same calculation path before the module is marked complete.
-
 ## Remaining substantive product development
 Priority order:
-1. **Complete VAT/tax integration** — consume workspace settings during invoice creation, calculate tax-inclusive/exclusive totals, store authoritative subtotal/tax/total fields, post VAT correctly to the journal and render tax fields on the canonical invoice. The reusable calculation/preview layer now exists.
+1. **Complete VAT/tax integration** — consume workspace settings during invoice creation, calculate tax-inclusive/exclusive totals, store authoritative subtotal/tax/total fields, post VAT correctly to the journal and render tax fields on the canonical invoice.
 2. **Bank reconciliation** — bank transaction/import model, matching against customer payments/journal entries, reconciliation state, controlled adjustments and audit trail.
 3. **Payroll / driver settlement** — driver/subcontractor settlement records, trip-linked earnings/costs, approval/payment state and journal consequences.
 4. **Richer scheduled/export reporting** — operational/financial report periods, durable exports and scheduled report infrastructure where useful.
 5. **Provider integrations** — email, push notifications, telematics and external/background mapping capabilities where a real provider is selected.
-
-These are product-development items, not QA claims. Do not mark a module complete merely because a placeholder screen or server action exists.
-
-## Canonical printable documents
-Translend Tax Invoice and Delivery Note are functional business documents, not generic templates.
-- Tax Invoice: Translend identity/address, invoice date/number, client reference/PO, linked Delivery Notes, issuer/contact, customer address/contact, standard Translend claims/discrepancy/measurement/VAT/delivery wording, line items, payment terms, balance due and bank/payment details.
-- Delivery Note: number/date/time, customer/supplied-to, location, order/POD reference, vehicle/driver, loading point, material/quantity, arrival/departure, acknowledgements/signatures/contact and discrepancy wording.
-- Documents are downstream projections of authoritative records, never a second source of truth.
-- Issued numbering and financial values are not silently rewritten; corrections use controlled workflows.
-- Document generation is permission-controlled and auditable.
-- Print/PDF layout, pagination, BWP formatting, signatures and wording must be verified against the canonical supplied examples.
 
 ## Hardening rules
 ### Firebase/security
@@ -139,7 +113,7 @@ The latest production-QA work exposed and fixed:
 - driver GPS permission/persistence,
 - misleading PWA sync banner.
 
-The 2026-09-15 multi-workspace driver fix is now implemented but still requires actual production verification when QA resumes. Do not confuse verification status with development completeness.
+The multi-workspace driver login precedence fix is implemented but requires actual production verification. Do not confuse verification status with development completeness.
 
 ## Development workflow
 Required sequence when tooling is available:
