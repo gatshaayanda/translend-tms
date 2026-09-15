@@ -43,6 +43,19 @@ The core Truck Division operating system is substantially implemented. Developme
 - `b54aa2afd7aaa9202e5d5c577c814cd78fab478d` — development checkpoint documentation update.
 - `51aca15c2570bee36f62fb220425b64994b59dd6` — workspace Tax & VAT controls.
 - `95399ebe6b8034b6a846c486778696a3098d666b` — authenticated VAT preview endpoint and calculation primitives checkpoint.
+- `636d0e89787dd443f2c45301e5bdde8516941146` — pending workspace invitations are claimed even when the signed-in user already belongs to another workspace; claimed workspace becomes active and last-active workspace is persisted.
+- `dcda4a587fad416469c649cb27464a03e60155ac` — driver navigation restricted to the driver workflow and workspace switcher added for multi-workspace accounts.
+- `bb2166bfddf9c3f1a2247c5d3a924605a5553b80` — root entry routes each role to its correct workspace landing page.
+- `58aa1af748c034326af4ffbe8de04a5e0c063be0` — driver route boundary enforced so direct URLs outside the driver surface return to My Trip.
+
+### Multi-workspace / driver access hardening
+- Login no longer skips pending invite claiming merely because the user already has an active membership in another workspace.
+- A successfully claimed invite immediately wins active-workspace resolution for that login and is persisted as the user's last active workspace.
+- Accounts with multiple workspaces have an in-app workspace selector. Switching to a driver membership opens `My Trip`; non-driver memberships open `Operations Hub`.
+- Driver navigation is intentionally limited to `My Trip`, `Fleet & Live Map`, and `Delivery Notes & POs`.
+- Driver direct-route access is also bounded by the org layout; attempting management/finance routes redirects to `My Trip`.
+- Existing server-side role authorization remains authoritative for CRUD. UI visibility is not treated as the security boundary.
+- Driver GPS remains available through the existing authenticated location path and My Trip workflow; background tracking is not claimed.
 
 ### Credit & Debit Notes
 - Finance/owner-only Credit & Debit Notes surface.
@@ -125,7 +138,7 @@ The latest production-QA work exposed and fixed:
 - driver GPS permission/persistence,
 - misleading PWA sync banner.
 
-These fixes require actual production verification when QA resumes. Do not confuse verification status with development completeness.
+The 2026-09-15 multi-workspace driver fix is now implemented but still requires actual production verification when QA resumes. Do not confuse verification status with development completeness.
 
 ## Development workflow
 Required sequence when tooling is available:
