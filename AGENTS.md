@@ -44,16 +44,17 @@ The core Truck Division operating system is substantially implemented. Developme
 - `51aca15c2570bee36f62fb220425b64994b59dd6` — workspace Tax & VAT controls.
 - `95399ebe6b8034b6a846c486778696a3098d666b` — authenticated VAT preview endpoint and calculation primitives checkpoint.
 - `636d0e89787dd443f2c45301e5bdde8516941146` — pending workspace invitations are claimed even when the signed-in user already belongs to another workspace; claimed workspace becomes active and last-active workspace is persisted.
-- `dcda4a587fad416469c649cb27464a03e60155ac` — driver navigation restricted to the driver workflow and workspace switcher added for multi-workspace accounts.
+- `dcda4a587fad416469c649cb27464a03e60155ac` — driver navigation restriction and multi-workspace selector introduced.
 - `bb2166bfddf9c3f1a2247c5d3a924605a5553b80` — root entry routes each role to its correct workspace landing page.
 - `58aa1af748c034326af4ffbe8de04a5e0c063be0` — driver route boundary enforced so direct URLs outside the driver surface return to My Trip.
+- `7778720d5d17fabb6fe63e3e5b0a7da8f50f6b2a` — driver surface tightened to My Trip only; workspace switching remains available for multi-workspace accounts.
 
 ### Multi-workspace / driver access hardening
 - Login no longer skips pending invite claiming merely because the user already has an active membership in another workspace.
 - A successfully claimed invite immediately wins active-workspace resolution for that login and is persisted as the user's last active workspace.
 - Accounts with multiple workspaces have an in-app workspace selector. Switching to a driver membership opens `My Trip`; non-driver memberships open `Operations Hub`.
-- Driver navigation is intentionally limited to `My Trip`, `Fleet & Live Map`, and `Delivery Notes & POs`.
-- Driver direct-route access is also bounded by the org layout; attempting management/finance routes redirects to `My Trip`.
+- Driver navigation is intentionally limited to `My Trip`; the existing My Trip workflow contains driver trip actions, delivery actions, vehicle tools and GPS/location capture.
+- Driver direct-route access is bounded by the org layout; attempting management/finance or other non-driver routes redirects to `My Trip`.
 - Existing server-side role authorization remains authoritative for CRUD. UI visibility is not treated as the security boundary.
 - Driver GPS remains available through the existing authenticated location path and My Trip workflow; background tracking is not claimed.
 
