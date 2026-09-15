@@ -46,18 +46,20 @@ The core Truck Division operating system is substantially implemented. Developme
 - `636d0e89787dd443f2c45301e5bdde8516941146` — pending workspace invitations are claimed even when the signed-in user already belongs to another workspace; claimed workspace becomes active and last-active workspace is persisted.
 - `dcda4a587fad416469c649cb27464a03e60155ac` — driver navigation restriction and multi-workspace selector introduced.
 - `bb2166bfddf9c3f1a2247c5d3a924605a5553b80` — root entry routes each role to its correct workspace landing page.
-- `58aa1af748c034326af4ffbe8de04a5e0c063be0` — driver route boundary enforced so direct URLs outside the driver surface return to My Trip.
+- `58aa1af748c034326af4ffeb8de04a5e0c063be0` — driver route boundary enforced so direct URLs outside the driver surface return to My Trip.
 - `7778720d5d17fabb6fe63e3e5b0a7da8f50f6b2a` — driver surface tightened to My Trip only; workspace switching remains available for multi-workspace accounts.
 - `b3539491b1664fd8d86c8f9b0a8f1d766ba42962` — login workspace resolution corrected so an active driver membership takes precedence over the owner's workspace when no newly claimed invite explicitly selects another workspace.
-- `666648cd8c0e896afeae03ed19e2b490a83831dc` — corrected multi-workspace login behavior so accounts with multiple workspaces are shown the chooser instead of being auto-forced into the driver workspace.
+- `666648cd8c0e896afe03ed19ed19e2b490a83831dc` — corrected multi-workspace login behavior so accounts with multiple workspaces are shown the chooser instead of being auto-forced into the driver workspace.
 - `f4e891e2190da804d8951370cc3e021e45cf20ea` — workspace chooser now opens `My Trip` for driver memberships and `Operations Hub` for non-driver memberships.
 - `d46d00030586e9cd0306ba2f4fbf8bb9d01fba96` — fixed chooser selection race so selecting a workspace is not immediately cleared by workspace-resolution refresh.
+- `126d5c75c23e65cf364696805e53263728f5c494` — fixed the deeper persistence issue: a resolver rerun could still clear an explicitly selected multi-workspace org because the multi-org branch always nulled the active workspace. A valid persisted selection now survives resolver refresh/remount and becomes active again.
 
 ### Multi-workspace / driver access hardening
 - Login checks pending workspace invitations before resolving memberships.
-- If the account has more than one resolved workspace, login intentionally leaves the active workspace unset so `WorkspaceChooserScreen` is shown.
-- Newly claimed invites are still converted into active membership during login; they no longer silently force a multi-workspace account into that workspace.
-- The chooser is the explicit decision point: each workspace is shown with its membership role, and selecting it persists the active workspace.
+- If the account has more than one resolved workspace and no valid saved selection exists, login intentionally leaves the active workspace unset so `WorkspaceChooserScreen` is shown.
+- A valid explicitly selected workspace is persisted in localStorage and remains authoritative across resolver refreshes/remounts.
+- Newly claimed invites are still converted into active membership during login; they no longer silently force a multi-workspace account into that workspace when another explicit saved selection exists.
+- The chooser is the explicit decision point when no valid saved selection exists: each workspace is shown with its membership role, and selecting it persists the active workspace.
 - Selecting a driver membership opens `My Trip`; selecting an owner/operations membership opens `Operations Hub`.
 - Workspace resolution no longer depends on `activeOrgId` as a callback dependency; otherwise the chooser's selection could trigger a second resolution pass that reset the selection to null.
 - Driver navigation is intentionally limited to `My Trip`; the existing My Trip workflow contains driver trip actions, delivery actions, vehicle tools and GPS/location capture.
