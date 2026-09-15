@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLE_LABELS } from "@/types/core";
@@ -11,45 +11,46 @@ import NotificationCenter from "@/components/layout/NotificationCenter";
 interface NavItem { label: string; href: (orgId: string) => string; icon: string; section?: string; badge?: string; roles?: string[]; }
 
 const NAV_ITEMS: NavItem[] = [
-  { section: "Truck Division", label: "Operations Hub", href: (id) => `/${id}/control-tower`, icon: "◈", badge: "TODAY" },
+  { section: "Truck Division", label: "Operations Hub", href: (id) => `/${id}/control-tower`, icon: "◈", badge: "TODAY", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer"] },
   { label: "My Trip", href: (id) => `/${id}/my-trip`, icon: "➜", badge: "DRIVER", roles: ["driver"] },
-  { label: "Fleet & Live Map", href: (id) => `/${id}/trucks`, icon: "▣" },
-  { label: "Fleet Intelligence", href: (id) => `/${id}/fleet-intelligence`, icon: "◉", badge: "NEW" },
-  { label: "Delivery Notes & POs", href: (id) => `/${id}/deliveries`, icon: "✓" },
-  { label: "POD Queue", href: (id) => `/${id}/pod-queue`, icon: "!", badge: "ACTION" },
-  { label: "Fuel & Workshop", href: (id) => `/${id}/fuel-workshop`, icon: "◒" },
-  { label: "Workshop Control", href: (id) => `/${id}/workshop-control`, icon: "⚙", badge: "NEW" },
-  { label: "Invoicing & Statements", href: (id) => `/${id}/invoicing`, icon: "▤" },
-  { label: "Performance Dashboard", href: (id) => `/${id}/performance`, icon: "▥" },
-  { label: "Reports & Intelligence", href: (id) => `/${id}/reports`, icon: "▤", badge: "NEW" },
-  { section: "Financials", label: "Journal Entry", href: (id) => `/${id}/journal`, icon: "▦" },
-  { label: "P&L Statement", href: (id) => `/${id}/p-and-l`, icon: "⌁" },
-  { label: "Cash Flow", href: (id) => `/${id}/cash-flow`, icon: "◒" },
-  { label: "Balance Sheet", href: (id) => `/${id}/balance-sheet`, icon: "⚖" },
-  { label: "Trial Balance", href: (id) => `/${id}/trial-balance`, icon: "≡" },
-  { label: "Business Controls", href: (id) => `/${id}/business-controls`, icon: "◫", badge: "NEW" },
+  { label: "Fleet & Live Map", href: (id) => `/${id}/trucks`, icon: "▣", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "driver", "viewer"] },
+  { label: "Fleet Intelligence", href: (id) => `/${id}/fleet-intelligence`, icon: "◉", badge: "NEW", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "viewer"] },
+  { label: "Delivery Notes & POs", href: (id) => `/${id}/deliveries`, icon: "✓", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "driver", "viewer"] },
+  { label: "POD Queue", href: (id) => `/${id}/pod-queue`, icon: "!", badge: "ACTION", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager"] },
+  { label: "Fuel & Workshop", href: (id) => `/${id}/fuel-workshop`, icon: "◒", roles: ["owner", "operations_manager", "fleet_manager"] },
+  { label: "Workshop Control", href: (id) => `/${id}/workshop-control`, icon: "⚙", badge: "NEW", roles: ["owner", "operations_manager", "fleet_manager"] },
+  { label: "Invoicing & Statements", href: (id) => `/${id}/invoicing`, icon: "▤", roles: ["owner", "operations_manager", "finance"] },
+  { label: "Performance Dashboard", href: (id) => `/${id}/performance`, icon: "▥", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer"] },
+  { label: "Reports & Intelligence", href: (id) => `/${id}/reports`, icon: "▤", badge: "NEW", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer"] },
+  { section: "Financials", label: "Journal Entry", href: (id) => `/${id}/journal`, icon: "▦", roles: ["owner", "finance"] },
+  { label: "P&L Statement", href: (id) => `/${id}/p-and-l`, icon: "⌁", roles: ["owner", "finance"] },
+  { label: "Cash Flow", href: (id) => `/${id}/cash-flow`, icon: "◒", roles: ["owner", "finance"] },
+  { label: "Balance Sheet", href: (id) => `/${id}/balance-sheet`, icon: "⚖", roles: ["owner", "finance"] },
+  { label: "Trial Balance", href: (id) => `/${id}/trial-balance`, icon: "≡", roles: ["owner", "finance"] },
+  { label: "Business Controls", href: (id) => `/${id}/business-controls`, icon: "◫", badge: "NEW", roles: ["owner", "operations_manager"] },
   { label: "Tax & VAT", href: (id) => `/${id}/tax-vat`, icon: "%", roles: ["owner", "finance"] },
   { label: "Credit & Debit Notes", href: (id) => `/${id}/credit-debit-notes`, icon: "±", roles: ["owner", "finance"] },
-  { section: "Management", label: "Customers", href: (id) => `/${id}/customers`, icon: "▤" },
-  { label: "Jobs", href: (id) => `/${id}/jobs`, icon: "□" },
-  { label: "Trips", href: (id) => `/${id}/trips`, icon: "➜" },
-  { label: "Drivers", href: (id) => `/${id}/drivers`, icon: "●" },
+  { section: "Management", label: "Customers", href: (id) => `/${id}/customers`, icon: "▤", roles: ["owner", "operations_manager", "dispatcher", "finance", "viewer"] },
+  { label: "Jobs", href: (id) => `/${id}/jobs`, icon: "□", roles: ["owner", "operations_manager", "dispatcher", "finance", "viewer"] },
+  { label: "Trips", href: (id) => `/${id}/trips`, icon: "➜", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer"] },
+  { label: "Drivers", href: (id) => `/${id}/drivers`, icon: "●", roles: ["owner", "operations_manager", "dispatcher", "fleet_manager", "finance", "viewer"] },
   { label: "Team & Invites", href: (id) => `/${id}/team`, icon: "◌", roles: ["owner", "operations_manager"] },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { activeOrg, activeMembership } = useWorkspace(); const { user, signOut } = useAuth(); const pathname = usePathname(); const [mobileOpen, setMobileOpen] = useState(false);
+  const { activeOrg, activeMembership, organizations, setActiveOrgId } = useWorkspace(); const { user, signOut } = useAuth(); const pathname = usePathname(); const router = useRouter(); const [mobileOpen, setMobileOpen] = useState(false);
   if (!activeOrg || !activeMembership) return null;
   const initials = (user?.displayName || user?.email || "U").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const visibleNav = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(activeMembership.role));
+  const switchWorkspace = (orgId: string) => { if (orgId === activeOrg.id) return; const membership = useWorkspace().memberships.find((m) => m.orgId === orgId); setActiveOrgId(orgId); router.replace(`/${orgId}/${membership?.role === "driver" ? "my-trip" : "control-tower"}`); };
   return <div className="translend-app">
     {mobileOpen && <button aria-label="Close navigation" className="mobile-nav-backdrop" onClick={() => setMobileOpen(false)} />}
     <aside className={`translend-sidebar ${mobileOpen ? "mobile-open" : ""}`}>
-      <div className="sidebar-logo"><div className="logo-badge"><div className="logo-icon" aria-hidden="true">›</div><div className="logo-text"><span className="brand">translend</span><span className="sub">any load · any road</span></div></div></div>
+      <div className="sidebar-logo"><div className="logo-badge"><div className="logo-icon"><div className="logo-icon" aria-hidden="true">›</div></div><div className="logo-text"><span className="brand">translend</span><span className="sub">any load · any road</span></div></div></div>
       <nav className="translend-nav" aria-label="Primary navigation">{visibleNav.map((item) => { const href = item.href(activeOrg.id); const active = pathname === href || pathname?.startsWith(`${href}/`); return <div key={`${item.section ?? ""}-${item.label}`}>{item.section && <div className="nav-section-label">{item.section}</div>}<Link href={href} onClick={() => setMobileOpen(false)} className={`translend-nav-item ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}><span className="nav-icon">{item.icon}</span><span>{item.label}</span>{item.badge && <span className="nav-badge">{item.badge}</span>}</Link></div>; })}</nav>
       <div className="sidebar-footer"><div className="user-chip"><div className="user-avatar">{initials}</div><div className="user-info"><div className="name">{user?.displayName || user?.email || "Signed in"}</div><div className="role">{ROLE_LABELS[activeMembership.role]}</div></div></div><button className="signout-button" onClick={signOut}>Sign out</button></div>
     </aside>
-    <div className="translend-main"><header className="translend-topbar"><div className="topbar-left"><button className="mobile-menu-button" onClick={() => setMobileOpen(true)} aria-label="Open navigation">☰</button><div><h1>{activeOrg.name}</h1><div className="breadcrumb">Truck Division <span>›</span> {getPageLabel(pathname, activeOrg.id)}</div></div></div><div className="topbar-right"><NotificationCenter orgId={activeOrg.id} /><span className="connection-pill"><span className="connection-dot" /> Live data</span><span className="org-pill">{activeMembership.role}</span></div></header><main className="translend-content">{children}</main></div>
+    <div className="translend-main"><header className="translend-topbar"><div className="topbar-left"><button className="mobile-menu-button" onClick={() => setMobileOpen(true)} aria-label="Open navigation">☰</button><div><h1>{activeOrg.name}</h1><div className="breadcrumb">Truck Division <span>›</span> {getPageLabel(pathname, activeOrg.id)}</div></div></div><div className="topbar-right">{organizations.length > 1 && <select aria-label="Switch workspace" value={activeOrg.id} onChange={(e) => switchWorkspace(e.target.value)} className="org-switcher">{organizations.map((org) => <option key={org.id} value={org.id}>{org.name} · {ROLE_LABELS[useWorkspace().memberships.find((m) => m.orgId === org.id)?.role ?? "viewer"]}</option>)}</select>}<NotificationCenter orgId={activeOrg.id} /><span className="connection-pill"><span className="connection-dot" /> Live data</span><span className="org-pill">{activeMembership.role}</span></div></header><main className="translend-content">{children}</main></div>
   </div>;
 }
 
