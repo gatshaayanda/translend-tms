@@ -42,6 +42,7 @@ The core Truck Division operating system is substantially implemented. Developme
 - `0fd839c9f997d0b920117a4ede62cfc02a1f2ca5` — controlled Credit & Debit Notes.
 - `b54aa2afd7aaa9202e5d5c577c814cd78fab478d` — development checkpoint documentation update.
 - `51aca15c2570bee36f62fb220425b64994b59dd6` — workspace Tax & VAT controls.
+- `95399ebe6b8034b6a846c486778696a3098d666b` — authenticated VAT preview endpoint and calculation primitives checkpoint.
 
 ### Credit & Debit Notes
 - Finance/owner-only Credit & Debit Notes surface.
@@ -56,11 +57,13 @@ The core Truck Division operating system is substantially implemented. Developme
 - Finance/owner-only `/tax-vat` surface.
 - Server-authoritative `/api/accounting/tax-settings` GET/PUT endpoint.
 - Workspace-level enabled/exempt setting, standard rate, inclusive/exclusive mode, tax code, VAT registration number and legal tax name.
-- Current controls are configuration infrastructure. Invoice calculation, VAT journal posting, adjustment/tax interaction and final document tax presentation still need to consume these authoritative settings before VAT is considered complete.
+- Added reusable server-safe `src/lib/accounting/tax.ts` calculation primitives for exclusive and inclusive VAT, with rounded net/tax/gross breakdowns.
+- Added authenticated `/api/accounting/tax-preview` endpoint so finance/owner users can validate the authoritative workspace tax configuration against an amount without mutating accounting records.
+- VAT is still **not complete**: invoice creation, VAT journal posting, adjustment/tax interaction and canonical invoice document presentation must consume the same calculation path before the module is marked complete.
 
 ## Remaining substantive product development
 Priority order:
-1. **Complete VAT/tax integration** — consume workspace settings during invoice creation, calculate tax-inclusive/exclusive totals, store authoritative subtotal/tax/total fields, post VAT correctly to the journal and render tax fields on the canonical invoice.
+1. **Complete VAT/tax integration** — consume workspace settings during invoice creation, calculate tax-inclusive/exclusive totals, store authoritative subtotal/tax/total fields, post VAT correctly to the journal and render tax fields on the canonical invoice. The reusable calculation/preview layer now exists.
 2. **Bank reconciliation** — bank transaction/import model, matching against customer payments/journal entries, reconciliation state, controlled adjustments and audit trail.
 3. **Payroll / driver settlement** — driver/subcontractor settlement records, trip-linked earnings/costs, approval/payment state and journal consequences.
 4. **Richer scheduled/export reporting** — operational/financial report periods, durable exports and scheduled report infrastructure where useful.
@@ -96,6 +99,7 @@ Always trace:
 `completed POD → invoice → adjustment/payment → AR/Cash journal → reporting`.
 Check duplicate invoice/payment/reference, customer/job/POD linkage, positive amounts, open accounting period, overpayment, adjustment integrity, journal balance, audit, concurrency and lost-response behavior.
 Credit/debit notes are separate immutable adjustments; do not rewrite issued invoices.
+VAT calculations must use `src/lib/accounting/tax.ts` semantics consistently across invoice, journal, adjustment and document layers once integrated.
 
 ### Offline/reliability
 - PWA shell and Firestore persistence are real infrastructure, not a status-message simulation.
