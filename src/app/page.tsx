@@ -1,37 +1,28 @@
 "use client";
 
-// =============================================================
-// Root page — auth + workspace gate
-// =============================================================
-// This is the front door of the app. AppGate renders whichever
-// screen matches the current combined auth/workspace state. Once
-// fully resolved (status === "application"), we redirect into the
-// org-scoped Control Tower rather than rendering app content here
-// — every real page lives under /(app)/[orgId]/*.
-
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AppGate from "@/components/layout/AppGate";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { LoadingScreen } from "@/components/ui/FullScreenState";
 
-function RedirectToControlTower() {
-  const { activeOrg } = useWorkspace();
+function RedirectToWorkspaceEntry() {
+  const { activeOrg, activeMembership } = useWorkspace();
   const router = useRouter();
 
   useEffect(() => {
-    if (activeOrg) {
-      router.replace(`/${activeOrg.id}/control-tower`);
+    if (activeOrg && activeMembership) {
+      router.replace(`/${activeOrg.id}/${activeMembership.role === "driver" ? "my-trip" : "control-tower"}`);
     }
-  }, [activeOrg, router]);
+  }, [activeOrg, activeMembership, router]);
 
-  return <LoadingScreen title="Opening Control Tower…" />;
+  return <LoadingScreen title="Opening your Translend workspace…" />;
 }
 
 export default function RootPage() {
   return (
     <AppGate>
-      <RedirectToControlTower />
+      <RedirectToWorkspaceEntry />
     </AppGate>
   );
 }
