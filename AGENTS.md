@@ -2,13 +2,25 @@
 
 ## Authoritative project
 - Repository: `gatshaayanda/translend-tms`
-- Branch: `v19-authoritative`
+- **Application source branch: `v19-authoritative`. This is the authoritative Translend app.**
+- **Vercel Production must track `v19-authoritative`, never `main`.**
+- `main` is not the Translend application source-of-truth branch and must not be used for Translend production releases or application fixes unless the product owner explicitly directs otherwise.
 - Stack: Next.js 15.5.15 + TypeScript + Tailwind + Firebase Auth/Firestore + Vercel
 - Firestore = business/source of truth.
 - UploadThing = POD/evidence and finance-receipt transport. Never reintroduce Firebase Storage.
 - Never replace Firebase with Supabase/another backend.
 - GitHub/current HEAD outranks remembered chat context and old patches.
 - Do not reset, revert, branch away, or reuse an older generation.
+
+## Release/source-of-truth rules — DO NOT BREAK
+- All Translend application development, fixes, QA builds and production releases start from and are pushed to **`v19-authoritative`**.
+- Before any write, deployment or release action, explicitly confirm the target ref is **`v19-authoritative`**.
+- Never silently substitute `main`, `feature/translend-independence`, a rebuild branch, or an older backup branch for the authoritative app.
+- If Vercel Production is configured to deploy `main`, **stop and correct the Production branch configuration to `v19-authoritative` before treating Production as representative of the app**.
+- A successful deployment from the wrong branch is not a valid Translend production deployment.
+- Do not copy workspace/auth code between branches to solve production problems. Inspect the authoritative branch first and preserve its existing server-side authorization boundary.
+- Do not force-move `main` as a substitute for correcting Vercel's Production branch configuration. The deployment source must remain explicitly `v19-authoritative`.
+- Deployment verification must check both the deployed commit and its branch. A deployment is authoritative only when it is sourced from `v19-authoritative`.
 
 ## Product north star
 `Job → Dispatch → Trip → Delivery → POD/evidence → Invoice → Payment → Journal → Reporting`
@@ -53,6 +65,7 @@ The core Truck Division operating system is substantially implemented. Developme
 - `f4e891e2190da804d8951370cc3e021e45cf20ea` — workspace chooser now opens `My Trip` for driver memberships and `Operations Hub` for non-driver memberships.
 - `d46d00030586e9cd0306ba2f4fbf8bb9d01fba96` — fixed chooser selection race so selecting a workspace is not immediately cleared by workspace-resolution refresh.
 - `dbbd026ba239992ccb5a9db9710d73207a8e2bc7` — restored the intended multi-workspace flow: when multiple workspaces exist, login always clears the active workspace and shows the chooser; saved last-active workspace is not allowed to bypass the chooser.
+- `71146f16d165818f9f459d28ee1bf6dbc744a574` — authoritative app deployment checkpoint; use this branch/commit lineage for Translend production.
 
 ### Multi-workspace / driver access hardening
 - Login checks pending workspace invitations before resolving memberships.
