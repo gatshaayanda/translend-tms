@@ -10,11 +10,38 @@ Do not regress the application to demo-only/local-only behaviour, owner-direct s
 
 ## Source checkpoint and branch discipline
 - GitHub: `gatshaayanda/translend-tms`
-- The repository integration currently exposes `feature/translend-independence` as the default branch, with latest documented commit `ac5783eafb3b0f2dbc72758d3cea7e1aa3c8d62f`.
+- The repository integration currently exposes `feature/translend-independence` as the default branch. The latest QA-contract checkpoint is `d8bc4558f60b4cbdad042c74b233dc852547619a`.
 - Operational UI described by the owner's 15 September 2026 QA audit is substantially later than the original foundation history.
 - `rebuild/translend-v19` is an historical foundation branch and must not be treated as the current operational product merely because its name sounds current.
 - Do not create or maintain parallel implementations to solve a defect. Before changing code, establish which branch/commit is the actual working/deployed Translend application.
 - AdminHub Global is a separate stable project and must not be modified as part of Translend work.
+
+## QA-fix mode — temporary controlled pass
+The owner has explicitly asked for a focused QA-fix pass before returning to the normal development path.
+
+During this pass:
+- Preserve the current working application and existing owner → workspace → customer → truck → driver → link driver → trip workflow.
+- Do not redesign, restructure, rename, remove, or replace working modules merely to make the screenshots look different.
+- Work only on the 10-item QA backlog plus directly related shared defects discovered while resolving those items.
+- The owner's newly reported mobile Driver roster issue is included in this pass: on a phone, the Driver table currently exposes only the first row/details and the remaining driver information is not practically viewable. Make the driver record/details usable at narrow widths without removing fields or weakening desktop behaviour. Prefer a responsive table/list/card pattern already used by the application rather than inventing a new workflow.
+- Fix shared primitives where a shared defect is responsible; do not scatter one-off CSS patches across pages.
+- Do not change business logic or Firebase data contracts unless the QA defect demonstrably requires it.
+- Do not push a checkpoint merely because a source edit was made. A QA item is complete only after the affected behaviour is successfully verified and the required quality gates pass.
+- If the current source/deployment cannot be reconciled, STOP rather than patching the wrong branch.
+
+### QA backlog being resolved in this pass
+1. Team & Invites — eliminate `Invalid Date` for pending invitation expiry.
+2. Operations Hub delivery-note drawer/modal — resolve dark-surface contrast if reproduced.
+3. Raw business identifiers — show human-readable truck/trip labels while retaining IDs internally.
+4. Machine enums — format values such as `not_started`, `in_transit`, `on_trip` for users.
+5. Technical copy — remove Firebase/UploadThing/Firestore/persistence/version implementation language from normal operator UI.
+6. Action hierarchy — teal primary, neutral outline secondary, orange/red deliberately for warning/destructive actions.
+7. Mobile layout — resolve clipped selects such as `All tru`, constrained cards, excessive density and related responsive defects.
+8. Delivery-note print view — use clean neutral fallbacks for missing values.
+9. Shared accessibility — correct contrast/readability in reusable UI primitives.
+10. Error recovery — verify the actual deployed failing path against the existing error fallback before changing error infrastructure.
+
+The pass is **not** complete until all 10 have either been fixed and verified or have a documented source/deployment explanation that prevents a safe code change.
 
 ## Independent architecture
 - Next.js App Router + React + TypeScript
@@ -72,27 +99,15 @@ The owner supplied a comprehensive mobile UI/UX audit covering Team & Invites, D
 The audit is a product backlog, not an instruction to blindly patch screenshots. Each item must be reconciled with the actual current source and deployed commit.
 
 ### Assessment against what is currently inspectable
-The strongest finding is a **source/deployment mismatch**, not that every screenshot defect is necessarily present in the GitHub branch currently exposed to the integration. The current repository history shows the QA documentation commit `ac5783e...` immediately after the earlier error-fallback work, while the operational screenshots describe a later, much larger application surface. Therefore:
+The strongest finding is a **source/deployment mismatch**, not that every screenshot defect is necessarily present in the GitHub branch currently exposed to the integration. The operational screenshots describe a later, much larger application surface than the historical foundation branch. Therefore:
 
 1. **Do not assume the screenshots are generated by the currently inspectable branch.** Reconcile the Vercel deployment commit/branch with the operational code before editing implementation.
-2. **Error boundary is already present in source history.** Commits `f14b141`, `4bc916b` and `7c1ce07` added an application error fallback and global recovery fallback before the QA documentation checkpoint. If production still shows the raw Next.js client exception, investigate deployment/path coverage first; do not blindly add a second error system.
-3. **The QA document itself has already been incorporated into this contract.** Do not repeatedly append the same screenshot findings. Future updates should record what was verified/fixed, not merely restate the audit.
-4. **The old foundation contract is obsolete for this phase.** Do not use `rebuild/translend-v19`'s historical "business modules out of scope" wording to remove or postpone the working Truck Division modules.
+2. **Error boundary is already present in source history.** Commits `f14b141`, `4bc916b` and `7c1ce07` added application/route/global recovery before the QA documentation checkpoint. If production still shows the raw Next.js client exception, investigate deployment/path coverage first; do not blindly add a second error system.
+3. **The QA findings are already incorporated into this contract.** Future updates should record what was verified/fixed, not repeatedly restate the same screenshot audit.
+4. **The old foundation contract is obsolete for this phase.** Do not use `rebuild/translend-v19`'s historical business-module restriction to remove or postpone established Truck Division workflows.
 
-### High-confidence implementation backlog from the owner's audit
-1. **Team & Invites:** pending invitation expiry must never render `Invalid Date`; explicitly validate timestamp/null state and use a deliberate fallback such as `No expiry`.
-2. **Operations Hub delivery-note modal/drawer:** if reproduced, fix the shared dark workflow surface so foreground text is readable. This is a critical accessibility issue.
-3. **Raw business identifiers:** truck/trip selectors and Fleet Intelligence lists must display registration, name, title or other human-readable labels while retaining document IDs internally.
-4. **Machine-readable enums:** format `not_started`, `in_transit`, `on_trip`, etc. in the presentation layer.
-5. **Technical copy leakage:** remove Firebase, UploadThing, Firestore, "persisted", internal version names and architecture/storage explanations from normal operator-facing copy. Explain the business outcome instead.
-6. **Action hierarchy:** primary workflow actions use teal; neutral secondary actions use outline/light styling; destructive/warning actions use orange/red deliberately. `Edit`, `Back`, `Attach Receipt`, `Suspend` and `Transfer ownership` must not all look like equivalent primary actions.
-7. **Mobile select/layout behaviour:** prevent labels such as `All tru` from clipping; group stretched forms sensibly; prevent avoidable card overflow and excessive vertical density.
-8. **Delivery-note print/document rendering:** use deliberate neutral fallbacks for missing values rather than raw technical sentinels or unnecessary paper-style blanks where the digital workflow already captures the value.
-9. **Shared accessibility:** contrast fixes belong in shared UI primitives where possible, including muted text, status pills, dark overlays, disabled controls, inputs and focus states.
-10. **Error recovery:** reproduce the actual failing route/deployment before changing it. The existing source history already contains route-level and global recovery infrastructure.
-
-### Visual/viewport findings that require browser verification
-These cannot be declared source defects from screenshots alone: Android volume overlay obstruction, exact mobile clipping/truncation dimensions, constrained card heights/scroll behaviour, actual modal contrast after CSS inheritance, print rendering, and whether a route-level client exception bypasses the existing error boundary.
+### Visual/viewport findings requiring browser verification
+Android volume overlay obstruction, exact mobile clipping/truncation dimensions, constrained card heights/scroll behaviour, actual modal contrast after CSS inheritance, print rendering, route-level client exception behaviour, and the Driver roster's narrow-screen detail visibility require browser verification before being called fully resolved.
 
 ### Refactoring targets
 Prefer shared implementations for:
@@ -100,7 +115,7 @@ Prefer shared implementations for:
 - Form controls, labels, focus and disabled states
 - Status pills
 - Modal/drawer surfaces
-- Responsive tables/lists
+- Responsive tables/lists, including the Driver roster
 - Date/timestamp formatting
 - Enum/status formatting
 - Business-record display labels
@@ -119,7 +134,7 @@ For every controlled change:
 5. Run locally.
 6. Verify affected and related routes, including mobile states where relevant.
 7. Run `npx tsc --noEmit`, `npm run lint`, and `npm run build`.
-8. Commit and push a checkpoint.
+8. Commit and push a checkpoint only after successful verification.
 
 Unexpected result = STOP → inspect actual state → then act.
 
