@@ -4,15 +4,19 @@
 Translend is an independent transport management application for the Truck Division. The current product goal is to answer: what is moving, what needs attention, what is costing money, and what can be billed.
 
 ## Current phase
-Working operational MVP / company workspace. The application is now beyond the original foundation-only phase. Business workflows are being developed against the authenticated, organisation-scoped workspace and must continue as one coherent owner → workspace → operational-record workflow.
+Working operational MVP / company workspace. The application is beyond the original foundation-only phase. Business workflows must continue against the authenticated, organisation-scoped workspace as one coherent owner → workspace → operational-record workflow.
 
-Do not regress the application back to demo-only/local-only behaviour, owner-direct shortcuts, fake company workspaces, or isolated feature demos. The real company workspace is the source of operational context.
+Do not regress the application to demo-only/local-only behaviour, owner-direct shortcuts, fake company workspaces, isolated feature demos, or a different branch/product surface. The real company workspace is the source of operational context.
 
-## Source checkpoint
-The independence migration is derived from the verified Translend foundation/shell on `gatshaayanda/adminhub-global`, branch `feature/translend-foundation`, beginning at foundation commit `7a933e04fa9be9ed4344a4555b730e2811f38185` and subsequent shell commits. AdminHub Global `main` is a separate stable project and must not be modified as part of this migration.
+## Source checkpoint and branch discipline
+- GitHub: `gatshaayanda/translend-tms`
+- The repository integration currently exposes `feature/translend-independence` as the default branch, with latest documented commit `ac5783eafb3b0f2dbc72758d3cea7e1aa3c8d62f`.
+- Operational UI described by the owner's 15 September 2026 QA audit is substantially later than the original foundation history.
+- `rebuild/translend-v19` is an historical foundation branch and must not be treated as the current operational product merely because its name sounds current.
+- Do not create or maintain parallel implementations to solve a defect. Before changing code, establish which branch/commit is the actual working/deployed Translend application.
+- AdminHub Global is a separate stable project and must not be modified as part of Translend work.
 
 ## Independent architecture
-- GitHub: `gatshaayanda/translend-tms`
 - Next.js App Router + React + TypeScript
 - Tailwind CSS + CSS Modules where appropriate
 - Firebase Authentication, Firestore and Storage belong exclusively to the Translend Firebase project
@@ -25,10 +29,10 @@ Firebase Authentication is the identity boundary for Translend. Google Sign-In i
 
 Owner signs in → real company workspace → create/edit customers → create/edit trucks → create/edit drivers → link driver → assign/operate trips → deliveries/POD → operational follow-through.
 
-A role determines the user's starting view and permissions; it must not silently replace the organisation context. Unexpected routing to a different workspace, owner-only shortcut, demo workspace, or placeholder state is a workflow regression and must be investigated before any further patching.
+A role determines the user's starting view and permissions; it must not silently replace organisation context. Unexpected routing to a different workspace, owner-only shortcut, demo workspace, or placeholder state is a workflow regression and must be investigated before any further patching.
 
 ## Security boundaries
-Never copy AdminHub production Firebase configuration, service-account credentials, OAuth secrets, Firestore data, Basic Auth, business routes, or AdminHub-specific service-worker behavior.
+Never copy AdminHub production Firebase configuration, service-account credentials, OAuth secrets, Firestore data, Basic Auth, business routes, or AdminHub-specific service-worker behaviour.
 
 `NEXT_PUBLIC_FIREBASE_*` values identify the Translend web app. `FIREBASE_ADMIN_KEY` is server-only and must never be committed.
 
@@ -49,7 +53,7 @@ The application is an operational TMS, not a technical diagnostics surface. Prod
 - Maintain readable foreground/background contrast, especially inside dark modal/drawer cards.
 - Never use dark text on dark slate surfaces.
 - Muted metadata must remain readable on its background.
-- Disabled controls must still be distinguishable as disabled without becoming unreadable.
+- Disabled controls must remain distinguishable as disabled without becoming unreadable.
 - Mobile layouts must not clip controls, truncate important labels, or create avoidable horizontal/vertical overflow.
 
 ### Data presentation
@@ -57,61 +61,67 @@ The application is an operational TMS, not a technical diagnostics surface. Prod
 - Convert enum values such as `not_started`, `in_transit`, `on_trip` and similar machine values into readable product language in presentation layers.
 - Blank values should use a consistent neutral presentation rather than leaking paper-form placeholders or technical sentinels into normal UI.
 - Dates must be validated before rendering. Invalid/null timestamps must produce a deliberate fallback such as `Not set` or `No expiry`, never `Invalid Date`.
-- Coordinates may be shown as supporting location data, but should not replace the truck/vehicle identity in operational lists.
+- Coordinates may be shown as supporting location data, but should not replace truck/vehicle identity in operational lists.
 
 ### Production copy
 Remove implementation jargon from end-user surfaces. Terms such as Firebase, UploadThing, Firestore, database IDs, "persisted", internal version names, architecture notes and developer-facing storage explanations belong in diagnostics/admin documentation, not ordinary operator workflows.
 
-## Owner QA audit checkpoint — 15 September 2026
+## Owner QA audit — 15 September 2026
 The owner supplied a comprehensive mobile UI/UX audit covering Team & Invites, Delivery Notes, Operations Hub, Performance Dashboard, Workshop Control, Fuel & Workshop, Fleet Intelligence, Fleet Register, Trip Lookup and the application error surface.
 
-The audit is treated as a real product backlog, but each item must be verified against the actual current source/deployment before changing it. Do not blindly patch from screenshots.
+The audit is a product backlog, not an instruction to blindly patch screenshots. Each item must be reconciled with the actual current source and deployed commit.
 
-### Confirmed/high-confidence issues to investigate
-1. **Team & Invites:** pending invitation expiry can render `Invalid Date`; make date/null handling explicit.
-2. **Operations Hub delivery-note modal/drawer:** dark workflow cards were reported with unreadable dark text. This is a critical contrast issue and must be fixed at the shared component level if reproduced.
-3. **Raw business identifiers:** truck/trip selectors and Fleet Intelligence lists were reported to expose Firebase/Firestore IDs instead of registrations/titles. Replace presentation labels with human-readable fields while retaining IDs internally.
-4. **Machine-readable enums:** delivery-note/POD states such as `not_started` must be formatted for people.
-5. **Technical copy leakage:** Fuel & Workshop informational copy reportedly exposes Firebase/UploadThing/persistence/version language. Production operator copy should explain the business effect, not the implementation.
-6. **Action hierarchy:** orange actions such as `Suspend`, `Transfer ownership`, `Attach Receipt`, `Edit` and `Back` must not visually compete with the primary workflow action unless their semantic priority warrants it.
-7. **Mobile select/layout behaviour:** reported truncation such as `All tru`, stretched forms and constrained cards need responsive treatment so controls remain usable at narrow widths.
-8. **Delivery-note print/document rendering:** blank fields should have deliberate neutral fallbacks instead of cluttering the document with technical or paper-era placeholders where a digital value is available.
-9. **Accessibility:** muted grey headings/status text and dark overlay/card combinations require contrast review across shared UI primitives, not one-off page patches.
-10. **Error recovery:** the source checkpoint already contains route/global error fallback infrastructure. If `/app-error` still exposes the raw Next.js client exception in production, first determine whether the deployment is stale, a different route/error boundary is being hit, or the current application has bypassed the fallback. Do not add a duplicate error system without inspecting the actual failing path.
+### Assessment against what is currently inspectable
+The strongest finding is a **source/deployment mismatch**, not that every screenshot defect is necessarily present in the GitHub branch currently exposed to the integration. The current repository history shows the QA documentation commit `ac5783e...` immediately after the earlier error-fallback work, while the operational screenshots describe a later, much larger application surface. Therefore:
 
-### Audit items that are visual/viewport-dependent
-The following require browser/mobile verification before being called source bugs: Android volume overlay obstruction, exact clipping/truncation dimensions, card height/scroll behaviour, modal contrast as actually rendered, print layout, and route-level client exception reproduction.
+1. **Do not assume the screenshots are generated by the currently inspectable branch.** Reconcile the Vercel deployment commit/branch with the operational code before editing implementation.
+2. **Error boundary is already present in source history.** Commits `f14b141`, `4bc916b` and `7c1ce07` added an application error fallback and global recovery fallback before the QA documentation checkpoint. If production still shows the raw Next.js client exception, investigate deployment/path coverage first; do not blindly add a second error system.
+3. **The QA document itself has already been incorporated into this contract.** Do not repeatedly append the same screenshot findings. Future updates should record what was verified/fixed, not merely restate the audit.
+4. **The old foundation contract is obsolete for this phase.** Do not use `rebuild/translend-v19`'s historical "business modules out of scope" wording to remove or postpone the working Truck Division modules.
 
-### Audit items that are architectural/refactoring candidates
-Standardise shared button variants, form controls, status pills, modal/drawer surfaces, data tables/responsive lists, date formatting and business-label formatting. Prefer one reusable implementation over repeated page-specific CSS/logic.
+### High-confidence implementation backlog from the owner's audit
+1. **Team & Invites:** pending invitation expiry must never render `Invalid Date`; explicitly validate timestamp/null state and use a deliberate fallback such as `No expiry`.
+2. **Operations Hub delivery-note modal/drawer:** if reproduced, fix the shared dark workflow surface so foreground text is readable. This is a critical accessibility issue.
+3. **Raw business identifiers:** truck/trip selectors and Fleet Intelligence lists must display registration, name, title or other human-readable labels while retaining document IDs internally.
+4. **Machine-readable enums:** format `not_started`, `in_transit`, `on_trip`, etc. in the presentation layer.
+5. **Technical copy leakage:** remove Firebase, UploadThing, Firestore, "persisted", internal version names and architecture/storage explanations from normal operator-facing copy. Explain the business outcome instead.
+6. **Action hierarchy:** primary workflow actions use teal; neutral secondary actions use outline/light styling; destructive/warning actions use orange/red deliberately. `Edit`, `Back`, `Attach Receipt`, `Suspend` and `Transfer ownership` must not all look like equivalent primary actions.
+7. **Mobile select/layout behaviour:** prevent labels such as `All tru` from clipping; group stretched forms sensibly; prevent avoidable card overflow and excessive vertical density.
+8. **Delivery-note print/document rendering:** use deliberate neutral fallbacks for missing values rather than raw technical sentinels or unnecessary paper-style blanks where the digital workflow already captures the value.
+9. **Shared accessibility:** contrast fixes belong in shared UI primitives where possible, including muted text, status pills, dark overlays, disabled controls, inputs and focus states.
+10. **Error recovery:** reproduce the actual failing route/deployment before changing it. The existing source history already contains route-level and global recovery infrastructure.
 
-## Important source/deployment discrepancy
-As of this documentation checkpoint, the GitHub branch visible through the repository integration is `feature/translend-independence` at commit `7c1ce07ad71b8c288b19c3d41b2eab008d168428`. The supplied owner QA screenshots describe a substantially later operational surface with routes such as `/team-invites`, `/performance-dashboard`, `/fuel-workshop`, `/fleet-intelligence`, `/fleet-live-map`, and `/operations-hub/delivery-notes/...`.
+### Visual/viewport findings that require browser verification
+These cannot be declared source defects from screenshots alone: Android volume overlay obstruction, exact mobile clipping/truncation dimensions, constrained card heights/scroll behaviour, actual modal contrast after CSS inheritance, print rendering, and whether a route-level client exception bypasses the existing error boundary.
 
-Therefore, those screenshots must not be assumed to correspond to the currently visible GitHub branch. Before implementing fixes, reconcile the deployed Vercel commit/branch with the actual current working code. This is especially important because the reachable branch already contains an application-level error fallback, while the audit reports a raw Next.js client error screen.
+### Refactoring targets
+Prefer shared implementations for:
+- Button variants and action hierarchy
+- Form controls, labels, focus and disabled states
+- Status pills
+- Modal/drawer surfaces
+- Responsive tables/lists
+- Date/timestamp formatting
+- Enum/status formatting
+- Business-record display labels
+- Empty/unknown value presentation
 
-## Known historical change
-The original foundation-era contract explicitly prohibited business modules. That restriction is no longer the product phase. The application has moved through the working MVP and authenticated organisation-scoped workflow stages. Do not use the old foundation wording as a reason to remove or postpone already-established Truck Division business workflows.
+Do not turn the audit into a broad visual redesign. Preserve the established Translend workflow and product language while removing defects, inconsistency and technical leakage.
 
-## Quality gates
-Do not inherit AdminHub's build-error suppression. `npx tsc --noEmit`, `npm run lint`, `npm run build`, deployment verification, and browser verification are real gates. Do not declare success from source inspection alone.
-
-## Workflow
+## Workflow rules for QA-driven fixes
 START → BUILD → CONTINUE/RECOVER.
 
-For every controlled change: inspect → plan → one controlled change → review diff → run locally → verify → build → commit → push.
+For every controlled change:
+1. Inspect the actual branch/commit and affected source.
+2. Identify whether the reported behaviour is source, deployment, data, or viewport dependent.
+3. Fix the smallest reusable layer that resolves the issue without regressing the workflow.
+4. Review the diff.
+5. Run locally.
+6. Verify affected and related routes, including mobile states where relevant.
+7. Run `npx tsc --noEmit`, `npm run lint`, and `npm run build`.
+8. Commit and push a checkpoint.
 
 Unexpected result = STOP → inspect actual state → then act.
-
-For QA-driven work:
-1. Reproduce or inspect the reported issue.
-2. Identify the shared component/data boundary responsible.
-3. Fix the smallest reusable layer that resolves the issue without regressing the workflow.
-4. Verify the affected route and mobile state.
-5. Check related routes for the same pattern.
-6. Build and checkpoint.
-
-Do not turn a screenshot audit into a broad redesign. Preserve the established Translend workflow and product language while removing defects, inconsistency and technical leakage.
 
 ## Recovery
 When continuing work, report:
@@ -124,4 +134,4 @@ When continuing work, report:
 - next controlled action
 
 ## Current configuration state
-The independent GitHub repository is established. The Translend Firebase project identifier is `translend-tms-dcd2a` and the supplied Web App configuration is recorded in `.env.example`. Firebase Console Google Sign-In enablement, Admin service credentials, Vercel environment variables, and end-to-end production deployment/browser verification remain external verification gates until confirmed.
+The independent repository is established. The Translend Firebase project identifier is `translend-tms-dcd2a`. Firebase Console Google Sign-In enablement, Admin service credentials, Vercel environment variables, and end-to-end production/browser verification remain external gates until confirmed.
