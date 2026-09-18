@@ -129,3 +129,51 @@ Never call a deployment green without actual status evidence. Do not repeatedly 
 
 Future agents:
 `read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace business mutation paths → inspect rules/indexes/config → attack retry/offline/concurrency/security edges → fix root cause → inspect diff → verify → update AGENTS.md → commit/push → report exact SHA/status`.
+
+
+## Simple app-update workflow — authoritative
+Translend is one existing production application. New work should normally be added to the current app, not treated as a new app or a replacement generation.
+
+### Default START → BUILD → CONTINUE/RECOVER loop
+1. START — inspect reality: read AGENTS.md first; confirm actual GitHub branch/HEAD and deployment source; inspect the current implementation and relevant recent commits; identify the change type. Do not assume an old branch, screenshot, patch, or remembered chat state is authoritative.
+2. BUILD — smallest controlled change: preserve the existing working application and real company/workspace flow; reuse current Firebase, auth, workspace, UI and shared patterns; do not create a parallel implementation, replacement app, unnecessary branch, or new environment setup for a small feature; do not modify unrelated working routes.
+3. REVIEW → VERIFY: inspect the diff before checkpointing; run the lightest useful verification, using typecheck/lint/build as appropriate. If an unexpected result appears: STOP → inspect reality → then act. Do not stack speculative fixes.
+4. CHECKPOINT → PUSH: commit one meaningful completed change and push the current authoritative app branch according to the actual repository/deployment configuration. Do not reset, force-push, merge unrelated generations, or switch the application onto an experimental/historical branch to solve a normal app update.
+5. DEPLOYMENT: let configured Vercel Git deployment create the preview/production deployment. Verify deployment status before calling it live. For additive work, the expected outcome is the existing Translend app plus the new capability; /translend must remain intact. Never claim a route is live until deployment succeeds and the route is verified.
+
+### CONTINUE / RECOVER
+When continuing from another chat or after an interruption: read AGENTS.md; inspect GitHub current HEAD, branch and recent commits; inspect affected files and deployment status; recover from actual repository state rather than memory; report the current checkpoint and single next controlled action; protect the existing working app first.
+
+### Branch discipline
+- main/current authoritative app = normal product development and deployment path when confirmed by current repository/deployment reality.
+- feature/fix branches = use only when a real isolation/review need exists or the user asks for one.
+- v19-authoritative, rebuild/*, backup/*, inspect/* and other historical/experimental branches = learning/reference/recovery material, not alternate production products.
+- A small change does not justify introducing a new branch or generation by default.
+- Never use a branch switch, reset, merge or force-push as a casual deployment workaround.
+
+### Pipeline as the product roadmap
+/pipeline is a simple owner-facing roadmap inside the existing Translend TMS app. It is not a technical dashboard.
+
+Seeded BUILDING items:
+- Delivery → invoice → payment → records — finish the handoff from completed delivery into billing, payment tracking and the financial record that follows.
+- Check the whole workflow — make sure changes to customers, trucks, drivers, trips, deliveries and billing stay accurate and connected.
+- Polish the everyday experience — mobile visibility, clear wording, readable statuses, buttons, delivery notes and recovery, based on owner QA.
+
+Seeded PLANNED items:
+- Manage the pipeline — authorised Admin users can add, edit and move pipeline items, with a clear record of what changed and when.
+- See how Translend is doing — a simple Admin view of important activity, issues and product signals without replacing the company's day-to-day workspace.
+
+Seeded RELEASED items:
+- Real company workspace.
+- Customers, trucks and drivers.
+- Trips and driver work.
+- Delivery notes and proof of delivery.
+- POD queue and invoicing.
+
+The pipeline also has Owner Updates:
+- A signed-in owner can add a dated update.
+- The update has a title and a plain-language “What should come next?” request.
+- A Loom link is optional.
+- If the owner prefers, the update can simply describe what should happen next; Loom is helpful context, not a blocker.
+- Updates are stored as separate dated records and displayed chronologically.
+- This gives future chats/agents a clear persistent product-request trail without exposing technical implementation details to the owner.
