@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "./pipeline.module.css";
+import PipelineUpdates from "./pipeline-updates";
 
 type Item = {
   stage: "PLANNED" | "BUILDING" | "RELEASED";
@@ -12,80 +13,73 @@ type Item = {
 const items: Item[] = [
   {
     stage: "BUILDING",
-    area: "Product control",
-    title: "Translend pipeline",
-    description: "A single place to see what has shipped, what is being tightened now, and what is planned next for the Truck Division.",
-    detail: "Seeded from the current operational MVP and QA pass.",
-  },
-  {
-    stage: "BUILDING",
-    area: "Operational workflow",
-    title: "Delivery → invoice → payment → journal",
-    description: "Complete the commercial chain so a completed delivery can flow cleanly into billing, payment tracking and financial records.",
-    detail: "Current product gap identified for the next controlled pass.",
+    area: "Commercial flow",
+    title: "Delivery → invoice → payment → records",
+    description: "Finish the handoff from a completed delivery into billing, payment tracking and the financial record that follows.",
+    detail: "Current next build area.",
   },
   {
     stage: "BUILDING",
     area: "Reliability",
-    title: "Audit and data-integrity sweep",
-    description: "Verify mutations, ownership boundaries and record relationships across customers, trucks, drivers, trips, deliveries and commercial records.",
-    detail: "Protects the real company workspace as the source of truth.",
+    title: "Check the whole workflow",
+    description: "Make sure changes made to customers, trucks, drivers, trips, deliveries and billing stay accurate and connected.",
+    detail: "Current product-wide check.",
+  },
+  {
+    stage: "BUILDING",
+    area: "Owner QA",
+    title: "Polish the everyday experience",
+    description: "Keep improving mobile visibility, clear wording, readable statuses, buttons, delivery notes and recovery when something goes wrong.",
+    detail: "Based on the owner's current QA.",
   },
   {
     stage: "PLANNED",
     area: "Admin control",
-    title: "Pipeline administration",
-    description: "Give authorised Admin users control over pipeline entries, status, copy and release notes without changing the operational application.",
-    detail: "Future admin capability — not connected yet.",
+    title: "Manage the pipeline",
+    description: "Allow authorised Admin users to add, edit and move pipeline items, with a clear record of what changed and when.",
+    detail: "Future control layer.",
   },
   {
     stage: "PLANNED",
-    area: "Admin oversight",
-    title: "Translend operations oversight",
-    description: "Provide a controlled Admin view of application health, workspace activity and important operational signals.",
-    detail: "Future oversight layer; organisation-scoped data remains protected.",
-  },
-  {
-    stage: "PLANNED",
-    area: "Product operations",
-    title: "Production monitoring",
-    description: "Surface the operational signals that help an administrator understand whether Translend is behaving as expected after release.",
-    detail: "Designed as an oversight layer, not a replacement for the owner workspace.",
+    area: "Oversight",
+    title: "See how Translend is doing",
+    description: "Give Admin a simple view of important activity, issues and product signals without replacing the company's day-to-day workspace.",
+    detail: "Future oversight layer.",
   },
   {
     stage: "RELEASED",
-    area: "Workspace",
+    area: "Company workspace",
     title: "Real company workspace",
-    description: "Translend operates against the authenticated, organisation-scoped company workspace rather than a demo-only surface.",
-    detail: "Current operational foundation.",
+    description: "The owner works inside the company's workspace rather than a demo, with people and operational records connected to the business.",
+    detail: "Available now.",
   },
   {
     stage: "RELEASED",
     area: "Fleet & people",
-    title: "Customer, truck and driver workflow",
-    description: "Owner workflows cover customer, truck and driver records, including linking drivers and assigning operational work.",
-    detail: "Current workflow foundation.",
+    title: "Customers, trucks and drivers",
+    description: "Create and manage customers, trucks and drivers, link drivers to trucks and prepare work for the road.",
+    detail: "Available now.",
   },
   {
     stage: "RELEASED",
-    area: "Driver operations",
-    title: "Trip and delivery workflow",
-    description: "Driver-side operations cover trip status, movement, unloading, delivery notes, proof of delivery and completion.",
-    detail: "Current operational workflow.",
+    area: "Trip operations",
+    title: "Trips and driver work",
+    description: "Drivers can see their work, update trip progress, handle movement and unloading, and record what happened on delivery.",
+    detail: "Available now.",
   },
   {
     stage: "RELEASED",
-    area: "Commercial follow-through",
-    title: "POD queue and invoice workspace",
-    description: "Completed deliveries can enter the owner-side POD and invoicing workflow for operational follow-through.",
-    detail: "The remaining accounting chain is tracked above.",
+    area: "Delivery records",
+    title: "Delivery notes and proof of delivery",
+    description: "Capture delivery details and proof, then bring completed work back to the owner for follow-through.",
+    detail: "Available now.",
   },
   {
     stage: "RELEASED",
-    area: "Quality",
-    title: "Controlled QA pass",
-    description: "The current product is being tightened against the owner's mobile, accessibility, copy, action hierarchy and error-recovery audit.",
-    detail: "QA remains controlled: fix the real application, verify, then checkpoint.",
+    area: "Owner follow-through",
+    title: "POD queue and invoicing",
+    description: "The owner can review completed delivery paperwork and move into the invoicing side of the business.",
+    detail: "Available now; commercial chain continues above.",
   },
 ];
 
@@ -104,10 +98,7 @@ export default function PipelinePage() {
         <header className={styles.header}>
           <div className={styles.brand}>
             <span className={styles.mark}>T</span>
-            <div>
-              <strong>Translend</strong>
-              <span>TMS · Truck Division</span>
-            </div>
+            <div><strong>Translend</strong><span>TMS · Truck Division</span></div>
           </div>
           <nav className={styles.nav} aria-label="Pipeline navigation">
             <Link href="/translend">Operations</Link>
@@ -118,35 +109,24 @@ export default function PipelinePage() {
         <section className={styles.hero}>
           <span className={styles.eyebrow}>Translend pipeline</span>
           <h1>The Truck Division keeps moving.</h1>
-          <p>
-            See what has shipped, what is being tightened now, and what is planned
-            next — with the real operational product kept separate from future admin
-            control.
-          </p>
-          <div className={styles.meta}>
-            <span>Seeded operational roadmap</span>
-            <span>Admin controls coming later</span>
-          </div>
+          <p>See what the app can do today, what we are tightening now, and what comes next. The owner can add dated updates and a Loom walkthrough below.</p>
+          <div className={styles.meta}><span>Owner updates are dated</span><span>Loom links welcome</span><span>Admin control later</span></div>
         </section>
 
         <section className={styles.stats} aria-label="Pipeline summary">
           <Stat label="Planned" value={counts.planned} />
           <Stat label="Building" value={counts.building} />
           <Stat label="Released" value={counts.released} />
-          <Stat label="Total tracked" value={items.length} />
+          <Stat label="Tracked" value={items.length} />
         </section>
 
         <section className={styles.board} aria-label="Translend product pipeline">
           {order.map((stage) => (
             <div className={styles.column} key={stage}>
               <div className={styles.columnHeader}>
-                <div>
-                  <span className={styles.stage}>{stage}</span>
-                  <h2>{stage === "BUILDING" ? "In the desk" : stage === "PLANNED" ? "What's next" : "Recently shipped"}</h2>
-                </div>
+                <div><span className={styles.stage}>{stage}</span><h2>{stage === "BUILDING" ? "Working on now" : stage === "PLANNED" ? "What's next" : "Already in the app"}</h2></div>
                 <span className={styles.count}>{items.filter((item) => item.stage === stage).length}</span>
               </div>
-
               <div className={styles.cards}>
                 {items.filter((item) => item.stage === stage).map((item) => (
                   <article className={styles.card} key={item.title}>
@@ -161,9 +141,11 @@ export default function PipelinePage() {
           ))}
         </section>
 
+        <PipelineUpdates />
+
         <footer className={styles.footer}>
-          <span>Translend TMS · Independent product pipeline</span>
-          <span>Public roadmap now · Admin control later</span>
+          <span>Translend TMS · Truck Division</span>
+          <span>Product pipeline · Owner updates</span>
         </footer>
       </div>
     </main>
@@ -171,10 +153,5 @@ export default function PipelinePage() {
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className={styles.stat}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
+  return <div className={styles.stat}><span>{label}</span><strong>{value}</strong></div>;
 }
