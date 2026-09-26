@@ -365,3 +365,19 @@ button { cursor: pointer; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+
+/* Mobile field-work safeguards: controls stay tappable and content can shrink without clipping. */
+.form-input, .form-select, .form-textarea, .input, select, textarea { min-width: 0; }
+button, .btn-primary, .btn-secondary { min-height: 40px; }
+.table-scroll, .overflow-x-auto { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 640px) {
+  .panel, .form-card, .dashboard-panel, .chart-panel { padding: 14px; }
+  .kpi-card, .ops-info-card, .manager-tile { min-height: 92px; padding: 14px; }
+  .kpi-value, .tile-value { font-size: 21px; }
+  .form-actions { width: 100%; }
+  .form-actions > button, .page-header > button, .section-header > button { width: 100%; }
+  .list-row { gap: 9px; padding: 11px 12px; }
+  .translend-topbar { min-width: 0; }
+  .topbar-left { min-width: 0; }
+  .topbar-left > div { min-width: 0; }
+}
