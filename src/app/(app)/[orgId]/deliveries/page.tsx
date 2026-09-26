@@ -154,7 +154,7 @@ export default function DeliveriesPage() {
               <div key={trip.id} className="flex flex-col gap-3 rounded-lg border border-amber-900/40 bg-amber-950/10 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-slate-200">{trip.jobNumber} · {trip.truckRegistration}</p>
-                  <p className="mt-1 text-xs text-slate-500">Driver: {trip.driverName} · Trip: {trip.id.slice(0, 8)}</p>
+                  <p className="mt-1 text-xs text-slate-500">Driver: {trip.driverName} · Trip: {trip.jobNumber}</p>
                 </div>
                 <button onClick={() => setTripTarget(trip)} className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500">Create delivery note</button>
               </div>
@@ -189,7 +189,7 @@ export default function DeliveriesPage() {
                   const note = noteForDelivery(delivery.id);
                   return (
                     <tr key={delivery.id} className="hover:bg-slate-900/60">
-                      <td className="px-4 py-3 text-slate-300">{delivery.tripId.slice(0, 8)}</td>
+                      <td className="px-4 py-3 text-slate-300">{trips.find((trip) => trip.id === delivery.tripId)?.jobNumber || "Trip record"}</td>
                       <td className="px-4 py-3 text-slate-300">{delivery.receivedByName || "—"}</td>
                       <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLE[delivery.status]}`}>{delivery.status}</span></td>
                       <td className="px-4 py-3 text-slate-400">{note ? note.materialLines.length : 0}</td>
