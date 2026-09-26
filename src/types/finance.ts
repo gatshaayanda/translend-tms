@@ -63,6 +63,8 @@ export interface Invoice extends BaseRecord {
   paidAt: Timestamp | null;
 }
 
+export interface JournalLine { account: string; side: "debit" | "credit"; amount: number; }
+
 export interface JournalEntry extends BaseRecord {
   entryDate: Timestamp;
   transactionType: string;
@@ -71,4 +73,5 @@ export interface JournalEntry extends BaseRecord {
   description: string;
   debitAccount: string;
   creditAccount: string;
+  lines?: JournalLine[];
 }
