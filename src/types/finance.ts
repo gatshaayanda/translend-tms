@@ -56,6 +56,12 @@ export interface Invoice extends BaseRecord {
   customerId: string;
   customerName: string;
   amount: number;
+  subtotalAmount?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  taxRate?: number;
+  taxCode?: string;
+  taxMode?: "exclusive" | "inclusive";
   currency: string;
   status: InvoiceStatus;
   issuedAt: Timestamp | null;
