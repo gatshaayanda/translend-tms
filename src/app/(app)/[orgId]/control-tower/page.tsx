@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { jobsRepo, tripsRepo, trucksRepo, driversRepo, deliveriesRepo } from "@/lib/firebase/modules";
-import type { Job, Trip, Truck, Driver, Delivery } from "@/types/core";
+import { jobsRepo, tripsRepo, trucksRepo, driversRepo, deliveriesRepo, deliveryNotesRepo, invoicesRepo } from "@/lib/firebase/modules";
+import type { Job, Trip, Truck, Driver, Delivery, DeliveryNote } from "@/types/core";
+import type { Invoice } from "@/types/finance";
 
 interface SnapshotData {
   jobs: Job[];
@@ -13,6 +14,8 @@ interface SnapshotData {
   trucks: Truck[];
   drivers: Driver[];
   deliveries: Delivery[];
+  deliveryNotes: DeliveryNote[];
+  invoices: Invoice[];
 }
 
 export default function ControlTowerPage() {
@@ -33,8 +36,10 @@ export default function ControlTowerPage() {
           trucksRepo.list(orgId, { environment: "LIVE" }),
           driversRepo.list(orgId, { environment: "LIVE" }),
           deliveriesRepo.list(orgId, { environment: "LIVE" }),
+          deliveryNotesRepo.list(orgId, { environment: "LIVE" }),
+          invoicesRepo.list(orgId, { environment: "LIVE" }),
         ]);
-        if (!cancelled) setData({ jobs, trips, trucks, drivers, deliveries });
+        if (!cancelled) setData({ jobs, trips, trucks, drivers, deliveries, deliveryNotes, invoices });
       } catch (err) {
         console.error("[ControlTowerPage] load failed:", err);
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load Control Tower data.");
@@ -58,6 +63,9 @@ export default function ControlTowerPage() {
   const trucksInMaintenance = data.trucks.filter((t) => t.status === "in_maintenance");
   const driversAvailable = data.drivers.filter((d) => d.status === "available");
   const exceptions = data.deliveries.filter((d) => d.status === "exception");
+  const podWaiting = data.deliveryNotes.filter((n) => n.podState !== "complete" && data.deliveries.some((d) => d.id === n.deliveryId && (d.status === "delivered" || d.status === "partial" || d.status === "exception")));
+  const billingReady = data.deliveryNotes.filter((n) => n.podState === "complete" && !data.invoices.some((i) => i.deliveryNoteId === n.id));
+  const overdueInvoices = data.invoices.filter((i) => i.status === "issued" && i.dueAt && i.dueAt.toMillis() < now);
   const isEmptyWorkspace = data.jobs.length === 0 && data.trucks.length === 0 && data.drivers.length === 0 && data.trips.length === 0;
 
   return (
@@ -83,6 +91,16 @@ export default function ControlTowerPage() {
             <StatCard label="In maintenance" value={trucksInMaintenance.length} accent="yellow" />
             <StatCard label="Drivers available" value={driversAvailable.length} accent="teal" />
             <StatCard label="POD exceptions" value={exceptions.length} accent="red" />
+          </section>
+
+          <section className="panel">
+            <div className="section-header"><div><h3>Next actions</h3><p className="panel-sub">Work that can move the operation forward now.</p></div></div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <ActionCard href={`/${activeOrg.id}/jobs`} label="Dispatch confirmed jobs" count={jobsAwaitingDispatch.length} detail="Confirmed jobs without a completed dispatch." tone="yellow" />
+              <ActionCard href={`/${activeOrg.id}/pod-queue`} label="Complete POD" count={podWaiting.length} detail="Delivered work still missing completed evidence." tone="red" />
+              <ActionCard href={`/${activeOrg.id}/invoicing`} label="Raise invoices" count={billingReady.length} detail="Completed PODs that are ready for billing." tone="green" />
+            </div>
+            {overdueInvoices.length > 0 && <div className="notice" style={{ marginTop: 14, borderColor: "#F3C3C3", background: "var(--red-100)", color: "#902323" }}><strong>{overdueInvoices.length} invoice{overdueInvoices.length === 1 ? "" : "s"} overdue.</strong> Review receivables in <Link href={`/${activeOrg.id}/business-controls`} style={{ textDecoration: "underline" }}>Business Controls</Link>.</div>}
           </section>
 
           <section className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
@@ -140,6 +158,12 @@ function StatCard({ label, value, accent }: { label: string; value: number; acce
 
 function Panel({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return <div className="panel"><h3>{title}</h3><p className="panel-sub">{subtitle}</p>{children}</div>;
+}
+
+function ActionCard({ href, label, count, detail, tone }: { href: string; label: string; count: number; detail: string; tone: "yellow" | "red" | "green" }) {
+  return <Link href={href} className="list-row" style={{ display: "block", textDecoration: "none", border: "1px solid var(--border)", borderRadius: 10 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}><div><strong>{label}</strong><span className="muted">{detail}</span></div><span className={`badge ${tone}`}>{count}</span></div>
+  </Link>;
 }
 
 function EmptyRow({ text }: { text: string }) {
