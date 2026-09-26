@@ -58,6 +58,7 @@ export default function DeliveriesPage() {
   const { activeOrg } = useWorkspace();
   const { user } = useAuth();
   const [deliveries, setDeliveries] = useState<Delivery[] | null>(null);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsAwaitingDelivery, setTripsAwaitingDelivery] = useState<Trip[]>([]);
   const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +86,7 @@ export default function DeliveriesPage() {
     ])
       .then(([trips, notes]) => {
         if (cancelled) return;
+        setTrips(trips);
         const deliveryTripIds = new Set((deliveries ?? []).map((d) => d.tripId));
         const completed = trips.filter(
           (t) => t.status === "completed" || t.status === "unloading",
