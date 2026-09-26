@@ -226,6 +226,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, supplierBillId: billRef.id, message: "Supplier bill created and posted to Accounts Payable." });
     }
 
+    if (action === "supplier_bill_payment") {
+      if (!ACCOUNTING_ROLES.has(role)) throw new ApiError(403, "Finance access required for supplier payments.");
+      const supplierBillId = String(body.supplierBillId ?? "");
+      const amount = Number(body.amount);
+      const reference = String(body.reference ?? "").trim() || `BPAY-${Date.now().toString(36).toUpperCase()}`;
+      if (!supplierBillId || !Number.isFinite(amount) || amount <= 0) throw new ApiError(400, "Supplier bill and positive payment amount are required.");
+      const billRef = db.doc(`organizations/${orgId}/supplierBills/${supplierBillId}`);
+      const journalRef = db.collection(`organizations/${orgId}/journalEntries`).doc();
+      const auditRef = db.collection(`organizations/${orgId}/auditEvents`).doc();
+      const paidAt = Timestamp.now();
+      await db.runTransaction(async (tx) => {
+        const billSnap = await tx.get(billRef);
+        if (!billSnap.exists || billSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Supplier bill not found.");
+        const bill = billSnap.data()!;
+        if (bill.status === "paid") throw new ApiError(409, "Supplier bill is already marked paid.");
+        if (amount > Number(bill.amount || 0)) throw new ApiError(409, "Payment cannot exceed the supplier bill amount.");
+        if (!await openPeriod(tx, db, orgId, paidAt)) throw new ApiError(409, "No open accounting period covers the payment date.");
+        const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
+        tx.update(billRef, { status: amount >= Number(bill.amount || 0) ? "paid" : "open", paidAt: amount >= Number(bill.amount || 0) ? paidAt : null, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid });
+        tx.set(journalRef, { ...base, entryDate: paidAt, transactionType: "Supplier payment", reference, amount, description: `Payment for supplier bill ${bill.reference}`, debitAccount: "Accounts Payable", creditAccount: "Cash at bank", supplierBillId });
+        tx.set(auditRef, audit(actor, "create", "supplierBillPayment", journalRef.id, `Supplier payment posted for ${bill.reference}.`, { supplierBillId, amount, reference }));
+      });
+      return NextResponse.json({ ok: true, message: "Supplier payment posted and the bill status was updated." });
+    }
+
     if (action === "reverse_journal") {
       if (!ACCOUNTING_ROLES.has(role)) throw new ApiError(403, "Finance access required for journal reversal.");
       const sourceId = String(body.sourceId ?? "");
