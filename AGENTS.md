@@ -193,3 +193,11 @@ Never use Pipeline work to justify switching application branches. If the next t
 
 Future agents:
 `read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace business mutation paths → inspect rules/indexes/config → use current UX/TMS research where it materially improves clarity → fix root cause → inspect diff → verify → update AGENTS.md → commit/push → report exact SHA/status`.
+
+
+## Final owner-QA hardening checkpoint — 2026-09-26
+- Invitation management now exposes the pending invitation expiry timestamp and a direct Re-invite action. Re-invite uses the existing server replacement behavior, issuing a fresh 7-day pending invitation and revoking the older pending invite for that email.
+- Business Controls no longer carries a dead subscription effect; customer payment and supplier-bill actions validate positive amounts client-side and disable the submit control while the server action is running.
+- Printable Tax Invoice and Delivery Note now have a retry action after load failure and explicit print control labeling; print output keeps the document page focused and A4-oriented.
+- Latest authoritative source checkpoint after this hardening pass: `8c28507e84aca0162f8d157b6230850bd1f6cbaa`.
+- These changes remain source-verified only until the authoritative deployment and owner browser/device walkthrough are verified.
