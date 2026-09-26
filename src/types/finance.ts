@@ -35,7 +35,15 @@ export interface SupplierPO extends BaseRecord {
   truckId: string | null;
   truckRegistration: string | null;
   description: string;
+  /** Gross invoice amount used for payment/AR settlement. */
   amount: number;
+  /** Authoritative tax breakdown captured when the invoice is issued. */
+  subtotalAmount?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  taxRate?: number;
+  taxCode?: string;
+  taxMode?: "exclusive" | "inclusive";
   currency: string;
   status: FinanceRecordStatus;
   workOrderId: string | null;
