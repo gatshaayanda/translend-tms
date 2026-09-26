@@ -27,8 +27,8 @@
 
 Every important workflow must trace the real mutation, authorization, atomicity, retry/idempotency, audit and reporting consequences. A screen or successful UI state is not proof that the business operation works.
 
-## Current development state — 2026-09-15
-The core Truck Division operating system is substantially implemented. Development is continuing on the remaining accounting/control modules before feature-complete status.
+## Current development state — 2026-09-26
+The core Truck Division operating system is substantially implemented. The project is now in the **finish-the-actual-app** phase.
 
 ### Implemented core
 - Company/workspace, authentication, membership and roles.
@@ -50,7 +50,52 @@ The core Truck Division operating system is substantially implemented. Developme
 - Canonical branded printable Tax Invoice and Delivery Note components/routes tied to authoritative LIVE records.
 - Vercel Analytics/Speed Insights infrastructure.
 
-### Latest development checkpoints
+## Product-finish priority — CURRENT RULE
+**Do not invent a separate “prove the main journey” workstream.** The product workflow is already the product's north star and is used as the standard against which implementation is checked. The remaining work is to make the existing app easier to understand and then finish the remaining accounting/control gaps.
+
+### Priority 1 — Make the actual app easier to understand and operate
+Use current logistics/TMS UX research and the owner's existing product feedback as input, but make changes against the actual authoritative implementation.
+
+Focus on:
+- clear role-based starting points and obvious next actions;
+- operations views that surface work needing attention instead of making users hunt;
+- clear active-job/load/trip stages and responsible person;
+- visible exceptions, missing documents and invoice-ready work;
+- a short path from completed delivery/POD to billing;
+- consistent terminology across Fleet, Trip, Delivery, POD and Finance;
+- progressive disclosure: important operational decisions first, secondary detail one level deeper;
+- less repetition and unnecessary whitespace;
+- strong visual hierarchy rather than dashboard/chart overload;
+- mobile readability and touch targets for field use;
+- honest offline/loading/error/empty states;
+- exception states that tell the user what happened and what to do next;
+- reports that feel like one connected financial system rather than unrelated screens.
+
+The objective is not a cosmetic redesign. **The app should make the right operational decision obvious.**
+
+### Priority 2 — Finish remaining accounting/control modules
+After the UX pass, finish the remaining substantive accounting/control work in this order:
+1. Complete VAT/tax integration — consume workspace settings during invoice creation, calculate tax-inclusive/exclusive totals, store authoritative subtotal/tax/total fields, post VAT correctly to the journal and render tax fields on the canonical invoice.
+2. Bank reconciliation — bank transaction/import model, matching against customer payments/journal entries, reconciliation state, controlled adjustments and audit trail.
+3. Payroll / driver settlement — driver/subcontractor settlement records, trip-linked earnings/costs, approval/payment state and journal consequences.
+4. Richer scheduled/export reporting — operational/financial report periods, durable exports and scheduled report infrastructure where useful.
+5. Provider integrations — email, push notifications, telematics and external/background mapping capabilities where a real provider is selected.
+
+These are the **actual product-finishing priorities**. Do not let roadmap administration, branch archaeology, or speculative features displace them.
+
+## Pipeline — STATUS/ROADMAP ONLY, NOT A PRODUCT WORKSTREAM
+**The Pipeline is already doing its job. Leave it alone while building the application.**
+
+`/pipeline` exists to help the owner see where the product is, what is being worked on, what has been released, and what the owner has requested. It is a status/roadmap aid, not a second application and not a feature-development priority.
+
+- Do not spend implementation time moving, rebuilding, securing, redesigning or otherwise developing the Pipeline unless the product owner explicitly asks for a Pipeline change.
+- Do not use the Pipeline's branch/history as a reason to change the authoritative application branch.
+- Do not repeatedly discuss or investigate Pipeline implementation while substantive application work remains.
+- When the product owner asks for a Pipeline/status update, update the status to reflect the actual application state and owner input; otherwise leave the Pipeline alone.
+- Owner input, including dated notes and optional Loom context, is product feedback. It is not a separate technical workstream.
+- **The goal is to finish Translend, not to finish the Pipeline.**
+
+## Latest development checkpoints
 - `0fd839c9f997d0b920117a4ede62cfc02a1f2ca5` — controlled Credit & Debit Notes.
 - `b54aa2afd7aaa9202e5d5c577c814cd78fab478d` — development checkpoint documentation update.
 - `51aca15c2570bee36f62fb220425b64994b59dd6` — workspace Tax & VAT controls.
@@ -66,26 +111,6 @@ The core Truck Division operating system is substantially implemented. Developme
 - `d46d00030586e9cd0306ba2f4fbf8bb9d01fba96` — fixed chooser selection race so selecting a workspace is not immediately cleared by workspace-resolution refresh.
 - `dbbd026ba239992ccb5a9db9710d73207a8e2bc7` — restored the intended multi-workspace flow: when multiple workspaces exist, login always clears the active workspace and shows the chooser; saved last-active workspace is not allowed to bypass the chooser.
 - `71146f16d165818f9f459d28ee1bf6dbc744a574` — authoritative app deployment checkpoint; use this branch/commit lineage for Translend production.
-
-### Multi-workspace / driver access hardening
-- Login checks pending workspace invitations before resolving memberships.
-- If the account has more than one resolved workspace, login intentionally leaves the active workspace unset so `WorkspaceChooserScreen` is always shown.
-- The chooser is the explicit decision point on every multi-workspace login: each workspace is shown with its membership role, and selecting it persists the active workspace and routes into that workspace.
-- Saved/local last-active workspace data must never auto-route a multi-workspace user past the chooser.
-- Selecting a driver membership opens `My Trip`; selecting an owner/operations membership opens `Operations Hub`.
-- Workspace resolution no longer depends on `activeOrgId` as a callback dependency; otherwise the chooser's selection could trigger a second resolution pass that reset the selection to null.
-- Driver navigation is intentionally limited to `My Trip`; the existing My Trip workflow contains driver trip actions, delivery actions, vehicle tools and GPS/location capture.
-- Driver direct-route access is bounded by the org layout; attempting management/finance or other non-driver routes redirects to `My Trip`.
-- Existing server-side role authorization remains authoritative for CRUD. UI visibility is not treated as the security boundary.
-- Driver GPS remains available through the existing authenticated location path and My Trip workflow; background tracking is not claimed.
-
-## Remaining substantive product development
-Priority order:
-1. **Complete VAT/tax integration** — consume workspace settings during invoice creation, calculate tax-inclusive/exclusive totals, store authoritative subtotal/tax/total fields, post VAT correctly to the journal and render tax fields on the canonical invoice.
-2. **Bank reconciliation** — bank transaction/import model, matching against customer payments/journal entries, reconciliation state, controlled adjustments and audit trail.
-3. **Payroll / driver settlement** — driver/subcontractor settlement records, trip-linked earnings/costs, approval/payment state and journal consequences.
-4. **Richer scheduled/export reporting** — operational/financial report periods, durable exports and scheduled report infrastructure where useful.
-5. **Provider integrations** — email, push notifications, telematics and external/background mapping capabilities where a real provider is selected.
 
 ## Hardening rules
 ### Firebase/security
@@ -140,5 +165,7 @@ Required sequence when tooling is available:
 
 Never call a deployment green without actual status evidence. Do not repeatedly trigger deployments while quota is exhausted.
 
+Never use Pipeline work to justify switching application branches. If the next task is application work, start from the authoritative application source and work on the actual product.
+
 Future agents:
-`read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace business mutation paths → inspect rules/indexes/config → attack retry/offline/concurrency/security edges → fix root cause → inspect diff → verify → update AGENTS.md → commit/push → report exact SHA/status`.
+`read AGENTS.md → confirm branch/current HEAD → inspect recent commits → trace business mutation paths → inspect rules/indexes/config → use current UX/TMS research where it materially improves clarity → fix root cause → inspect diff → verify → update AGENTS.md → commit/push → report exact SHA/status`.
