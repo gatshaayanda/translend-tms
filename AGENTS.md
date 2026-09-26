@@ -112,6 +112,19 @@ These are the **actual product-finishing priorities**. Do not let roadmap admini
 - `dbbd026ba239992ccb5a9db9710d73207a8e2bc7` — restored the intended multi-workspace flow: when multiple workspaces exist, login always clears the active workspace and shows the chooser; saved last-active workspace is not allowed to bypass the chooser.
 - `71146f16d165818f9f459d28ee1bf6dbc744a574` — authoritative app deployment checkpoint; use this branch/commit lineage for Translend production.
 
+## Owner-QA finish checkpoint — 2026-09-26
+- Fixed the missing `/translend` entry route so it now opens the signed-in user's workspace or the normal sign-in/root entry.
+- Hardened mobile controls and overflow behavior; small screens keep touch targets usable and content can scroll horizontally where tabular data genuinely requires it.
+- Delivery history and finance selectors now prefer human-readable Job, Delivery Note and truck references over raw Firestore IDs.
+- Delivery expense capture now supports linking fuel to the relevant Trip and Delivery Note, with server-side validation that the delivery belongs to the trip/truck.
+- Customer payment recording now goes through the server accounting action, enforcing outstanding-balance limits and posting the payment to Cash at bank / Accounts Receivable with audit evidence.
+- Supplier bills and supplier payments now use server accounting actions and post the corresponding accounting entries rather than relying only on client-side record mutation.
+- Invoice issuance now uses the server accounting action and workspace Tax & VAT settings; invoice records retain net/tax/gross data and VAT is represented in the journal.
+- Printable invoices and reports expose the stored tax breakdown.
+- Owner QA still requires real browser/device verification of mobile clipping, driver sign-in/workspace visibility, invitation expiry/re-invite behavior, delivery-note print readability, and error/offline recovery. These are verification items, not assumed green from source inspection alone.
+- Remaining product-finishing modules after owner-QA closure: bank reconciliation, driver/pay settlement, richer exports/scheduled reporting, and selected provider integrations.
+- Do not mark Translend finished until the owner-reported QA items above are tested against the deployed authoritative application.
+
 ## Current finish checkpoint — 2026-09-26
 - UX/clarity pass started from the authoritative application, not a parallel rebuild.
 - Operations Hub now surfaces actionable work: confirmed jobs awaiting dispatch, delivered work missing completed POD, completed PODs ready for invoicing, and overdue issued invoices.
