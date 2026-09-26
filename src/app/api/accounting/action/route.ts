@@ -72,11 +72,11 @@ export async function POST(request: Request) {
         if (job.customerId !== customerId) throw new ApiError(409, "The selected Customer does not match the Job.");
         const existing = await tx.get(db.collection(`organizations/${orgId}/invoices`).where("environment", "==", "LIVE").where("deliveryNoteId", "==", deliveryNoteId).where("deletedAt", "==", null));
         if (!existing.empty) throw new ApiError(409, "This completed delivery already has an invoice.");
-        const reference = `INV-\${invoiceRef.id.slice(0, 10).toUpperCase()}`;
+        const reference = `INV-${invoiceRef.id.slice(0, 10).toUpperCase()}`;
         invoiceNumber = reference;
         const dueAt = Timestamp.fromMillis(issuedAt.toMillis() + Number(customer.paymentTermsDays || 0) * 86400000);
         if (!await openPeriod(tx, db, orgId, issuedAt)) throw new ApiError(409, "No open accounting period covers the invoice date.");
-        const taxSnap = await tx.get(db.doc(`organizations/\${orgId}/taxSettings/default`));
+        const taxSnap = await tx.get(db.doc(`organizations/${orgId}/taxSettings/default`));
         const taxSettings: TaxSettings = {
           enabled: Boolean(taxSnap.data()?.enabled),
           standardRate: Number(taxSnap.data()?.standardRate ?? 0),
@@ -88,12 +88,12 @@ export async function POST(request: Request) {
         const tax = calculateTax(Number(job.rate), taxSettings);
         const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
         tx.set(invoiceRef, { ...base, invoiceNumber: reference, deliveryNoteId, jobId, customerId, customerName: customer.name, amount: tax.grossAmount, subtotalAmount: tax.netAmount, taxAmount: tax.taxAmount, totalAmount: tax.grossAmount, taxRate: tax.rate, taxCode: tax.taxCode, taxMode: tax.mode, currency: String(job.currency || customer.currency || "BWP"), status: "issued", issuedAt, dueAt, paidAt: null });
-        tx.set(journalRef, { ...base, entryDate: issuedAt, transactionType: "Customer invoice", reference, amount: tax.grossAmount, description: `Invoice for \${note.noteReference}`, debitAccount: "Accounts Receivable", creditAccount: "Haulage Revenue", invoiceId: invoiceRef.id, deliveryNoteId, jobId, customerId, taxAmount: tax.taxAmount, taxRate: tax.rate, taxCode: tax.taxCode, lines: [
+        tx.set(journalRef, { ...base, entryDate: issuedAt, transactionType: "Customer invoice", reference, amount: tax.grossAmount, description: `Invoice for ${note.noteReference}`, debitAccount: "Accounts Receivable", creditAccount: "Haulage Revenue", invoiceId: invoiceRef.id, deliveryNoteId, jobId, customerId, taxAmount: tax.taxAmount, taxRate: tax.rate, taxCode: tax.taxCode, lines: [
           { account: "Accounts Receivable", side: "debit", amount: tax.grossAmount },
           { account: "Haulage Revenue", side: "credit", amount: tax.netAmount },
           ...(tax.taxAmount > 0 ? [{ account: "VAT Payable", side: "credit" as const, amount: tax.taxAmount }] : []),
         ] });
-        tx.set(auditRef, audit(actor, "create", "invoice", invoiceRef.id, `Invoice \${reference} raised from completed delivery.`, { deliveryNoteId, jobId, customerId, subtotalAmount: tax.netAmount, taxAmount: tax.taxAmount, totalAmount: tax.grossAmount, taxRate: tax.rate, taxCode: tax.taxCode }));
+        tx.set(auditRef, audit(actor, "create", "invoice", invoiceRef.id, `Invoice ${reference} raised from completed delivery.`, { deliveryNoteId, jobId, customerId, subtotalAmount: tax.netAmount, taxAmount: tax.taxAmount, totalAmount: tax.grossAmount, taxRate: tax.rate, taxCode: tax.taxCode }));
       });
       return NextResponse.json({ ok: true, invoiceId: invoiceRef.id, invoiceNumber, message: `${invoiceNumber} was raised and posted to Accounts Receivable.` });
     }
@@ -118,16 +118,16 @@ export async function POST(request: Request) {
         const truckSnap = await tx.get(truckRef);
         if (!truckSnap.exists || truckSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Live truck not found.");
         if (tripId) {
-          const tripSnap = await tx.get(db.doc(\`organizations/\${orgId}/trips/\${tripId}\`));
+          const tripSnap = await tx.get(db.doc(`organizations/${orgId}/trips/${tripId}`));
           if (!tripSnap.exists || tripSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Linked live trip not found.");
           if (tripSnap.data()?.truckId !== truckId) throw new ApiError(409, "Linked trip does not belong to the selected truck.");
           if (deliveryNoteId) {
-            const noteSnap = await tx.get(db.doc(\`organizations/\${orgId}/deliveryNotes/\${deliveryNoteId}\`));
+            const noteSnap = await tx.get(db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`));
             if (!noteSnap.exists || noteSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Linked delivery note not found.");
             if (noteSnap.data()?.tripId !== tripId) throw new ApiError(409, "Delivery note does not belong to the selected trip.");
           }
         } else if (deliveryNoteId) {
-          const noteSnap = await tx.get(db.doc(\`organizations/\${orgId}/deliveryNotes/\${deliveryNoteId}\`));
+          const noteSnap = await tx.get(db.doc(`organizations/${orgId}/deliveryNotes/${deliveryNoteId}`));
           if (!noteSnap.exists || noteSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Linked delivery note not found.");
           if (noteSnap.data()?.vehicleRegistration !== truckSnap.data()?.registrationNumber) throw new ApiError(409, "Delivery note does not belong to the selected truck.");
         }
