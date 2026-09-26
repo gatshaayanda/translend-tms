@@ -88,11 +88,11 @@ export async function POST(request: Request) {
         const tax = calculateTax(Number(job.rate), taxSettings);
         const base = { orgId, environment: "LIVE", createdAt: FieldValue.serverTimestamp(), createdBy: user.uid, updatedAt: FieldValue.serverTimestamp(), updatedBy: user.uid, deletedAt: null };
         tx.set(invoiceRef, { ...base, invoiceNumber: reference, deliveryNoteId, jobId, customerId, customerName: customer.name, amount: tax.grossAmount, subtotalAmount: tax.netAmount, taxAmount: tax.taxAmount, totalAmount: tax.grossAmount, taxRate: tax.rate, taxCode: tax.taxCode, taxMode: tax.mode, currency: String(job.currency || customer.currency || "BWP"), status: "issued", issuedAt, dueAt, paidAt: null });
-        tx.set(journalRef, { ...base, entryDate: issuedAt, transactionType: "Customer invoice", reference, amount: tax.grossAmount, description: \`Invoice for \${note.noteReference}\`, debitAccount: "Accounts Receivable", creditAccount: "Haulage Revenue", invoiceId: invoiceRef.id, deliveryNoteId, jobId, customerId, taxAmount: tax.taxAmount, taxRate: tax.rate, taxCode: tax.taxCode });
-        if (tax.taxAmount > 0) {
-          const vatJournalRef = db.collection(\`organizations/\${orgId}/journalEntries\`).doc();
-          tx.set(vatJournalRef, { ...base, entryDate: issuedAt, transactionType: "VAT on customer invoice", reference: \`\${reference}-VAT\`, amount: tax.taxAmount, description: \`VAT on \${reference}\`, debitAccount: "Haulage Revenue", creditAccount: "VAT Payable", invoiceId: invoiceRef.id, deliveryNoteId, jobId, customerId, taxRate: tax.rate, taxCode: tax.taxCode });
-        }
+        tx.set(journalRef, { ...base, entryDate: issuedAt, transactionType: "Customer invoice", reference, amount: tax.grossAmount, description: \`Invoice for \${note.noteReference}\`, debitAccount: "Accounts Receivable", creditAccount: "Haulage Revenue", invoiceId: invoiceRef.id, deliveryNoteId, jobId, customerId, taxAmount: tax.taxAmount, taxRate: tax.rate, taxCode: tax.taxCode, lines: [
+          { account: "Accounts Receivable", side: "debit", amount: tax.grossAmount },
+          { account: "Haulage Revenue", side: "credit", amount: tax.netAmount },
+          ...(tax.taxAmount > 0 ? [{ account: "VAT Payable", side: "credit" as const, amount: tax.taxAmount }] : []),
+        ] });
         tx.set(auditRef, audit(actor, "create", "invoice", invoiceRef.id, \`Invoice \${reference} raised from completed delivery.\`, { deliveryNoteId, jobId, customerId, subtotalAmount: tax.netAmount, taxAmount: tax.taxAmount, totalAmount: tax.grossAmount, taxRate: tax.rate, taxCode: tax.taxCode }));
       });
       return NextResponse.json({ ok: true, invoiceId: invoiceRef.id, invoiceNumber, message: `${invoiceNumber} was raised and posted to Accounts Receivable.` });
