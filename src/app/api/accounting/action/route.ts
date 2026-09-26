@@ -106,6 +106,7 @@ export async function POST(request: Request) {
       const odometerKm = Number(body.odometerKm || 0);
       const supplier = String(body.supplier ?? "").trim();
       const tripId = body.tripId ? String(body.tripId) : null;
+      const deliveryNoteId = body.deliveryNoteId ? String(body.deliveryNoteId) : null;
       const logDateMillis = Number(body.logDateMillis);
       if (!truckId || !Number.isFinite(litres) || litres <= 0 || !Number.isFinite(totalCost) || totalCost <= 0 || !Number.isFinite(odometerKm) || odometerKm < 0 || !Number.isFinite(logDateMillis)) throw new ApiError(400, "Truck, positive litres, positive cost, valid odometer and date are required.");
       const truckRef = db.doc(`organizations/${orgId}/trucks/${truckId}`);
@@ -117,9 +118,18 @@ export async function POST(request: Request) {
         const truckSnap = await tx.get(truckRef);
         if (!truckSnap.exists || truckSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Live truck not found.");
         if (tripId) {
-          const tripSnap = await tx.get(db.doc(`organizations/${orgId}/trips/${tripId}`));
+          const tripSnap = await tx.get(db.doc(\`organizations/\${orgId}/trips/\${tripId}\`));
           if (!tripSnap.exists || tripSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Linked live trip not found.");
           if (tripSnap.data()?.truckId !== truckId) throw new ApiError(409, "Linked trip does not belong to the selected truck.");
+          if (deliveryNoteId) {
+            const noteSnap = await tx.get(db.doc(\`organizations/\${orgId}/deliveryNotes/\${deliveryNoteId}\`));
+            if (!noteSnap.exists || noteSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Linked delivery note not found.");
+            if (noteSnap.data()?.tripId !== tripId) throw new ApiError(409, "Delivery note does not belong to the selected trip.");
+          }
+        } else if (deliveryNoteId) {
+          const noteSnap = await tx.get(db.doc(\`organizations/\${orgId}/deliveryNotes/\${deliveryNoteId}\`));
+          if (!noteSnap.exists || noteSnap.data()?.environment !== "LIVE") throw new ApiError(404, "Linked delivery note not found.");
+          if (noteSnap.data()?.vehicleRegistration !== truckSnap.data()?.registrationNumber) throw new ApiError(409, "Delivery note does not belong to the selected truck.");
         }
         const truck = truckSnap.data()!;
         const now = Timestamp.now();
