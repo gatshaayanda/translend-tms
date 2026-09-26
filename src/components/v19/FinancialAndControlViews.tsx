@@ -95,7 +95,7 @@ function FuelView({ trucks, trips, deliveryNotes, fuelLogs, workOrders, supplier
       const token = await user.getIdToken();
       const response = await fetch("/api/accounting/action", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: \`Bearer \${token}\` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           orgId: activeOrg.id,
           action: "fuel_expense",
@@ -106,7 +106,7 @@ function FuelView({ trucks, trips, deliveryNotes, fuelLogs, workOrders, supplier
           supplier: fuel.supplier.trim(),
           tripId: fuel.tripId || null,
           deliveryNoteId: fuel.deliveryNoteId || null,
-          logDateMillis: new Date(\`\${fuel.date}T00:00:00\`).getTime(),
+          logDateMillis: new Date(`${fuel.date}T00:00:00`).getTime(),
         }),
       });
       const result = await response.json().catch(() => ({}));
