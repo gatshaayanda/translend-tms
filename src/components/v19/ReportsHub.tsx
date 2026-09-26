@@ -63,7 +63,7 @@ export function ReportsHub({ orgId }: { orgId: string }) {
     const trip = data.trips.find((item) => item.id === delivery.tripId);
     return { delivery: delivery.deliveryNoteId ?? delivery.id.slice(0, 8), job: trip?.jobNumber ?? delivery.jobId, truck: trip?.truckRegistration ?? "—", status: delivery.status, podState: delivery.podState ?? "not_started", required: required.length, approvedRequired: approvedRequired.length, rejected: rejected.length, readiness: required.length > 0 && approvedRequired.length >= required.length ? "ready" : delivery.status === "exception" ? "exception" : "needs evidence" };
   }), [data]);
-  const invoiceRows = useMemo(() => data.invoices.map((invoice) => ({ invoice: invoice.invoiceNumber, customer: invoice.customerName, status: invoice.status, amount: money(invoice.amount, invoice.currency), issued: date(invoice.issuedAt), due: date(invoice.dueAt), paid: date(invoice.paidAt) })), [data]);
+  const invoiceRows = useMemo(() => data.invoices.map((invoice) => ({ invoice: invoice.invoiceNumber, customer: invoice.customerName, status: invoice.status, net: money(invoice.subtotalAmount ?? invoice.amount, invoice.currency), vat: money(invoice.taxAmount ?? 0, invoice.currency), total: money(invoice.totalAmount ?? invoice.amount, invoice.currency), issued: date(invoice.issuedAt), due: date(invoice.dueAt), paid: date(invoice.paidAt) })), [data]);
   const customerRows = useMemo(() => data.customers.map((customer) => ({ customer: customer.name, status: customer.status, jobs: customer.stats.openJobs, activeTrips: customer.stats.activeTrips, outstanding: money(customer.stats.outstandingBalance, customer.currency), lastActivity: date(customer.stats.lastActivityAt) })), [data]);
 
   const exportRows = () => {
