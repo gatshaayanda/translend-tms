@@ -30,7 +30,7 @@ export default function ControlTowerPage() {
 
     async function load() {
       try {
-        const [jobs, trips, trucks, drivers, deliveries] = await Promise.all([
+        const [jobs, trips, trucks, drivers, deliveries, deliveryNotes, invoices] = await Promise.all([
           jobsRepo.list(orgId, { environment: "LIVE" }),
           tripsRepo.list(orgId, { environment: "LIVE" }),
           trucksRepo.list(orgId, { environment: "LIVE" }),
