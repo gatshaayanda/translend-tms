@@ -47,7 +47,7 @@ export default function TeamPage() {
     finally { setReinviting(null); }
   };
 
-  const invite = async (event: FormEvent) =>
+  const invite = async (event: FormEvent) => {
     event.preventDefault(); if (!user || !email.trim()) return;
     setSaving(true); setMessage(null); setError(null);
     try {
