@@ -112,6 +112,17 @@ These are the **actual product-finishing priorities**. Do not let roadmap admini
 - `dbbd026ba239992ccb5a9db9710d73207a8e2bc7` — restored the intended multi-workspace flow: when multiple workspaces exist, login always clears the active workspace and shows the chooser; saved last-active workspace is not allowed to bypass the chooser.
 - `71146f16d165818f9f459d28ee1bf6dbc744a574` — authoritative app deployment checkpoint; use this branch/commit lineage for Translend production.
 
+## Current finish checkpoint — 2026-09-26
+- UX/clarity pass started from the authoritative application, not a parallel rebuild.
+- Operations Hub now surfaces actionable work: confirmed jobs awaiting dispatch, delivered work missing completed POD, completed PODs ready for invoicing, and overdue issued invoices.
+- Primary navigation grouping is clearer and stale NEW badges were removed so badges communicate actual attention rather than novelty.
+- Invoice creation now consumes workspace Tax & VAT settings server-side at issue time and stores authoritative net, tax, gross/total, rate, code and mode fields.
+- VAT-enabled invoices post a balanced multi-line journal: Accounts Receivable debit = gross; Haulage Revenue credit = net; VAT Payable credit = tax.
+- Financial statement aggregation reads multi-line journal entries while retaining backward compatibility with existing single-line journal entries.
+- Printable Tax Invoice now renders the stored subtotal, VAT rate/amount and total.
+- Invoice register now exposes net/VAT/total so billing control is visible without opening each document.
+- These changes are on \`finish/translend-ux-and-accounting\`. They require typecheck/lint/build and affected workflow QA before being treated as verified.
+
 ## Hardening rules
 ### Firebase/security
 - Server-controlled Trip/Delivery/finance/exception collections are client-write denied.
