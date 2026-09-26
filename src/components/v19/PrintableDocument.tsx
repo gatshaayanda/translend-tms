@@ -76,7 +76,7 @@ function InvoiceDocument({ data, org }: { data: Related; org: any }) {
   const subtotal = Number(invoice.subtotalAmount ?? invoice.amount ?? 0);
   const taxAmount = Number(invoice.taxAmount ?? 0);
   const quantity = note?.materialLines?.reduce((sum, line) => sum + Number(line.quantity || 0), 0) || 1;
-  const unit = quantity > 0 ? amount / quantity : amount;
+  const unit = quantity > 0 ? subtotal / quantity : subtotal;
   return <main className="document-shell">
     <div className="document-actions"><button className="btn-primary" onClick={() => window.print()}>Print / Save PDF</button><a className="btn-secondary" href={`/${org.id}/business-controls`}>Back to Business Controls</a></div>
     <article className="print-page">
