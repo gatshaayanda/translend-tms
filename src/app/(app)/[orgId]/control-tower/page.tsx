@@ -90,15 +90,16 @@ export default function ControlTowerPage() {
             <StatCard label="Trucks available" value={trucksAvailable.length} accent="blue" />
             <StatCard label="In maintenance" value={trucksInMaintenance.length} accent="yellow" />
             <StatCard label="Drivers available" value={driversAvailable.length} accent="teal" />
-            <StatCard label="POD exceptions" value={exceptions.length} accent="red" />
+            <StatCard label="Delivery exceptions" value={exceptions.length} accent="red" />
           </section>
 
           <section className="panel">
             <div className="section-header"><div><h3>Next actions</h3><p className="panel-sub">Work that can move the operation forward now.</p></div></div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
               <ActionCard href={`/${activeOrg.id}/jobs`} label="Dispatch confirmed jobs" count={jobsAwaitingDispatch.length} detail="Confirmed jobs without a completed dispatch." tone="yellow" />
               <ActionCard href={`/${activeOrg.id}/pod-queue`} label="Complete POD" count={podWaiting.length} detail="Delivered work still missing completed evidence." tone="red" />
               <ActionCard href={`/${activeOrg.id}/invoicing`} label="Raise invoices" count={billingReady.length} detail="Completed PODs that are ready for billing." tone="green" />
+              <ActionCard href={`/${activeOrg.id}/deliveries`} label="Review delivery exceptions" count={exceptions.length} detail="Deliveries that need an operational decision or correction." tone="red" />
             </div>
             {overdueInvoices.length > 0 && <div className="notice" style={{ marginTop: 14, borderColor: "#F3C3C3", background: "var(--red-100)", color: "#902323" }}><strong>{overdueInvoices.length} invoice{overdueInvoices.length === 1 ? "" : "s"} overdue.</strong> Review receivables in <Link href={`/${activeOrg.id}/business-controls`} style={{ textDecoration: "underline" }}>Business Controls</Link>.</div>}
           </section>
@@ -115,12 +116,12 @@ export default function ControlTowerPage() {
                       <span className="badge red">Delayed</span>
                     </div>
                   ))}
-                  {exceptions.map((d) => (
+                  {exceptions.map((d) => { const note = data.deliveryNotes.find((n) => n.deliveryId === d.id); const trip = data.trips.find((t) => t.id === d.tripId); return (
                     <div key={d.id} className="list-row">
-                      <div><strong>Delivery {d.id.slice(0, 6)}</strong><span className="muted">{d.exceptionReason ?? "Delivery exception requires review."}</span></div>
+                      <div><strong>{note?.noteReference ?? trip?.jobNumber ?? "Delivery"}</strong><span className="muted">{note?.customerName ? `${note.customerName} · ` : ""}{d.exceptionReason ?? "Delivery exception requires review."}</span></div>
                       <span className="badge red">Exception</span>
                     </div>
-                  ))}
+                  ); })}
                 </div>
               )}
             </Panel>
