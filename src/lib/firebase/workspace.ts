@@ -16,8 +16,6 @@ import {
   setDoc,
   updateDoc,
   collection,
-  query,
-  where,
   getDocs,
   serverTimestamp,
   runTransaction,
@@ -68,12 +66,32 @@ export async function setLastActiveOrg(uid: string, orgId: string) {
  * normal "brand new user" case and callers should route to
  * company setup, not treat it as an error.
  */
-export async function getMembershipsForUser(uid: string): Promise<OrgMember[]> {
-  const { db } = getFirebase();
-  const { collectionGroup } = await import("firebase/firestore");
-  const membersQuery = query(collectionGroup(db, "members"), where("uid", "==", uid), where("status", "==", "active"));
-  const snap = await getDocs(membersQuery);
-  return snap.docs.map((d) => d.data() as OrgMember);
+export interface WorkspaceSnapshot {
+  memberships: OrgMember[];
+  organizations: Organization[];
+}
+
+/**
+ * Resolves workspace membership through the authenticated server route.
+ * This keeps workspace discovery independent of the client's collection-group
+ * rules while leaving normal business-data access protected by Firestore rules.
+ */
+export async function getWorkspaceForUser(uid: string): Promise<WorkspaceSnapshot> {
+  const { auth } = getFirebase();
+  const currentUser = auth.currentUser;
+  if (!currentUser || currentUser.uid !== uid) throw new Error("Authentication required.");
+  const token = await currentUser.getIdToken();
+  const response = await fetch("/api/workspace", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? "We couldn't load your workspace.");
+  return {
+    memberships: Array.isArray(data.memberships) ? data.memberships as OrgMember[] : [],
+    organizations: Array.isArray(data.organizations) ? data.organizations as Organization[] : [],
+  };
 }
 
 export async function getOrganization(orgId: string): Promise<Organization | null> {
