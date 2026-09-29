@@ -201,3 +201,16 @@ Future agents:
 - Printable Tax Invoice and Delivery Note now have a retry action after load failure and explicit print control labeling; print output keeps the document page focused and A4-oriented.
 - Latest authoritative source checkpoint after this hardening pass: `8c28507e84aca0162f8d157b6230850bd1f6cbaa`.
 - These changes remain source-verified only until the authoritative deployment and owner browser/device walkthrough are verified.
+
+## Operational visibility completion checkpoint — 2026-09-29
+- Re-inspected the authoritative app top-down across Customers → Jobs / orders → Dispatch / Trips → Deliveries / POD → Invoicing.
+- Added a shared workflow-progress component at `src/components/v19/WorkflowNextStep.tsx` so the core screens visibly explain where the current record sits and where the user goes next.
+- Customers now expose the operational path from customer → job/order → dispatch → delivery/POD → invoice/payment.
+- Jobs now expose the same lifecycle and show a direct next-action link for confirmed, dispatched/in-progress and completed work.
+- Trips / Dispatch now show the lifecycle position and direct the operator to Delivery / POD when a trip reaches unloading/completion.
+- Deliveries now show the lifecycle position and directly distinguish incomplete POD work from completed-POD work ready for invoicing.
+- Invoicing now shows its place at the end of the same operational chain instead of behaving like a disconnected financial screen.
+- This is a workflow/operational-clarity implementation pass, not a cosmetic dashboard redesign. The intended rule is: a user should be able to see what happened, what stage the work is in, and what to do next without hunting through navigation.
+- Source implementation checkpoint: `10b78e66421ffdc0f4be69c58be3ff0781903e15` plus the preceding workflow commits on `v19-authoritative`.
+- Still required before calling this visibility work fully verified: typecheck/lint/build and deployed browser walkthrough across the affected screens. Do not claim those checks passed from source inspection alone.
+- Remaining substantive product-finishing modules are unchanged: bank reconciliation, driver/pay settlement, richer scheduled/export reporting, and selected provider integrations.
