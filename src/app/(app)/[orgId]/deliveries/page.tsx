@@ -18,6 +18,7 @@ import type {
   BaseRecord,
 } from "@/types/core";
 import type { ReactNode } from "react";
+import { WorkflowNextStep } from "@/components/v19/WorkflowNextStep";
 
 const STATUS_STYLE: Record<DeliveryStatus, string> = {
   pending: "bg-slate-800 text-slate-400",
@@ -138,6 +139,15 @@ export default function DeliveriesPage() {
         <h1 className="text-xl font-semibold text-slate-50">Deliveries</h1>
         <p className="mt-1 text-sm text-slate-400">Build the delivery record first; POD and exception workflow follows from it.</p>
       </header>
+      <WorkflowNextStep
+        steps={[
+          { label: "Customer", state: "done", href: `/${activeOrg.id}/customers` },
+          { label: "Job / order", state: "done", href: `/${activeOrg.id}/jobs` },
+          { label: "Dispatch / trip", state: "done", href: `/${activeOrg.id}/trips` },
+          { label: "Delivery + POD", state: "current" },
+          { label: "Invoice + payment", state: "next", href: `/${activeOrg.id}/invoicing` },
+        ]}
+      />
 
       {error && (
         <div className="rounded-md border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">
@@ -196,7 +206,7 @@ export default function DeliveriesPage() {
                       <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLE[delivery.status]}`}>{delivery.status}</span></td>
                       <td className="px-4 py-3 text-slate-400">{note ? note.materialLines.length : 0}</td>
                       <td className="px-4 py-3">
-                        {note ? <button onClick={() => setNoteTarget(note)} className="text-sky-400 hover:underline">{note.noteReference}</button> : <button onClick={() => openExistingNote(delivery)} className="text-slate-500 hover:text-slate-300">Create note</button>}
+                        {note ? <div className="flex flex-wrap items-center gap-2"><button onClick={() => setNoteTarget(note)} className="text-sky-400 hover:underline">{note.noteReference}</button>{note.podState === "complete" ? <a href={`/${activeOrg.id}/invoicing`} className="text-xs text-emerald-400 hover:underline">Invoice →</a> : <a href={`/${activeOrg.id}/pod-queue`} className="text-xs text-amber-400 hover:underline">Complete POD →</a>}</div> : <button onClick={() => openExistingNote(delivery)} className="text-slate-500 hover:text-slate-300">Create note</button>}
                       </td>
                     </tr>
                   );
