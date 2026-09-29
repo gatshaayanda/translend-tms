@@ -77,13 +77,13 @@ export function FleetLiveMap({ events, trucks }: { events: TruckLocationEvent[];
         marker.addListener("click", () => setSelectedTruckId(event.truckId));
         markersRef.current.set(event.truckId, marker);
       }
-      marker.setPosition({ lat: event.latitude, lng: event.longitude });
+      marker.setPosition({ lat: Number(event.latitude ?? 0), lng: Number(event.longitude ?? 0) });
       marker.setTitle(`${label} · ${status.toUpperCase()}`);
       marker.setIcon({ path: window.google.maps.SymbolPath.CIRCLE, scale: status === "stale" ? 7 : 8, fillColor: status === "moving" ? "#15803d" : status === "stale" ? "#dc2626" : "#d97706", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 });
     }
     if (rows.length && !selectedTruckId) {
       const bounds = new window.google.maps.LatLngBounds();
-      rows.forEach(({ event }) => bounds.extend({ lat: event.latitude, lng: event.longitude }));
+      rows.forEach(({ event }) => bounds.extend({ lat: Number(event.latitude ?? 0), lng: Number(event.longitude ?? 0) }));
       map.fitBounds(bounds, 72);
     }
   }, [mapReady, rows, selectedTruckId]);
@@ -94,7 +94,7 @@ export function FleetLiveMap({ events, trucks }: { events: TruckLocationEvent[];
     if (!selectedTruckId) return;
     const points = events.filter(e => e.truckId === selectedTruckId).sort((a, b) => (a.capturedAt?.toMillis?.() ?? 0) - (b.capturedAt?.toMillis?.() ?? 0)).slice(-200);
     if (points.length < 2) return;
-    routeRef.current = new window.google.maps.Polyline({ path: points.map(e => ({ lat: e.latitude, lng: e.longitude })), geodesic: true, strokeOpacity: 0.85, strokeWeight: 4, map: mapRef.current });
+    routeRef.current = new window.google.maps.Polyline({ path: points.map(e => ({ lat: Number(e.latitude ?? 0), lng: Number(e.longitude ?? 0) })), geodesic: true, strokeOpacity: 0.85, strokeWeight: 4, map: mapRef.current });
   }, [events, mapReady, selectedTruckId]);
 
   useEffect(() => () => {
@@ -114,7 +114,7 @@ export function FleetLiveMap({ events, trucks }: { events: TruckLocationEvent[];
     {mapError && <div className="notice red">{mapError}</div>}
     {apiKey && <div ref={mapElement} style={{ minHeight: 430, borderRadius: 14, overflow: "hidden", background: "#e5e7eb" }} />}
     <div className="section-header" style={{ marginTop: 18 }}><div><h3 className="section-title">Latest truck positions</h3><p className="section-sub">{rows.length} truck position{rows.length === 1 ? "" : "s"} match the current filter.</p></div></div>
-    {!rows.length ? <div className="notice blue">No location events match this filter yet. Start driver location capture or connect the company's telematics provider.</div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Truck</th><th>Status</th><th>Last position</th><th>Accuracy</th><th>Source</th><th /></tr></thead><tbody>{rows.map(({ event, truck }) => { const status = statusFor(event), captured = event.capturedAt?.toDate?.(); return <tr key={event.truckId}><td><strong>{truck?.registration ?? event.truckId}</strong><div className="muted">{truck?.make ?? "Truck"} {truck?.model ?? ""}</div></td><td><span className={`badge ${status === "moving" ? "green" : status === "stale" ? "red" : "orange"}`}>{status.toUpperCase()}</span></td><td>{event.latitude.toFixed(5)}, {event.longitude.toFixed(5)}<div className="muted">{captured ? captured.toLocaleString() : "Unknown time"}</div></td><td>{event.accuracyMeters == null ? "—" : `${Math.round(event.accuracyMeters)} m`}</td><td>{event.source === "driver_gps" ? "Driver GPS" : "Telematics"}</td><td><button className="btn-secondary" onClick={() => focus(event)}>Focus</button></td></tr>; })}</tbody></table></div>}
+    {!rows.length ? <div className="notice blue">No location events match this filter yet. Start driver location capture or connect the company's telematics provider.</div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Truck</th><th>Status</th><th>Last position</th><th>Accuracy</th><th>Source</th><th /></tr></thead><tbody>{rows.map(({ event, truck }) => { const status = statusFor(event), captured = event.capturedAt?.toDate?.(); return <tr key={event.truckId}><td><strong>{truck?.registration ?? event.truckId}</strong><div className="muted">{truck?.make ?? "Truck"} {truck?.model ?? ""}</div></td><td><span className={`badge ${status === "moving" ? "green" : status === "stale" ? "red" : "orange"}`}>{status.toUpperCase()}</span></td><td>{Number(event.latitude ?? 0).toFixed(5)}, {Number(event.longitude ?? 0).toFixed(5)}<div className="muted">{captured ? captured.toLocaleString() : "Unknown time"}</div></td><td>{event.accuracyMeters == null ? "—" : `${Math.round(event.accuracyMeters)} m`}</td><td>{event.source === "driver_gps" ? "Driver GPS" : "Telematics"}</td><td><button className="btn-secondary" onClick={() => focus(event)}>Focus</button></td></tr>; })}</tbody></table></div>}
     {selectedTruckId && <div className="notice blue" style={{ marginTop: 14 }}>Selected truck: {truckById.get(selectedTruckId)?.registration ?? selectedTruckId}. Route trail uses the latest 200 location points for this truck.</div>}
   </section>;
 }
