@@ -214,3 +214,27 @@ Future agents:
 - Source implementation checkpoint: `10b78e66421ffdc0f4be69c58be3ff0781903e15` plus the preceding workflow commits on `v19-authoritative`.
 - Still required before calling this visibility work fully verified: typecheck/lint/build and deployed browser walkthrough across the affected screens. Do not claim those checks passed from source inspection alone.
 - Remaining substantive product-finishing modules are unchanged: bank reconciliation, driver/pay settlement, richer scheduled/export reporting, and selected provider integrations.
+
+
+## Owner-reported production QA blockers — 2026-09-29
+The owner reported the following deployed-application issues that must be treated as the current same-day finish list until verified fixed:
+- Delivery Note milestone presentation has poor contrast on the light v19 visual system; Arrival / Departure cards must remain readable and clearly show the enforced Arrival → Departure order.
+- Invoicing / payment navigation can surface a Next.js server-side Application Error during page load. The invoicing route must be a Client Component because it directly uses `useWorkspace()`; do not call client hooks from a Server Component.
+- Workshop Control, Reports and Fleet Intelligence have surfaced client-side Application Errors. These screens must tolerate existing/legacy LIVE records with incomplete optional fields and must expose actionable error states rather than crashing.
+- Reports must continue to load through the authenticated server-side `/api/reports` boundary; do not weaken Firestore finance rules to make reporting work.
+- The light v19 compatibility layer must not leave Tailwind dark-panel backgrounds underneath dark text. When converting legacy Tailwind surfaces, map all commonly used opacity variants (including `bg-slate-950/70`, amber/red panel variants) to readable v19 light surfaces.
+- POD Queue must show human-readable Delivery Note/customer state. A queue item such as `DN-HNMHX8K6 · Customer pending · incomplete` is only useful if that reflects the actual underlying Delivery Note; do not fabricate customer/POD values.
+- Current authoritative source is `v19-authoritative`. The GitHub repository's default branch may show an older `feature/translend-independence` HEAD; that branch is not the source of truth and must not be used to judge current production code.
+- Vercel production/preview deployments that are minutes old can legitimately be ahead of the GitHub default-branch page when Vercel is tracking `v19-authoritative`. Always identify the deployment commit and branch before calling the source state stale or inconsistent.
+
+### Same-day QA sequence
+1. Verify `v19-authoritative` HEAD and the latest Vercel deployment commit.
+2. Verify sign-in/workspace resolution.
+3. Verify Delivery Note Arrival and Departure actions and readable light contrast.
+4. Verify POD Queue state and open-note context.
+5. Verify Invoicing & Statements and customer payment flow.
+6. Verify Fuel & Workshop / Workshop Control.
+7. Verify Reports & Intelligence.
+8. Verify Fleet Intelligence.
+9. Run typecheck, lint and production build; then re-check affected routes.
+10. Update this checkpoint with the exact verified deployment commit; do not mark the app finished from source inspection alone.
