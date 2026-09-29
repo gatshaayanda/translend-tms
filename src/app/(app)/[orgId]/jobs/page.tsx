@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { jobsRepo, customersRepo } from "@/lib/firebase/modules";
 import type { Job, JobStatus, Customer, BaseRecord } from "@/types/core";
 import { Timestamp } from "firebase/firestore";
+import { WorkflowNextStep } from "@/components/v19/WorkflowNextStep";
 
 const STATUS_STYLE: Record<JobStatus, string> = {
   draft: "bg-slate-800 text-slate-400",
@@ -58,6 +59,16 @@ export default function JobsPage() {
         </button>
       </header>
 
+      <WorkflowNextStep
+        steps={[
+          { label: "Customer", state: "done", href: `/${activeOrg.id}/customers` },
+          { label: "Job / order", state: "current" },
+          { label: "Dispatch", state: "next", href: `/${activeOrg.id}/trips` },
+          { label: "Delivery + POD", state: "next", href: `/${activeOrg.id}/deliveries` },
+          { label: "Invoice + payment", state: "next", href: `/${activeOrg.id}/invoicing` },
+        ]}
+      />
+
       {error && <div className="rounded-md border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">{error}</div>}
 
       {jobs === null ? (
@@ -88,9 +99,14 @@ export default function JobsPage() {
                     {j.currency} {j.rate.toLocaleString()}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLE[j.status]}`}>
-                      {j.status.replace(/_/g, " ")}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${STATUS_STYLE[j.status]}`}>
+                        {j.status.replace(/_/g, " ")}
+                      </span>
+                      {j.status === "confirmed" && <a href={`/${activeOrg.id}/trips`} className="text-xs text-sky-400 hover:underline">Dispatch →</a>}
+                      {(j.status === "dispatched" || j.status === "in_progress") && <a href={`/${activeOrg.id}/trips`} className="text-xs text-sky-400 hover:underline">Track trip →</a>}
+                      {j.status === "completed" && <a href={`/${activeOrg.id}/deliveries`} className="text-xs text-sky-400 hover:underline">Delivery / POD →</a>}
+                    </div>
                   </td>
                 </tr>
               ))}
