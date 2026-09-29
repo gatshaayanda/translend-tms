@@ -54,7 +54,7 @@ export function ReportsHub({ orgId }: { orgId: string }) {
     return { job: job.jobNumber, customer: job.customerName, origin: job.origin, destination: job.destination, status: job.status, tripStatus: trip?.status ?? "unassigned", deliveryStatus: delivery?.status ?? "not created", rate: money(job.rate, job.currency) };
   }), [data]);
 
-  const fleetRows = useMemo(() => data.trucks.map((truck) => ({ registration: truck.registrationNumber, status: truck.status, driver: data.drivers.find((driver) => driver.id === truck.assignedDriverId)?.fullName ?? "Unassigned", odometerKm: truck.odometerKm, fuelType: truck.fuelType, compliance: [truck.complianceExpiryDates.licenseDisc, truck.complianceExpiryDates.roadworthy, truck.complianceExpiryDates.insurance].some((item) => item && millis(item) < Date.now()) ? "expired" : "current" })), [data]);
+  const fleetRows = useMemo(() => data.trucks.map((truck) => { const expiry = truck.complianceExpiryDates ?? {}; return { registration: truck.registrationNumber, status: truck.status, driver: data.drivers.find((driver) => driver.id === truck.assignedDriverId)?.fullName ?? "Unassigned", odometerKm: truck.odometerKm ?? 0, fuelType: truck.fuelType ?? "—", compliance: [expiry.licenseDisc, expiry.roadworthy, expiry.insurance].some((item) => item && millis(item) < Date.now()) ? "expired" : "current" }; }), [data]);
   const podRows = useMemo(() => data.deliveries.map((delivery) => {
     const evidence = delivery.evidenceRefs ?? [];
     const required = evidence.filter((item) => item.required && item.status !== "replaced");
@@ -64,7 +64,7 @@ export function ReportsHub({ orgId }: { orgId: string }) {
     return { delivery: delivery.deliveryNoteId ?? delivery.id.slice(0, 8), job: trip?.jobNumber ?? delivery.jobId, truck: trip?.truckRegistration ?? "—", status: delivery.status, podState: delivery.podState ?? "not_started", required: required.length, approvedRequired: approvedRequired.length, rejected: rejected.length, readiness: required.length > 0 && approvedRequired.length >= required.length ? "ready" : delivery.status === "exception" ? "exception" : "needs evidence" };
   }), [data]);
   const invoiceRows = useMemo(() => data.invoices.map((invoice) => ({ invoice: invoice.invoiceNumber, customer: invoice.customerName, status: invoice.status, net: money(invoice.subtotalAmount ?? invoice.amount, invoice.currency), vat: money(invoice.taxAmount ?? 0, invoice.currency), total: money(invoice.totalAmount ?? invoice.amount, invoice.currency), issued: date(invoice.issuedAt), due: date(invoice.dueAt), paid: date(invoice.paidAt) })), [data]);
-  const customerRows = useMemo(() => data.customers.map((customer) => ({ customer: customer.name, status: customer.status, jobs: customer.stats.openJobs, activeTrips: customer.stats.activeTrips, outstanding: money(customer.stats.outstandingBalance, customer.currency), lastActivity: date(customer.stats.lastActivityAt) })), [data]);
+  const customerRows = useMemo(() => data.customers.map((customer) => ({ customer: customer.name, status: customer.status, jobs: customer.stats?.openJobs ?? 0, activeTrips: customer.stats?.activeTrips ?? 0, outstanding: money(customer.stats?.outstandingBalance ?? 0, customer.currency), lastActivity: date(customer.stats?.lastActivityAt) })), [data]);
 
   const exportRows = () => {
     const rows = tab === "operations" ? operationsRows : tab === "fleet" ? fleetRows : tab === "pod" ? podRows : tab === "finance" ? invoiceRows : customerRows;
