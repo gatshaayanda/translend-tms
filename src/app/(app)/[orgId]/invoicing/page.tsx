@@ -1,3 +1,5 @@
+"use client";
+
 import FinancialAndControlViews from "@/components/v19/FinancialAndControlViews";
 import { WorkflowNextStep } from "@/components/v19/WorkflowNextStep";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
