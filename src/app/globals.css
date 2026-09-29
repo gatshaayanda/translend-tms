@@ -299,7 +299,7 @@ button { cursor: pointer; }
 .text-slate-300 { color: var(--ink-2) !important; }
 .text-slate-400, .text-slate-500 { color: var(--ink-3) !important; }
 .text-slate-600 { color: var(--ink-4) !important; }
-.bg-slate-950, .bg-slate-950\/40, .bg-slate-900, .bg-slate-900\/40, .bg-slate-900\/60 { background: var(--surface) !important; }
+.bg-slate-950, .bg-slate-950\/40, .bg-slate-950\/30, .bg-slate-950\/20, .bg-slate-950\/70, .bg-slate-900, .bg-slate-900\/40, .bg-slate-900\/60 { background: var(--surface) !important; }
 .bg-slate-800 { background: var(--surface-3) !important; }
 .border-slate-800, .border-slate-700 { border-color: var(--border) !important; }
 .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: var(--divider) !important; }
@@ -311,9 +311,9 @@ button { cursor: pointer; }
 .text-emerald-300, .text-emerald-400 { color: var(--green) !important; }
 .bg-emerald-950\/50 { background: var(--green-100) !important; }
 .text-amber-300, .text-amber-400 { color: var(--amber) !important; }
-.bg-amber-950\/50 { background: var(--amber-100) !important; }
+.bg-amber-950, .bg-amber-950\/10, .bg-amber-950\/50 { background: var(--amber-100) !important; }
 .text-red-300, .text-red-400 { color: var(--red) !important; }
-.bg-red-950\/50, .bg-red-950\/30 { background: var(--red-100) !important; }
+.bg-red-950, .bg-red-950\/10, .bg-red-950\/50, .bg-red-950\/30 { background: var(--red-100) !important; }
 .border-red-900\/50 { border-color: #F3C3C3 !important; }
 .bg-black\/60 { background: rgba(14,42,48,.42) !important; }
 .ring-sky-600 { --tw-ring-color: var(--teal) !important; }
