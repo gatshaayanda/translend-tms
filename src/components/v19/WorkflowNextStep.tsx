@@ -13,7 +13,7 @@ export function WorkflowNextStep({
   steps: WorkflowStep[];
   title?: string;
 }) {
-  const next = steps.find((step) => step.state === "current" || step.state === "next");
+  const next = steps.find((step) => (step.state === "current" || step.state === "next") && step.href);
   return (
     <section className="panel" aria-label={title}>
       <div className="section-header">
@@ -34,12 +34,12 @@ export function WorkflowNextStep({
               className="rounded-lg border p-3"
               style={{
                 borderColor:
-                  step.state === "current" ? "var(--teal-300)" :
+                  step.state === "current" ? "var(--teal)" :
                   step.state === "done" ? "var(--border)" :
-                  step.state === "blocked" ? "var(--red-300)" : "var(--border)",
+                  step.state === "blocked" ? "var(--red)" : "var(--border)",
                 background:
-                  step.state === "current" ? "var(--teal-100)" :
-                  step.state === "blocked" ? "var(--red-100)" : "var(--surface-2)",
+                  step.state === "current" ? "var(--surface-3)" :
+                  step.state === "blocked" ? "var(--red-100)" : "var(--surface)",
               }}
             >
               <div className="flex items-center gap-2">
