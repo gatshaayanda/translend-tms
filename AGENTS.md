@@ -238,3 +238,9 @@ The owner reported the following deployed-application issues that must be treate
 8. Verify Fleet Intelligence.
 9. Run typecheck, lint and production build; then re-check affected routes.
 10. Update this checkpoint with the exact verified deployment commit; do not mark the app finished from source inspection alone.
+
+## Deployment retry checkpoint — 2026-09-30
+- Authoritative branch HEAD remains `c1b03d1d24039f9952db1d5429c965825b1191e0`, containing the owner-QA blocker record and all preceding workflow hardening fixes.
+- The previous Vercel status for that commit reported `build-rate-limit`, so the source changes were pushed but not yet live-verified.
+- This checkpoint is a deliberate no-behavior-change chore push to give Vercel a fresh authoritative commit/build opportunity. It does not replace or bypass the application fixes above.
+- After deployment, verify the deployed commit/branch before promotion; then run the documented same-day QA sequence.
